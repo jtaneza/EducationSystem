@@ -28,18 +28,22 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LoginForm));
             label1 = new Label();
             label2 = new Label();
-            textBox1 = new TextBox();
+            emailadd = new TextBox();
             label3 = new Label();
-            textBox2 = new TextBox();
-            button1 = new Button();
-            panelLeft = new Panel();
+            password = new TextBox();
+            login = new Button();
+            panelRight = new Panel();
+            picEye = new PictureBox();
             picLogo = new PictureBox();
             linkLabel1 = new LinkLabel();
-            checkBox1 = new CheckBox();
-            panelLeft.SuspendLayout();
+            rememberme = new CheckBox();
+            notifyIcon1 = new NotifyIcon(components);
+            panelRight.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picEye).BeginInit();
             ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
             SuspendLayout();
             // 
@@ -47,92 +51,112 @@
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI Black", 20.25F, FontStyle.Bold | FontStyle.Italic, GraphicsUnit.Point, 0);
-            label1.ForeColor = Color.OrangeRed;
-            label1.Location = new Point(134, 41);
+            label1.ForeColor = Color.Maroon;
+            label1.Location = new Point(436, 39);
             label1.Name = "label1";
-            label1.Size = new Size(110, 37);
+            label1.Size = new Size(206, 37);
             label1.TabIndex = 0;
-            label1.Text = "S.I.M.S";
+            label1.Text = "LibraFlow ERP";
             label1.Click += label1_Click;
             // 
             // label2
             // 
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label2.ForeColor = Color.FromArgb(64, 64, 64);
-            label2.Location = new Point(52, 101);
+            label2.ForeColor = Color.Maroon;
+            label2.Location = new Point(404, 97);
             label2.Name = "label2";
             label2.Size = new Size(83, 15);
             label2.TabIndex = 1;
             label2.Text = "Email Address";
             // 
-            // textBox1
+            // emailadd
             // 
-            textBox1.ForeColor = Color.FromArgb(64, 64, 64);
-            textBox1.Location = new Point(54, 119);
-            textBox1.Multiline = true;
-            textBox1.Name = "textBox1";
-            textBox1.Size = new Size(265, 30);
-            textBox1.TabIndex = 2;
+            emailadd.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            emailadd.ForeColor = Color.Sienna;
+            emailadd.Location = new Point(404, 115);
+            emailadd.Multiline = true;
+            emailadd.Name = "emailadd";
+            emailadd.Size = new Size(265, 28);
+            emailadd.TabIndex = 2;
             // 
             // label3
             // 
             label3.AutoSize = true;
             label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label3.ForeColor = Color.FromArgb(64, 64, 64);
-            label3.Location = new Point(52, 163);
+            label3.ForeColor = Color.Maroon;
+            label3.Location = new Point(404, 166);
             label3.Name = "label3";
             label3.Size = new Size(59, 15);
             label3.TabIndex = 3;
             label3.Text = "Password";
             // 
-            // textBox2
+            // password
             // 
-            textBox2.ForeColor = Color.FromArgb(64, 64, 64);
-            textBox2.Location = new Point(54, 181);
-            textBox2.Multiline = true;
-            textBox2.Name = "textBox2";
-            textBox2.Size = new Size(265, 30);
-            textBox2.TabIndex = 4;
+            password.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            password.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            password.ForeColor = Color.Sienna;
+            password.Location = new Point(405, 184);
+            password.Name = "password";
+            password.PasswordChar = '*';
+            password.Size = new Size(265, 25);
+            password.TabIndex = 4;
+            password.UseSystemPasswordChar = true;
+            password.TextChanged += textBox2_TextChanged;
             // 
-            // button1
+            // login
             // 
-            button1.BackColor = Color.OrangeRed;
-            button1.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            button1.ForeColor = SystemColors.ButtonHighlight;
-            button1.Location = new Point(55, 263);
-            button1.Name = "button1";
-            button1.Size = new Size(264, 34);
-            button1.TabIndex = 5;
-            button1.Text = "Login";
-            button1.UseVisualStyleBackColor = false;
-            button1.Click += btnLogin_Click;
+            login.BackColor = Color.Maroon;
+            login.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
+            login.ForeColor = SystemColors.ButtonHighlight;
+            login.Location = new Point(404, 261);
+            login.Name = "login";
+            login.Size = new Size(265, 34);
+            login.TabIndex = 5;
+            login.Text = "Login";
+            login.UseVisualStyleBackColor = false;
+            login.Click += btnLogin_Click;
             // 
-            // panelLeft
+            // panelRight
             // 
-            panelLeft.BackColor = Color.SeaShell;
-            panelLeft.Controls.Add(picLogo);
-            panelLeft.Controls.Add(linkLabel1);
-            panelLeft.Controls.Add(checkBox1);
-            panelLeft.Controls.Add(button1);
-            panelLeft.Controls.Add(textBox2);
-            panelLeft.Controls.Add(label3);
-            panelLeft.Controls.Add(textBox1);
-            panelLeft.Controls.Add(label2);
-            panelLeft.Controls.Add(label1);
-            panelLeft.Dock = DockStyle.Right;
-            panelLeft.Location = new Point(-2, 0);
-            panelLeft.Name = "panelLeft";
-            panelLeft.Size = new Size(738, 450);
-            panelLeft.TabIndex = 6;
+            panelRight.BackColor = Color.SeaShell;
+            panelRight.Controls.Add(picEye);
+            panelRight.Controls.Add(picLogo);
+            panelRight.Controls.Add(linkLabel1);
+            panelRight.Controls.Add(rememberme);
+            panelRight.Controls.Add(login);
+            panelRight.Controls.Add(label3);
+            panelRight.Controls.Add(emailadd);
+            panelRight.Controls.Add(label2);
+            panelRight.Controls.Add(label1);
+            panelRight.Controls.Add(password);
+            panelRight.Dock = DockStyle.Right;
+            panelRight.Location = new Point(-2, 0);
+            panelRight.Name = "panelRight";
+            panelRight.Size = new Size(738, 450);
+            panelRight.TabIndex = 6;
+            panelRight.Paint += panelRight_Paint;
+            // 
+            // picEye
+            // 
+            picEye.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+            picEye.BackColor = SystemColors.Window;
+            picEye.Cursor = Cursors.Hand;
+            picEye.Image = (Image)resources.GetObject("picEye.Image");
+            picEye.Location = new Point(635, 186);
+            picEye.Name = "picEye";
+            picEye.Size = new Size(33, 20);
+            picEye.SizeMode = PictureBoxSizeMode.Zoom;
+            picEye.TabIndex = 8;
+            picEye.TabStop = false;
             // 
             // picLogo
             // 
             picLogo.BackColor = Color.Transparent;
             picLogo.Image = (Image)resources.GetObject("picLogo.Image");
-            picLogo.Location = new Point(325, -3);
+            picLogo.Location = new Point(53, 4);
             picLogo.Name = "picLogo";
-            picLogo.Size = new Size(413, 450);
+            picLogo.Size = new Size(346, 386);
             picLogo.SizeMode = PictureBoxSizeMode.Zoom;
             picLogo.TabIndex = 0;
             picLogo.TabStop = false;
@@ -140,25 +164,31 @@
             // 
             // linkLabel1
             // 
+            linkLabel1.ActiveLinkColor = Color.DarkRed;
             linkLabel1.AutoSize = true;
             linkLabel1.LinkColor = Color.Red;
-            linkLabel1.Location = new Point(117, 308);
+            linkLabel1.Location = new Point(480, 298);
             linkLabel1.Name = "linkLabel1";
             linkLabel1.Size = new Size(127, 15);
             linkLabel1.TabIndex = 7;
             linkLabel1.TabStop = true;
             linkLabel1.Text = "Forgot Your Password?";
             // 
-            // checkBox1
+            // rememberme
             // 
-            checkBox1.AutoSize = true;
-            checkBox1.ForeColor = Color.FromArgb(64, 64, 64);
-            checkBox1.Location = new Point(55, 230);
-            checkBox1.Name = "checkBox1";
-            checkBox1.Size = new Size(109, 19);
-            checkBox1.TabIndex = 6;
-            checkBox1.Text = "Remember me?";
-            checkBox1.UseVisualStyleBackColor = true;
+            rememberme.AutoSize = true;
+            rememberme.ForeColor = Color.Maroon;
+            rememberme.Location = new Point(405, 224);
+            rememberme.Name = "rememberme";
+            rememberme.Size = new Size(109, 19);
+            rememberme.TabIndex = 6;
+            rememberme.Text = "Remember me?";
+            rememberme.UseVisualStyleBackColor = true;
+            // 
+            // notifyIcon1
+            // 
+            notifyIcon1.Text = "notifyIcon1";
+            notifyIcon1.Visible = true;
             // 
             // LoginForm
             // 
@@ -166,12 +196,13 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.SeaShell;
             ClientSize = new Size(736, 450);
-            Controls.Add(panelLeft);
+            Controls.Add(panelRight);
             Name = "LoginForm";
             Text = "A";
             Load += LoginForm_Load;
-            panelLeft.ResumeLayout(false);
-            panelLeft.PerformLayout();
+            panelRight.ResumeLayout(false);
+            panelRight.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picEye).EndInit();
             ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
             ResumeLayout(false);
         }
@@ -180,13 +211,15 @@
 
         private Label label1;
         private Label label2;
-        private TextBox textBox1;
+        private TextBox emailadd;
         private Label label3;
-        private TextBox textBox2;
-        private Button button1;
-        private Panel panelLeft;
+        private TextBox password;
+        private Button login;
+        private Panel panelRight;
         private LinkLabel linkLabel1;
-        private CheckBox checkBox1;
+        private CheckBox rememberme;
         private PictureBox picLogo;
+        private NotifyIcon notifyIcon1;
+        private PictureBox picEye;
     }
 }

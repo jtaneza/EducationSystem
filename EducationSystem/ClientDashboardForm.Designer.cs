@@ -1,6 +1,6 @@
 ﻿namespace EducationSystem
 {
-    partial class DashboardForm
+    partial class ClientDashboardForm
     {
         private System.ComponentModel.IContainer components = null;
 
@@ -16,13 +16,6 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DashboardForm));
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
             Sidebar = new Panel();
             button7 = new Button();
             button6 = new Button();
@@ -31,6 +24,7 @@
             button3 = new Button();
             button2 = new Button();
             button1 = new Button();
+            panelContent = new Panel();
             topbar = new Panel();
             dropdownarrow = new Button();
             contextMenuStrip1 = new ContextMenuStrip(components);
@@ -42,42 +36,36 @@
             pictureBox1 = new PictureBox();
             time = new Label();
             label4 = new Label();
-            label2 = new Label();
-            TotalClients = new Panel();
+            TotalMembers = new Panel();
             label5 = new Label();
             label3 = new Label();
             users = new PictureBox();
-            TotalMembers = new Panel();
+            TotalBooks = new Panel();
             label7 = new Label();
             label6 = new Label();
             books = new PictureBox();
-            TotalBooks = new Panel();
+            BorrowedBooks = new Panel();
             label9 = new Label();
             label8 = new Label();
             activity = new PictureBox();
-            ActiveBorrowings = new Panel();
+            OverdueBooks = new Panel();
             label11 = new Label();
             label10 = new Label();
             pictureBox5 = new PictureBox();
-            chart1 = new System.Windows.Forms.DataVisualization.Charting.Chart();
-            chart2 = new System.Windows.Forms.DataVisualization.Charting.Chart();
-            panelContent = new Panel();
             panel1 = new Panel();
             Sidebar.SuspendLayout();
             topbar.SuspendLayout();
             contextMenuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)ProfileImage).BeginInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
-            TotalClients.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)users).BeginInit();
             TotalMembers.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)books).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)users).BeginInit();
             TotalBooks.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)books).BeginInit();
+            BorrowedBooks.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)activity).BeginInit();
-            ActiveBorrowings.SuspendLayout();
+            OverdueBooks.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox5).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)chart1).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)chart2).BeginInit();
             panel1.SuspendLayout();
             SuspendLayout();
             // 
@@ -121,20 +109,19 @@
             button6.FlatStyle = FlatStyle.Flat;
             button6.ForeColor = Color.Maroon;
             button6.ImageAlign = ContentAlignment.MiddleLeft;
-            button6.Location = new Point(-2, 636);
+            button6.Location = new Point(-16, 636);
             button6.Name = "button6";
-            button6.Size = new Size(226, 52);
+            button6.Size = new Size(246, 52);
             button6.TabIndex = 6;
             button6.Text = "\u23fb  Logout";
             button6.UseVisualStyleBackColor = true;
-            button6.Click += button6_Click;
             // 
             // button5
             // 
             button5.FlatAppearance.BorderSize = 0;
             button5.FlatStyle = FlatStyle.Flat;
             button5.ForeColor = Color.Maroon;
-            button5.Location = new Point(-50, 336);
+            button5.Location = new Point(-52, 336);
             button5.Name = "button5";
             button5.Size = new Size(280, 43);
             button5.TabIndex = 5;
@@ -150,12 +137,12 @@
             button4.FlatStyle = FlatStyle.Flat;
             button4.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             button4.ForeColor = Color.Maroon;
-            button4.Location = new Point(-49, 276);
+            button4.Location = new Point(-40, 276);
             button4.Margin = new Padding(3, 4, 3, 4);
             button4.Name = "button4";
             button4.Size = new Size(280, 43);
             button4.TabIndex = 4;
-            button4.Text = "📚  Modules";
+            button4.Text = "📚  Borrowing";
             button4.UseVisualStyleBackColor = true;
             // 
             // button3
@@ -167,12 +154,12 @@
             button3.FlatStyle = FlatStyle.Flat;
             button3.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             button3.ForeColor = Color.Maroon;
-            button3.Location = new Point(-40, 217);
+            button3.Location = new Point(-57, 217);
             button3.Margin = new Padding(3, 4, 3, 4);
             button3.Name = "button3";
             button3.Size = new Size(280, 43);
             button3.TabIndex = 3;
-            button3.Text = "📈  Monitoring";
+            button3.Text = "📘  Books";
             button3.UseVisualStyleBackColor = true;
             // 
             // button2
@@ -184,12 +171,12 @@
             button2.FlatStyle = FlatStyle.Flat;
             button2.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             button2.ForeColor = Color.Maroon;
-            button2.Location = new Point(-57, 159);
+            button2.Location = new Point(-45, 159);
             button2.Margin = new Padding(3, 4, 3, 4);
             button2.Name = "button2";
             button2.Size = new Size(280, 43);
             button2.TabIndex = 2;
-            button2.Text = "🏢  Clients";
+            button2.Text = "👥  Members";
             button2.UseVisualStyleBackColor = true;
             // 
             // button1
@@ -208,7 +195,15 @@
             button1.TabIndex = 1;
             button1.Text = "📊  Dashboard";
             button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click_1;
+            // 
+            // panelContent
+            // 
+            panelContent.BackColor = Color.Snow;
+            panelContent.Location = new Point(225, 53);
+            panelContent.Name = "panelContent";
+            panelContent.Size = new Size(1148, 826);
+            panelContent.TabIndex = 13;
+            panelContent.Visible = false;
             // 
             // topbar
             // 
@@ -218,10 +213,10 @@
             topbar.Controls.Add(ProfileImage);
             topbar.Controls.Add(label1);
             topbar.Controls.Add(pictureBox1);
-            topbar.Location = new Point(-6, 1);
+            topbar.Location = new Point(-1, 1);
             topbar.Margin = new Padding(3, 4, 3, 4);
             topbar.Name = "topbar";
-            topbar.Size = new Size(1403, 54);
+            topbar.Size = new Size(1370, 54);
             topbar.TabIndex = 1;
             topbar.Paint += topbar_Paint;
             // 
@@ -232,7 +227,7 @@
             dropdownarrow.FlatStyle = FlatStyle.Flat;
             dropdownarrow.Font = new Font("Segoe UI", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             dropdownarrow.ForeColor = Color.Maroon;
-            dropdownarrow.Location = new Point(1332, 15);
+            dropdownarrow.Location = new Point(1330, 15);
             dropdownarrow.Name = "dropdownarrow";
             dropdownarrow.Size = new Size(24, 30);
             dropdownarrow.TabIndex = 5;
@@ -262,7 +257,7 @@
             // 
             username.AutoSize = true;
             username.ForeColor = Color.Maroon;
-            username.Location = new Point(1253, 18);
+            username.Location = new Point(1251, 18);
             username.Name = "username";
             username.Size = new Size(80, 20);
             username.TabIndex = 4;
@@ -270,8 +265,7 @@
             // 
             // ProfileImage
             // 
-            ProfileImage.Image = (Image)resources.GetObject("ProfileImage.Image");
-            ProfileImage.Location = new Point(1212, 8);
+            ProfileImage.Location = new Point(1211, 8);
             ProfileImage.Margin = new Padding(3, 4, 3, 4);
             ProfileImage.Name = "ProfileImage";
             ProfileImage.Size = new Size(36, 37);
@@ -295,8 +289,7 @@
             // 
             // pictureBox1
             // 
-            pictureBox1.ErrorImage = (Image)resources.GetObject("pictureBox1.ErrorImage");
-            pictureBox1.Image = (Image)resources.GetObject("pictureBox1.Image");
+            pictureBox1.ErrorImage = null;
             pictureBox1.Location = new Point(2, -6);
             pictureBox1.Margin = new Padding(3, 4, 3, 4);
             pictureBox1.Name = "pictureBox1";
@@ -324,35 +317,28 @@
             label4.ForeColor = Color.Maroon;
             label4.Location = new Point(251, 91);
             label4.Name = "label4";
-            label4.Size = new Size(180, 20);
+            label4.Size = new Size(129, 20);
             label4.TabIndex = 6;
-            label4.Text = "Super Admin Dashboard";
+            label4.Text = "Client Dashboard";
             // 
-            // label2
+            // TotalMembers
             // 
-            label2.AutoSize = true;
-            label2.Location = new Point(439, 325);
-            label2.Name = "label2";
-            label2.Size = new Size(0, 20);
-            label2.TabIndex = 0;
-            // 
-            // TotalClients
-            // 
-            TotalClients.BackColor = Color.Maroon;
-            TotalClients.Controls.Add(label5);
-            TotalClients.Controls.Add(label3);
-            TotalClients.Controls.Add(users);
-            TotalClients.Location = new Point(254, 143);
-            TotalClients.Name = "TotalClients";
-            TotalClients.Size = new Size(254, 95);
-            TotalClients.TabIndex = 7;
+            TotalMembers.BackColor = Color.Maroon;
+            TotalMembers.Controls.Add(label5);
+            TotalMembers.Controls.Add(label3);
+            TotalMembers.Controls.Add(users);
+            TotalMembers.Location = new Point(254, 143);
+            TotalMembers.Name = "TotalMembers";
+            TotalMembers.Size = new Size(254, 95);
+            TotalMembers.TabIndex = 7;
+            TotalMembers.Paint += TotalMembers_Paint;
             // 
             // label5
             // 
             label5.AutoSize = true;
             label5.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label5.ForeColor = Color.WhiteSmoke;
-            label5.Location = new Point(157, 54);
+            label5.Location = new Point(159, 54);
             label5.Name = "label5";
             label5.Size = new Size(18, 20);
             label5.TabIndex = 2;
@@ -363,18 +349,17 @@
             label3.AutoSize = true;
             label3.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label3.ForeColor = Color.WhiteSmoke;
-            label3.Location = new Point(125, 30);
+            label3.Location = new Point(115, 30);
             label3.Name = "label3";
-            label3.Size = new Size(95, 20);
+            label3.Size = new Size(114, 20);
             label3.TabIndex = 1;
-            label3.Text = "Total Clients";
+            label3.Text = "Total Members";
             label3.Click += label3_Click;
             // 
             // users
             // 
             users.BackColor = Color.Maroon;
-            users.Image = (Image)resources.GetObject("users.Image");
-            users.Location = new Point(16, 18);
+            users.Location = new Point(19, 18);
             users.Name = "users";
             users.Size = new Size(99, 61);
             users.SizeMode = PictureBoxSizeMode.Zoom;
@@ -382,24 +367,24 @@
             users.TabStop = false;
             users.Click += pictureBox2_Click_1;
             // 
-            // TotalMembers
+            // TotalBooks
             // 
-            TotalMembers.BackColor = Color.Maroon;
-            TotalMembers.Controls.Add(label7);
-            TotalMembers.Controls.Add(label6);
-            TotalMembers.Controls.Add(books);
-            TotalMembers.ForeColor = Color.SeaShell;
-            TotalMembers.Location = new Point(532, 143);
-            TotalMembers.Name = "TotalMembers";
-            TotalMembers.Size = new Size(254, 95);
-            TotalMembers.TabIndex = 8;
+            TotalBooks.BackColor = Color.Maroon;
+            TotalBooks.Controls.Add(label7);
+            TotalBooks.Controls.Add(label6);
+            TotalBooks.Controls.Add(books);
+            TotalBooks.ForeColor = Color.SeaShell;
+            TotalBooks.Location = new Point(532, 143);
+            TotalBooks.Name = "TotalBooks";
+            TotalBooks.Size = new Size(254, 95);
+            TotalBooks.TabIndex = 8;
             // 
             // label7
             // 
             label7.AutoSize = true;
             label7.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label7.ForeColor = Color.WhiteSmoke;
-            label7.Location = new Point(160, 51);
+            label7.Location = new Point(167, 51);
             label7.Name = "label7";
             label7.Size = new Size(18, 20);
             label7.TabIndex = 2;
@@ -410,41 +395,40 @@
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label6.ForeColor = Color.WhiteSmoke;
-            label6.Location = new Point(120, 29);
+            label6.Location = new Point(130, 29);
             label6.Name = "label6";
-            label6.Size = new Size(114, 20);
+            label6.Size = new Size(91, 20);
             label6.TabIndex = 1;
-            label6.Text = "Total Members";
+            label6.Text = "Total Books";
             // 
             // books
             // 
             books.BackColor = Color.Maroon;
-            books.Image = (Image)resources.GetObject("books.Image");
-            books.Location = new Point(16, 18);
+            books.Location = new Point(20, 18);
             books.Name = "books";
             books.Size = new Size(99, 61);
             books.SizeMode = PictureBoxSizeMode.Zoom;
             books.TabIndex = 0;
             books.TabStop = false;
             // 
-            // TotalBooks
+            // BorrowedBooks
             // 
-            TotalBooks.BackColor = Color.Maroon;
-            TotalBooks.Controls.Add(label9);
-            TotalBooks.Controls.Add(label8);
-            TotalBooks.Controls.Add(activity);
-            TotalBooks.ForeColor = Color.SeaShell;
-            TotalBooks.Location = new Point(811, 143);
-            TotalBooks.Name = "TotalBooks";
-            TotalBooks.Size = new Size(254, 95);
-            TotalBooks.TabIndex = 9;
+            BorrowedBooks.BackColor = Color.Maroon;
+            BorrowedBooks.Controls.Add(label9);
+            BorrowedBooks.Controls.Add(label8);
+            BorrowedBooks.Controls.Add(activity);
+            BorrowedBooks.ForeColor = Color.SeaShell;
+            BorrowedBooks.Location = new Point(811, 143);
+            BorrowedBooks.Name = "BorrowedBooks";
+            BorrowedBooks.Size = new Size(254, 95);
+            BorrowedBooks.TabIndex = 9;
             // 
             // label9
             // 
             label9.AutoSize = true;
             label9.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label9.ForeColor = Color.WhiteSmoke;
-            label9.Location = new Point(160, 51);
+            label9.Location = new Point(167, 51);
             label9.Name = "label9";
             label9.Size = new Size(18, 20);
             label9.TabIndex = 2;
@@ -455,40 +439,39 @@
             label8.AutoSize = true;
             label8.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label8.ForeColor = Color.WhiteSmoke;
-            label8.Location = new Point(129, 30);
+            label8.Location = new Point(111, 30);
             label8.Name = "label8";
-            label8.Size = new Size(91, 20);
+            label8.Size = new Size(125, 20);
             label8.TabIndex = 1;
-            label8.Text = "Total Books";
+            label8.Text = "Borrowed Books";
             // 
             // activity
             // 
             activity.BackColor = Color.Maroon;
-            activity.Image = (Image)resources.GetObject("activity.Image");
-            activity.Location = new Point(19, 19);
+            activity.Location = new Point(20, 19);
             activity.Name = "activity";
             activity.Size = new Size(99, 61);
             activity.SizeMode = PictureBoxSizeMode.Zoom;
             activity.TabIndex = 0;
             activity.TabStop = false;
             // 
-            // ActiveBorrowings
+            // OverdueBooks
             // 
-            ActiveBorrowings.BackColor = Color.Maroon;
-            ActiveBorrowings.Controls.Add(label11);
-            ActiveBorrowings.Controls.Add(label10);
-            ActiveBorrowings.Controls.Add(pictureBox5);
-            ActiveBorrowings.Location = new Point(1089, 143);
-            ActiveBorrowings.Name = "ActiveBorrowings";
-            ActiveBorrowings.Size = new Size(254, 95);
-            ActiveBorrowings.TabIndex = 10;
+            OverdueBooks.BackColor = Color.Maroon;
+            OverdueBooks.Controls.Add(label11);
+            OverdueBooks.Controls.Add(label10);
+            OverdueBooks.Controls.Add(pictureBox5);
+            OverdueBooks.Location = new Point(1089, 143);
+            OverdueBooks.Name = "OverdueBooks";
+            OverdueBooks.Size = new Size(254, 95);
+            OverdueBooks.TabIndex = 10;
             // 
             // label11
             // 
             label11.AutoSize = true;
             label11.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label11.ForeColor = Color.WhiteSmoke;
-            label11.Location = new Point(168, 54);
+            label11.Location = new Point(165, 54);
             label11.Name = "label11";
             label11.Size = new Size(18, 20);
             label11.TabIndex = 2;
@@ -500,68 +483,21 @@
             label10.FlatStyle = FlatStyle.Flat;
             label10.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             label10.ForeColor = Color.WhiteSmoke;
-            label10.Location = new Point(133, 27);
+            label10.Location = new Point(114, 27);
             label10.Name = "label10";
-            label10.Size = new Size(97, 20);
+            label10.Size = new Size(115, 20);
             label10.TabIndex = 1;
-            label10.Text = "Transactions";
+            label10.Text = "Overdue Books";
             // 
             // pictureBox5
             // 
             pictureBox5.BackColor = Color.Maroon;
-            pictureBox5.Image = (Image)resources.GetObject("pictureBox5.Image");
             pictureBox5.Location = new Point(20, 19);
             pictureBox5.Name = "pictureBox5";
             pictureBox5.Size = new Size(99, 61);
             pictureBox5.SizeMode = PictureBoxSizeMode.Zoom;
             pictureBox5.TabIndex = 0;
             pictureBox5.TabStop = false;
-            // 
-            // chart1
-            // 
-            chart1.BackColor = Color.WhiteSmoke;
-            chart1.BackImageTransparentColor = Color.DimGray;
-            chart1.BorderlineColor = Color.OrangeRed;
-            chartArea1.Name = "ChartArea1";
-            chart1.ChartAreas.Add(chartArea1);
-            legend1.Name = "Legend1";
-            chart1.Legends.Add(legend1);
-            chart1.Location = new Point(254, 279);
-            chart1.Name = "chart1";
-            series1.ChartArea = "ChartArea1";
-            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
-            series1.Legend = "Legend1";
-            series1.Name = "Series1";
-            chart1.Series.Add(series1);
-            chart1.Size = new Size(596, 300);
-            chart1.TabIndex = 11;
-            chart1.Text = "chart1";
-            // 
-            // chart2
-            // 
-            chartArea2.Name = "ChartArea1";
-            chart2.ChartAreas.Add(chartArea2);
-            legend2.Name = "Legend1";
-            chart2.Legends.Add(legend2);
-            chart2.Location = new Point(896, 289);
-            chart2.Name = "chart2";
-            series2.ChartArea = "ChartArea1";
-            series2.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Pie;
-            series2.Legend = "Legend1";
-            series2.Name = "Series1";
-            chart2.Series.Add(series2);
-            chart2.Size = new Size(447, 272);
-            chart2.TabIndex = 12;
-            chart2.Text = "chart2";
-            // 
-            // panelContent
-            // 
-            panelContent.BackColor = Color.Snow;
-            panelContent.Location = new Point(226, 56);
-            panelContent.Name = "panelContent";
-            panelContent.Size = new Size(1147, 581);
-            panelContent.TabIndex = 13;
-            panelContent.Visible = false;
             // 
             // panel1
             // 
@@ -573,7 +509,7 @@
             panel1.Size = new Size(1147, 59);
             panel1.TabIndex = 14;
             // 
-            // DashboardForm
+            // ClientDashboardForm
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -581,43 +517,37 @@
             ClientSize = new Size(1370, 707);
             Controls.Add(panel1);
             Controls.Add(panelContent);
-            Controls.Add(chart2);
-            Controls.Add(chart1);
-            Controls.Add(ActiveBorrowings);
+            Controls.Add(OverdueBooks);
+            Controls.Add(BorrowedBooks);
             Controls.Add(TotalBooks);
             Controls.Add(TotalMembers);
-            Controls.Add(TotalClients);
             Controls.Add(label4);
-            Controls.Add(label2);
             Controls.Add(topbar);
             Controls.Add(Sidebar);
             Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             ForeColor = Color.Sienna;
             Margin = new Padding(3, 4, 3, 4);
-            Name = "DashboardForm";
-            Text = "Dashboard";
-            TransparencyKey = Color.SeaShell;
-            Load += DashboardForm_Load;
+            Name = "ClientDashboardForm";
+            Text = "Client Dashboard";
+            Load += ClientDashboardForm_Load;
             Sidebar.ResumeLayout(false);
             topbar.ResumeLayout(false);
             topbar.PerformLayout();
             contextMenuStrip1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)ProfileImage).EndInit();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
-            TotalClients.ResumeLayout(false);
-            TotalClients.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)users).EndInit();
             TotalMembers.ResumeLayout(false);
             TotalMembers.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)books).EndInit();
+            ((System.ComponentModel.ISupportInitialize)users).EndInit();
             TotalBooks.ResumeLayout(false);
             TotalBooks.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)books).EndInit();
+            BorrowedBooks.ResumeLayout(false);
+            BorrowedBooks.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)activity).EndInit();
-            ActiveBorrowings.ResumeLayout(false);
-            ActiveBorrowings.PerformLayout();
+            OverdueBooks.ResumeLayout(false);
+            OverdueBooks.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)pictureBox5).EndInit();
-            ((System.ComponentModel.ISupportInitialize)chart1).EndInit();
-            ((System.ComponentModel.ISupportInitialize)chart2).EndInit();
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             ResumeLayout(false);
@@ -628,7 +558,6 @@
         private Panel topbar;
         private Label label1;
         private PictureBox pictureBox1;
-        private Label label2;
         private Button button1;
         private Button button4;
         private Button button3;
@@ -642,10 +571,10 @@
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem profileToolStripMenuItem;
         private ToolStripMenuItem settingsToolStripMenuItem;
-        private Panel TotalClients;
         private Panel TotalMembers;
         private Panel TotalBooks;
-        private Panel ActiveBorrowings;
+        private Panel BorrowedBooks;
+        private Panel OverdueBooks;
         private PictureBox books;
         private PictureBox activity;
         private PictureBox pictureBox5;
@@ -659,8 +588,6 @@
         private Label label10;
         private Label time;
         private PictureBox users;
-        private System.Windows.Forms.DataVisualization.Charting.Chart chart1;
-        private System.Windows.Forms.DataVisualization.Charting.Chart chart2;
         private Panel panelContent;
         private Button button7;
         private Panel panel1;
