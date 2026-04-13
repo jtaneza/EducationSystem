@@ -17,13 +17,14 @@
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DashboardForm));
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea5 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend5 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series5 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea6 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend6 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series6 = new System.Windows.Forms.DataVisualization.Charting.Series();
             Sidebar = new Panel();
+            button8 = new Button();
             button7 = new Button();
             button6 = new Button();
             button5 = new Button();
@@ -84,8 +85,9 @@
             // Sidebar
             // 
             Sidebar.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
-            Sidebar.BackColor = Color.WhiteSmoke;
+            Sidebar.BackColor = Color.SeaShell;
             Sidebar.BorderStyle = BorderStyle.Fixed3D;
+            Sidebar.Controls.Add(button8);
             Sidebar.Controls.Add(button7);
             Sidebar.Controls.Add(button6);
             Sidebar.Controls.Add(button5);
@@ -93,19 +95,32 @@
             Sidebar.Controls.Add(button3);
             Sidebar.Controls.Add(button2);
             Sidebar.Controls.Add(button1);
-            Sidebar.ForeColor = Color.Sienna;
-            Sidebar.Location = new Point(-6, 1);
+            Sidebar.ForeColor = Color.Maroon;
+            Sidebar.Location = new Point(-6, -4);
             Sidebar.Margin = new Padding(3, 4, 3, 4);
             Sidebar.Name = "Sidebar";
-            Sidebar.Size = new Size(232, 705);
+            Sidebar.Size = new Size(232, 718);
             Sidebar.TabIndex = 0;
+            // 
+            // button8
+            // 
+            button8.FlatAppearance.BorderSize = 0;
+            button8.FlatStyle = FlatStyle.Flat;
+            button8.ForeColor = Color.Maroon;
+            button8.Location = new Point(-41, 337);
+            button8.Name = "button8";
+            button8.Size = new Size(270, 43);
+            button8.TabIndex = 8;
+            button8.Text = "🔍  Oversight";
+            button8.UseVisualStyleBackColor = true;
+            button8.Click += button8_Click;
             // 
             // button7
             // 
             button7.FlatAppearance.BorderSize = 0;
             button7.FlatStyle = FlatStyle.Flat;
             button7.ForeColor = Color.Maroon;
-            button7.Location = new Point(-51, 402);
+            button7.Location = new Point(-51, 465);
             button7.Name = "button7";
             button7.Size = new Size(280, 43);
             button7.TabIndex = 7;
@@ -134,7 +149,7 @@
             button5.FlatAppearance.BorderSize = 0;
             button5.FlatStyle = FlatStyle.Flat;
             button5.ForeColor = Color.Maroon;
-            button5.Location = new Point(-50, 336);
+            button5.Location = new Point(-53, 401);
             button5.Name = "button5";
             button5.Size = new Size(280, 43);
             button5.TabIndex = 5;
@@ -172,7 +187,7 @@
             button3.Name = "button3";
             button3.Size = new Size(280, 43);
             button3.TabIndex = 3;
-            button3.Text = "📈  Monitoring";
+            button3.Text = "⚙  Monitoring";
             button3.UseVisualStyleBackColor = true;
             // 
             // button2
@@ -212,7 +227,7 @@
             // 
             // topbar
             // 
-            topbar.BackColor = Color.WhiteSmoke;
+            topbar.BackColor = Color.SeaShell;
             topbar.Controls.Add(dropdownarrow);
             topbar.Controls.Add(username);
             topbar.Controls.Add(ProfileImage);
@@ -522,34 +537,34 @@
             chart1.BackColor = Color.WhiteSmoke;
             chart1.BackImageTransparentColor = Color.DimGray;
             chart1.BorderlineColor = Color.OrangeRed;
-            chartArea1.Name = "ChartArea1";
-            chart1.ChartAreas.Add(chartArea1);
-            legend1.Name = "Legend1";
-            chart1.Legends.Add(legend1);
+            chartArea5.Name = "ChartArea1";
+            chart1.ChartAreas.Add(chartArea5);
+            legend5.Name = "Legend1";
+            chart1.Legends.Add(legend5);
             chart1.Location = new Point(254, 279);
             chart1.Name = "chart1";
-            series1.ChartArea = "ChartArea1";
-            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
-            series1.Legend = "Legend1";
-            series1.Name = "Series1";
-            chart1.Series.Add(series1);
+            series5.ChartArea = "ChartArea1";
+            series5.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series5.Legend = "Legend1";
+            series5.Name = "Series1";
+            chart1.Series.Add(series5);
             chart1.Size = new Size(596, 300);
             chart1.TabIndex = 11;
             chart1.Text = "chart1";
             // 
             // chart2
             // 
-            chartArea2.Name = "ChartArea1";
-            chart2.ChartAreas.Add(chartArea2);
-            legend2.Name = "Legend1";
-            chart2.Legends.Add(legend2);
+            chartArea6.Name = "ChartArea1";
+            chart2.ChartAreas.Add(chartArea6);
+            legend6.Name = "Legend1";
+            chart2.Legends.Add(legend6);
             chart2.Location = new Point(896, 289);
             chart2.Name = "chart2";
-            series2.ChartArea = "ChartArea1";
-            series2.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Pie;
-            series2.Legend = "Legend1";
-            series2.Name = "Series1";
-            chart2.Series.Add(series2);
+            series6.ChartArea = "ChartArea1";
+            series6.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Pie;
+            series6.Legend = "Legend1";
+            series6.Name = "Series1";
+            chart2.Series.Add(series6);
             chart2.Size = new Size(447, 272);
             chart2.TabIndex = 12;
             chart2.Text = "chart2";
@@ -557,11 +572,12 @@
             // panelContent
             // 
             panelContent.BackColor = Color.Snow;
-            panelContent.Location = new Point(226, 56);
+            panelContent.Location = new Point(226, 53);
             panelContent.Name = "panelContent";
             panelContent.Size = new Size(1147, 581);
             panelContent.TabIndex = 13;
             panelContent.Visible = false;
+            panelContent.Paint += panelContent_Paint;
             // 
             // panel1
             // 
@@ -570,7 +586,7 @@
             panel1.ForeColor = Color.PeachPuff;
             panel1.Location = new Point(226, 637);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1147, 59);
+            panel1.Size = new Size(1147, 69);
             panel1.TabIndex = 14;
             // 
             // DashboardForm
@@ -664,5 +680,6 @@
         private Panel panelContent;
         private Button button7;
         private Panel panel1;
+        private Button button8;
     }
 }

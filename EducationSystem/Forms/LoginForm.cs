@@ -94,10 +94,56 @@ namespace EducationSystem
                 ClientSession.LibraryName = client.LibraryName;
                 ClientSession.Email = client.Email;
                 ClientSession.Role = "Client Admin";
+                ClientSession.Username = client.LibraryName;
+                ClientSession.ImagePath = Application.StartupPath + @"\Assets\client.png";
 
                 ClientDashboardForm clientDashboard = new ClientDashboardForm();
                 clientDashboard.Show();
                 this.Hide();
+                return;
+            }
+
+            // MEMBER DEMO LOGIN
+            if (email.Equals("john@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "john123")
+            {
+                SaveRememberMe(email, userPassword);
+
+                UserSession.Username = "John Cruz";
+                UserSession.Role = "Member";
+                UserSession.Email = "john@school.edu";
+                UserSession.Password = "john123";
+                UserSession.ImagePath = Application.StartupPath + @"\Assets\user.png";
+
+                MessageBox.Show("Member dashboard next.");
+                // later replace with:
+                // MemberDashboardForm memberDashboard = new MemberDashboardForm();
+                // memberDashboard.Show();
+                this.Hide();
+                return;
+            }
+
+            if (email.Equals("maria@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "maria123")
+            {
+                SaveRememberMe(email, userPassword);
+
+                UserSession.Username = "Maria Santos";
+                UserSession.Role = "Member";
+                UserSession.Email = "maria@school.edu";
+                UserSession.Password = "maria123";
+                UserSession.ImagePath = Application.StartupPath + @"\Assets\user.png";
+
+                MessageBox.Show("Member dashboard next.");
+                // later replace with:
+                // MemberDashboardForm memberDashboard = new MemberDashboardForm();
+                // memberDashboard.Show();
+                this.Hide();
+                return;
+            }
+
+            // ARCHIVED MEMBER DEMO LOGIN
+            if (email.Equals("anne@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "anne123")
+            {
+                MessageBox.Show("This account is archived and cannot log in.");
                 return;
             }
 

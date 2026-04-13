@@ -121,11 +121,11 @@
             button5.FlatAppearance.BorderSize = 0;
             button5.FlatStyle = FlatStyle.Flat;
             button5.ForeColor = Color.Maroon;
-            button5.Location = new Point(-52, 336);
+            button5.Location = new Point(-63, 336);
             button5.Name = "button5";
             button5.Size = new Size(280, 43);
             button5.TabIndex = 5;
-            button5.Text = "📃  Reports";
+            button5.Text = "💰 Fines";
             button5.UseVisualStyleBackColor = true;
             // 
             // button4
@@ -171,12 +171,12 @@
             button2.FlatStyle = FlatStyle.Flat;
             button2.Font = new Font("Segoe UI", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             button2.ForeColor = Color.Maroon;
-            button2.Location = new Point(-45, 159);
+            button2.Location = new Point(-59, 159);
             button2.Margin = new Padding(3, 4, 3, 4);
             button2.Name = "button2";
             button2.Size = new Size(280, 43);
             button2.TabIndex = 2;
-            button2.Text = "👥  Members";
+            button2.Text = "👥  User ";
             button2.UseVisualStyleBackColor = true;
             // 
             // button1
@@ -305,7 +305,7 @@
             time.BackColor = Color.WhiteSmoke;
             time.Font = new Font("Segoe UI Semibold", 11.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             time.ForeColor = Color.Maroon;
-            time.Location = new Point(20, 19);
+            time.Location = new Point(20, 20);
             time.Name = "time";
             time.Size = new Size(168, 20);
             time.TabIndex = 6;
@@ -506,7 +506,7 @@
             panel1.ForeColor = Color.PeachPuff;
             panel1.Location = new Point(226, 637);
             panel1.Name = "panel1";
-            panel1.Size = new Size(1147, 59);
+            panel1.Size = new Size(1147, 69);
             panel1.TabIndex = 14;
             // 
             // ClientDashboardForm
