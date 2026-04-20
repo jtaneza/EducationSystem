@@ -6,6 +6,15 @@ namespace EducationSystem
 {
     public class ClientDialogForm : Form
     {
+        private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color Surface = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color Outline = ColorTranslator.FromHtml("#DDE4E6");
+        private readonly Color Primary = ColorTranslator.FromHtml("#00B894");
+        private readonly Color PrimaryDark = ColorTranslator.FromHtml("#006B55");
+        private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color SecondaryText = ColorTranslator.FromHtml("#6B7E95");
+
         private Label lblTitle = null!;
         private Label lblClientId = null!;
         private Label lblLibraryName = null!;
@@ -55,28 +64,6 @@ namespace EducationSystem
             }
         }
 
-        private void StyleButton(Button btn, Color baseColor, Color hoverColor)
-        {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.UseVisualStyleBackColor = false;
-            btn.BackColor = baseColor;
-            btn.ForeColor = Color.White;
-
-            btn.MouseEnter += (s, e) =>
-            {
-                btn.BackColor = hoverColor;
-                if (baseColor == Color.Maroon)
-                    btn.ForeColor = Color.Black;
-            };
-
-            btn.MouseLeave += (s, e) =>
-            {
-                btn.BackColor = baseColor;
-                btn.ForeColor = Color.White;
-            };
-        }
-
         private void BuildUI(string formTitle)
         {
             Text = formTitle;
@@ -84,136 +71,161 @@ namespace EducationSystem
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = new Size(470, 380);
-            BackColor = Color.Snow;
+            ShowInTaskbar = false;
+            ClientSize = new Size(560, 470);
+            BackColor = Background;
+            Font = new Font("Segoe UI", 10F);
 
-            lblTitle = new Label();
-            lblTitle.Text = formTitle;
-            lblTitle.Font = new Font("Segoe UI", 14, FontStyle.Bold);
-            lblTitle.ForeColor = Color.Maroon;
-            lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(25, 20);
+            Panel card = new Panel
+            {
+                BackColor = Surface,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(18, 18),
+                Size = new Size(524, 434)
+            };
+            Controls.Add(card);
 
-            lblClientId = new Label();
-            lblClientId.Text = "Client ID";
-            lblClientId.Location = new Point(30, 70);
-            lblClientId.AutoSize = true;
+            lblTitle = new Label
+            {
+                Text = formTitle,
+                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true,
+                Location = new Point(28, 24)
+            };
 
-            txtClientId = new TextBox();
-            txtClientId.Location = new Point(170, 67);
-            txtClientId.Size = new Size(230, 27);
+            lblClientId = CreateLabel("Client ID", 28, 88);
+            lblLibraryName = CreateLabel("Library Name", 28, 138);
+            lblEmail = CreateLabel("Email", 28, 188);
+            lblPassword = CreateLabel("Password", 28, 238);
+            lblConfirmPassword = CreateLabel("Confirm Password", 28, 288);
+            lblStatus = CreateLabel("Status", 28, 338);
+
+            txtClientId = CreateTextBox(170, 84, 300);
             txtClientId.ReadOnly = true;
-            txtClientId.BackColor = Color.WhiteSmoke;
+            txtClientId.BackColor = SurfaceLow;
 
-            lblLibraryName = new Label();
-            lblLibraryName.Text = "Library Name";
-            lblLibraryName.Location = new Point(30, 110);
-            lblLibraryName.AutoSize = true;
+            txtLibraryName = CreateTextBox(170, 134, 300);
+            txtEmail = CreateTextBox(170, 184, 300);
 
-            txtLibraryName = new TextBox();
-            txtLibraryName.Location = new Point(170, 107);
-            txtLibraryName.Size = new Size(230, 27);
-
-            lblEmail = new Label();
-            lblEmail.Text = "Email";
-            lblEmail.Location = new Point(30, 150);
-            lblEmail.AutoSize = true;
-
-            txtEmail = new TextBox();
-            txtEmail.Location = new Point(170, 147);
-            txtEmail.Size = new Size(230, 27);
-
-            lblPassword = new Label();
-            lblPassword.Text = "Password";
-            lblPassword.Location = new Point(30, 190);
-            lblPassword.AutoSize = true;
-
-            txtPassword = new TextBox();
-            txtPassword.Location = new Point(170, 187);
-            txtPassword.Size = new Size(190, 27);
+            txtPassword = CreateTextBox(170, 234, 260);
             txtPassword.UseSystemPasswordChar = true;
 
-            btnShowPassword = new Button();
-            btnShowPassword.Text = "👁";
-            btnShowPassword.Location = new Point(365, 186);
-            btnShowPassword.Size = new Size(35, 29);
-            btnShowPassword.FlatStyle = FlatStyle.Flat;
-            btnShowPassword.FlatAppearance.BorderSize = 0;
-            btnShowPassword.FlatAppearance.MouseDownBackColor = Color.Transparent;
-            btnShowPassword.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnShowPassword.BackColor = Color.Transparent;
-            btnShowPassword.Cursor = Cursors.Hand;
-            btnShowPassword.TabStop = false;
+            btnShowPassword = CreateEyeButton(436, 234);
             btnShowPassword.Click += TogglePasswordVisibility;
 
-            lblConfirmPassword = new Label();
-            lblConfirmPassword.Text = "Confirm Password";
-            lblConfirmPassword.Location = new Point(30, 230);
-            lblConfirmPassword.AutoSize = true;
-
-            txtConfirmPassword = new TextBox();
-            txtConfirmPassword.Location = new Point(170, 227);
-            txtConfirmPassword.Size = new Size(190, 27);
+            txtConfirmPassword = CreateTextBox(170, 284, 260);
             txtConfirmPassword.UseSystemPasswordChar = true;
 
-            btnShowConfirmPassword = new Button();
-            btnShowConfirmPassword.Text = "👁";
-            btnShowConfirmPassword.Location = new Point(365, 226);
-            btnShowConfirmPassword.Size = new Size(35, 29);
-            btnShowConfirmPassword.FlatStyle = FlatStyle.Flat;
-            btnShowConfirmPassword.FlatAppearance.BorderSize = 0;
-            btnShowConfirmPassword.FlatAppearance.MouseDownBackColor = Color.Transparent;
-            btnShowConfirmPassword.FlatAppearance.MouseOverBackColor = Color.Transparent;
-            btnShowConfirmPassword.BackColor = Color.Transparent;
-            btnShowConfirmPassword.Cursor = Cursors.Hand;
-            btnShowConfirmPassword.TabStop = false;
+            btnShowConfirmPassword = CreateEyeButton(436, 284);
             btnShowConfirmPassword.Click += ToggleConfirmPasswordVisibility;
 
-            lblStatus = new Label();
-            lblStatus.Text = "Status";
-            lblStatus.Location = new Point(30, 270);
-            lblStatus.AutoSize = true;
-
-            cmbStatus = new ComboBox();
-            cmbStatus.DropDownStyle = ComboBoxStyle.DropDownList;
-            cmbStatus.Location = new Point(170, 267);
-            cmbStatus.Size = new Size(230, 28);
+            cmbStatus = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(170, 334),
+                Size = new Size(300, 34),
+                Font = new Font("Segoe UI", 10F),
+                BackColor = Surface,
+                ForeColor = OnSurface,
+                FlatStyle = FlatStyle.Flat
+            };
             cmbStatus.Items.AddRange(new object[] { "Active", "Inactive" });
 
-            btnSave = new Button();
-            btnSave.Text = "Save";
-            btnSave.Location = new Point(240, 320);
-            btnSave.Size = new Size(75, 32);
-            StyleButton(btnSave, Color.Maroon, Color.FromArgb(230, 230, 230));
+            btnSave = new Button
+            {
+                Text = "Save",
+                Location = new Point(314, 386),
+                Size = new Size(74, 36),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Primary,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
 
-            this.AcceptButton = btnSave;
-            this.CancelButton = btnCancel;
-
-            btnCancel = new Button();
-            btnCancel.Text = "Cancel";
-            btnCancel.Location = new Point(325, 320);
-            btnCancel.Size = new Size(75, 32);
-            StyleButton(btnCancel, Color.Gray, Color.Silver);
+            btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(396, 386),
+                Size = new Size(74, 36),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = ColorTranslator.FromHtml("#8C98A4"),
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+            btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) => DialogResult = DialogResult.Cancel;
 
-            Controls.Add(lblTitle);
-            Controls.Add(lblClientId);
-            Controls.Add(txtClientId);
-            Controls.Add(lblLibraryName);
-            Controls.Add(txtLibraryName);
-            Controls.Add(lblEmail);
-            Controls.Add(txtEmail);
-            Controls.Add(lblPassword);
-            Controls.Add(txtPassword);
-            Controls.Add(btnShowPassword);
-            Controls.Add(lblConfirmPassword);
-            Controls.Add(txtConfirmPassword);
-            Controls.Add(btnShowConfirmPassword);
-            Controls.Add(lblStatus);
-            Controls.Add(cmbStatus);
-            Controls.Add(btnSave);
-            Controls.Add(btnCancel);
+            AcceptButton = btnSave;
+            CancelButton = btnCancel;
+
+            card.Controls.Add(lblTitle);
+            card.Controls.Add(lblClientId);
+            card.Controls.Add(lblLibraryName);
+            card.Controls.Add(lblEmail);
+            card.Controls.Add(lblPassword);
+            card.Controls.Add(lblConfirmPassword);
+            card.Controls.Add(lblStatus);
+
+            card.Controls.Add(txtClientId);
+            card.Controls.Add(txtLibraryName);
+            card.Controls.Add(txtEmail);
+            card.Controls.Add(txtPassword);
+            card.Controls.Add(btnShowPassword);
+            card.Controls.Add(txtConfirmPassword);
+            card.Controls.Add(btnShowConfirmPassword);
+            card.Controls.Add(cmbStatus);
+
+            card.Controls.Add(btnSave);
+            card.Controls.Add(btnCancel);
+        }
+
+        private Label CreateLabel(string text, int x, int y)
+        {
+            return new Label
+            {
+                Text = text,
+                Location = new Point(x, y),
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                ForeColor = OnSurface
+            };
+        }
+
+        private TextBox CreateTextBox(int x, int y, int width)
+        {
+            TextBox txt = new TextBox
+            {
+                Location = new Point(x, y),
+                Size = new Size(width, 32),
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = OnSurface,
+                BackColor = Surface,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            return txt;
+        }
+
+        private Button CreateEyeButton(int x, int y)
+        {
+            Button btn = new Button
+            {
+                Text = "👁",
+                Location = new Point(x, y),
+                Size = new Size(34, 32),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = SurfaceLow,
+                ForeColor = SecondaryText,
+                Cursor = Cursors.Hand,
+                TabStop = false
+            };
+            btn.FlatAppearance.BorderColor = Outline;
+            btn.FlatAppearance.BorderSize = 1;
+            return btn;
         }
 
         private void TogglePasswordVisibility(object? sender, EventArgs e)

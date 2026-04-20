@@ -1,6 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Compile Update="BookCatalogForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BookManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="BorrowingViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="CategoryManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="ClientDashboardForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -8,6 +20,12 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="ClientSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ClientViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FinesViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\ArchiveForm.cs">
@@ -38,6 +56,24 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="Forms\SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LibrarianViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LibrarySetupForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LogsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MemberViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ReportsViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ReturnsViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="UserEntryForm.cs">

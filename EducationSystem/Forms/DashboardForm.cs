@@ -1,22 +1,105 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using System.Windows.Forms.DataVisualization.Charting;
 
 namespace EducationSystem
 {
     public partial class DashboardForm : Form
     {
-        private System.Windows.Forms.Timer clockTimer = new System.Windows.Forms.Timer();
+        private readonly System.Windows.Forms.Timer clockTimer = new System.Windows.Forms.Timer();
         private bool isLoggingOut = false;
 
         private FlowLayoutPanel userHeaderPanel = new FlowLayoutPanel();
         private Panel userHeaderHost = new Panel();
         private Panel sidebarBrandPanel = new Panel();
 
-        private Label welcomeLabel = new Label();
+        private TextBox topSearchBox = new TextBox();
+        private Panel topSearchHost = new Panel();
+        private Label topSearchIcon = new Label();
+
+        private Label dashboardSubTitle = new Label();
+       
+
+        // Dynamic sidebar
+        private FlowLayoutPanel superAdminMenuHost = null!;
+        private Button navDashboard = null!;
+        private Button navManageClients = null!;
+        private Button navMonitorSystem = null!;
+        private Button navConfigureModules = null!;
+        private Button navViewBookCatalog = null!;
+        private Button navViewUser = null!;
+        private Button navViewCirculation = null!;
+        private Button navViewReports = null!;
+        private Button navArchive = null!;
+        private Button navSignOut = null!;
+        private Panel sidebarBottomPanel = null!;
+
+        private Panel userSubMenuPanel = null!;
+        private Panel circulationSubMenuPanel = null!;
+        private Button navClient = null!;
+        private Button navLibrarian = null!;
+        private Button navMember = null!;
+        private Button navBorrowing = null!;
+        private Button navReturns = null!;
+        private Button navFines = null!;
+        private Label sidebarSubTitleLabel = null!;
+        private Button? activeNavButton = null;
+        private bool userMenuExpanded = true;
+        private bool circulationMenuExpanded = true;
+
+        // Dashboard home panels
+        private Panel heroLibrariesCard = new Panel();
+        private Panel heroUsersCard = new Panel();
+        private Panel heroAlertsCard = new Panel();
+
+        private Label lblHeroLibrariesTitle = new Label();
+        private Label lblHeroLibrariesValue = new Label();
+        private Label lblHeroLibrariesTrend = new Label();
+        private Label lblHeroUsersTitle = new Label();
+        private Label lblHeroUsersValue = new Label();
+        private Label lblHeroAlertsTitle = new Label();
+        private Label lblHeroAlertsValue = new Label();
+
+        private Panel speedPanel = new Panel();
+        private Label lblSpeedTitle = new Label();
+        private Label lblSpeedSub = new Label();
+        private Panel speedChartCard = new Panel();
+        private readonly List<Panel> speedBars = new List<Panel>();
+
+        private Panel librariesPanel = new Panel();
+        private Label lblLibrariesTitle = new Label();
+        private LinkLabel lnkSeeAll = new LinkLabel();
+        private DataGridView dgvLibraries = new DataGridView();
+
+        private Panel eventsPanel = new Panel();
+        private Label lblEventsTitle = new Label();
+        private FlowLayoutPanel eventsFlow = new FlowLayoutPanel();
+        private Button fabMonitor = new Button();
+
+        // Palette
+        private readonly Color SidebarBack = ColorTranslator.FromHtml("#2B3234");
+        private readonly Color SidebarDeep = ColorTranslator.FromHtml("#1F2628");
+        private readonly Color SidebarHover = Color.FromArgb(58, 66, 68);
+        private readonly Color SidebarActive = Color.FromArgb(18, 0, 184, 148);
+        private readonly Color AccentMint = ColorTranslator.FromHtml("#6DFAD2");
+        private readonly Color AccentEmerald = ColorTranslator.FromHtml("#00B894");
+        private readonly Color AccentDeep = ColorTranslator.FromHtml("#006B55");
+
+        private readonly Color FormBack = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color TopBack = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color FooterBack = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color CardBack = Color.White;
+        private readonly Color CardSoft = ColorTranslator.FromHtml("#E8EFF1");
+        private readonly Color CardSoftLow = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color CardDark = ColorTranslator.FromHtml("#2B3234");
+        private readonly Color Outline = ColorTranslator.FromHtml("#BBCAC3");
+        private readonly Color PrimaryText = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color SecondaryText = ColorTranslator.FromHtml("#64748B");
+        private readonly Color Tertiary = ColorTranslator.FromHtml("#A03F30");
+        private readonly Color GoodSoft = ColorTranslator.FromHtml("#B7EBD7");
 
         public DashboardForm()
         {
@@ -24,8 +107,11 @@ namespace EducationSystem
 
             SetupResponsiveShell();
             SetupSidebarBranding();
+            BuildSuperAdminSidebar();
+            BuildSuperAdminSidebar();
             SetupResponsiveHeader();
-            SetupExtraLabels();
+            SetupTopSearch();
+            SetupDashboardHome();
 
             profileToolStripMenuItem.Click += profileToolStripMenuItem_Click;
             settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
@@ -39,32 +125,8 @@ namespace EducationSystem
             button7.Click += ArchiveButton_Click;
             button8.Click += button8_Click;
 
-            StyleSidebarButton(button1);
-            StyleSidebarButton(button2);
-            StyleSidebarButton(button3);
-            StyleSidebarButton(button4);
-            StyleSidebarButton(button5);
-            StyleSidebarButton(button6);
-            StyleSidebarButton(button7);
-            StyleSidebarButton(button8);
-
-            StyleDashboardCard(TotalClients);
-            StyleDashboardCard(TotalMembers);
-            StyleDashboardCard(TotalBooks);
-            StyleDashboardCard(ActiveBorrowings);
-
-            TotalClients.Click += (s, e) => LoadContentForm(new ClientsForm());
-            TotalMembers.Click += (s, e) => LoadContentForm(new ClientsForm());
-            TotalBooks.Click += (s, e) => LoadContentForm(new MonitoringForm());
-            ActiveBorrowings.Click += (s, e) => LoadContentForm(new ArchiveForm());
-
-            foreach (Control c in TotalClients.Controls) c.Click += (s, e) => LoadContentForm(new ClientsForm());
-            foreach (Control c in TotalMembers.Controls) c.Click += (s, e) => LoadContentForm(new ClientsForm());
-            foreach (Control c in TotalBooks.Controls) c.Click += (s, e) => LoadContentForm(new MonitoringForm());
-            foreach (Control c in ActiveBorrowings.Controls) c.Click += (s, e) => LoadContentForm(new ArchiveForm());
-
-            this.Load += DashboardForm_Load;
-            this.Resize += DashboardForm_Resize;
+            Load += DashboardForm_Load;
+            Resize += DashboardForm_Resize;
             topbar.Resize += (s, e) => PositionResponsiveHeader();
             Sidebar.Resize += (s, e) => LayoutSidebar();
         }
@@ -72,16 +134,15 @@ namespace EducationSystem
         private void DashboardForm_Load(object? sender, EventArgs e)
         {
             LoadUserInfo();
+            RefreshDashboardData();
             ApplyTheme(UserSession.Theme);
             StartClock();
-            RefreshDashboardCounts();
-            LoadLineChart();
-            LoadPieChart();
-            LoadSuperAdminCardIcons();
 
-            label4.Text = "Super Admin Dashboard";
+            label4.Text = "Dashboard";
             panelContent.Visible = false;
 
+            SetActiveNavButton(navDashboard);
+            UpdateTopHeaderSearchVisibility();
             ApplyResponsiveLayout();
         }
 
@@ -98,32 +159,53 @@ namespace EducationSystem
             panel1.Dock = DockStyle.Bottom;
             panelContent.Dock = DockStyle.Fill;
 
-            topbar.Height = 60;
-            panel1.Height = 45;
+            topbar.Height = 68;
+            panel1.Height = 40;
 
-            this.MinimumSize = new Size(1000, 650);
+            MinimumSize = new Size(1180, 760);
+            BackColor = FormBack;
+
+            AutoScroll = true;
+            AutoScrollMinSize = new Size(0, 1200);
         }
+
+        private void UpdateTopHeaderSearchVisibility()
+        {
+            if (topSearchHost == null) return;
+
+            topSearchHost.Visible = !panelContent.Visible;
+        }
+
 
         private void SetupSidebarBranding()
         {
             if (!Sidebar.Controls.Contains(sidebarBrandPanel))
             {
                 sidebarBrandPanel.Name = "sidebarBrandPanel";
-                sidebarBrandPanel.Height = 78;
+                sidebarBrandPanel.Height = 104;
                 sidebarBrandPanel.Dock = DockStyle.Top;
-                sidebarBrandPanel.BackColor = Color.SeaShell;
+                sidebarBrandPanel.BackColor = SidebarBack;
 
                 if (pictureBox1.Parent != null) pictureBox1.Parent.Controls.Remove(pictureBox1);
                 if (label1.Parent != null) label1.Parent.Controls.Remove(label1);
 
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-                pictureBox1.BackColor = Color.SeaShell;
-                label1.BackColor = Color.SeaShell;
+                pictureBox1.BackColor = SidebarBack;
+                label1.BackColor = SidebarBack;
+
+                sidebarSubTitleLabel = new Label
+                {
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                    ForeColor = Color.FromArgb(190, 203, 210),
+                    BackColor = SidebarBack,
+                    Text = "Super Admin Dashboard"
+                };
 
                 sidebarBrandPanel.Controls.Add(pictureBox1);
                 sidebarBrandPanel.Controls.Add(label1);
+                sidebarBrandPanel.Controls.Add(sidebarSubTitleLabel);
                 Sidebar.Controls.Add(sidebarBrandPanel);
-
                 sidebarBrandPanel.BringToFront();
             }
 
@@ -133,45 +215,445 @@ namespace EducationSystem
         private void LayoutSidebarBranding(bool showText)
         {
             sidebarBrandPanel.Width = Sidebar.Width;
-            sidebarBrandPanel.Height = showText ? 74 : 60;
+            sidebarBrandPanel.Height = showText ? 104 : 72;
 
             if (showText)
             {
                 pictureBox1.Visible = true;
                 label1.Visible = true;
+                sidebarSubTitleLabel.Visible = true;
 
-                pictureBox1.Size = new Size(36, 36);
-                pictureBox1.Location = new Point(18, 18);
+                pictureBox1.Size = new Size(38, 38);
+                pictureBox1.Location = new Point(18, 22);
 
                 label1.AutoSize = true;
-                label1.TextAlign = ContentAlignment.MiddleLeft;
-                label1.Location = new Point(58, 24);
+                label1.Text = "LibraFlow ERP";
+                label1.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+                label1.ForeColor = AccentMint;
+                label1.Location = new Point(64, 24);
+
+                sidebarSubTitleLabel.Location = new Point(64, 50);
             }
             else
             {
                 pictureBox1.Visible = true;
                 label1.Visible = false;
+                sidebarSubTitleLabel.Visible = false;
 
                 pictureBox1.Size = new Size(34, 34);
-                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 13);
+                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 18);
             }
         }
 
-        private void SetupExtraLabels()
+        private void BuildSuperAdminSidebar()
         {
-            if (!Controls.Contains(welcomeLabel))
+            button1.Visible = false;
+            button2.Visible = false;
+            button3.Visible = false;
+            button4.Visible = false;
+            button5.Visible = false;
+            button6.Visible = false;
+            button7.Visible = false;
+            button8.Visible = false;
+
+            if (superAdminMenuHost != null && Sidebar.Controls.Contains(superAdminMenuHost))
+                return;
+
+            sidebarBottomPanel = new Panel
             {
-                welcomeLabel.Name = "welcomeLabel";
-                welcomeLabel.AutoSize = true;
-                welcomeLabel.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
-                welcomeLabel.ForeColor = Color.Maroon;
-                welcomeLabel.BackColor = Color.SeaShell;
-                Controls.Add(welcomeLabel);
-                welcomeLabel.BringToFront();
+                Dock = DockStyle.Bottom,
+                Height = 86,
+                BackColor = SidebarBack,
+                Padding = new Padding(14, 12, 14, 14)
+            };
+
+            superAdminMenuHost = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = true,
+                BackColor = SidebarBack,
+                Dock = DockStyle.Fill,
+                Padding = new Padding(14, 10, 14, 10)
+            };
+
+            navDashboard = CreateSidebarNavButton("▦", "Dashboard");
+            navManageClients = CreateSidebarNavButton("✦", "Manage Client Libraries");
+            navMonitorSystem = CreateSidebarNavButton("◉", "Monitor System");
+            navConfigureModules = CreateSidebarNavButton("⚙", "Configure Modules");
+            navViewBookCatalog = CreateSidebarNavButton("📖", "View Book Catalog");
+            navViewUser = CreateSidebarNavButton("👥", "View User", true);
+            navViewCirculation = CreateSidebarNavButton("⇄", "View Circulation", true);
+            navViewReports = CreateSidebarNavButton("〽", "View Reports");
+            navArchive = CreateSidebarNavButton("🗂", "Archive");
+            navSignOut = CreateSidebarNavButton("⏻", "Sign Out");
+
+            navClient = CreateSidebarSubButton("Client");
+            navLibrarian = CreateSidebarSubButton("Librarian");
+            navMember = CreateSidebarSubButton("Member");
+            navBorrowing = CreateSidebarSubButton("View Borrowing");
+            navReturns = CreateSidebarSubButton("View Returns");
+            navFines = CreateSidebarSubButton("View Fines");
+
+            userSubMenuPanel = CreateSubMenuPanel();
+            userSubMenuPanel.Controls.Add(navClient);
+            userSubMenuPanel.Controls.Add(navLibrarian);
+            userSubMenuPanel.Controls.Add(navMember);
+
+            circulationSubMenuPanel = CreateSubMenuPanel();
+            circulationSubMenuPanel.Controls.Add(navBorrowing);
+            circulationSubMenuPanel.Controls.Add(navReturns);
+            circulationSubMenuPanel.Controls.Add(navFines);
+
+            LayoutSubMenuButtons();
+
+            superAdminMenuHost.Controls.Add(navDashboard);
+            superAdminMenuHost.Controls.Add(navManageClients);
+            superAdminMenuHost.Controls.Add(navMonitorSystem);
+            superAdminMenuHost.Controls.Add(navConfigureModules);
+            superAdminMenuHost.Controls.Add(navViewBookCatalog);
+            superAdminMenuHost.Controls.Add(navViewUser);
+            superAdminMenuHost.Controls.Add(userSubMenuPanel);
+            superAdminMenuHost.Controls.Add(navViewCirculation);
+            superAdminMenuHost.Controls.Add(circulationSubMenuPanel);
+            superAdminMenuHost.Controls.Add(navViewReports);
+            superAdminMenuHost.Controls.Add(navArchive);
+
+            sidebarBottomPanel.Controls.Add(navSignOut);
+
+            Sidebar.Controls.Add(superAdminMenuHost);
+            Sidebar.Controls.Add(sidebarBottomPanel);
+
+            sidebarBottomPanel.BringToFront();
+            superAdminMenuHost.BringToFront();
+
+            navDashboard.Click += (s, e) =>
+            {
+                SetActiveNavButton(navDashboard);
+                ShowDashboardHome();
+            };
+
+            navManageClients.Click += (s, e) =>
+            {
+                SetActiveNavButton(navManageClients);
+                LoadContentForm(new ClientsForm());
+            };
+
+            navMonitorSystem.Click += (s, e) =>
+            {
+                SetActiveNavButton(navMonitorSystem);
+                LoadContentForm(new MonitoringForm());
+            };
+
+            navConfigureModules.Click += (s, e) =>
+            {
+                SetActiveNavButton(navConfigureModules);
+                LoadContentForm(new SettingsForm());
+            };
+
+            navViewBookCatalog.Click += (s, e) =>
+            {
+                SetActiveNavButton(navViewBookCatalog);
+                LoadContentForm(new BookCatalogForm());
+            };
+
+            navArchive.Click += (s, e) =>
+            {
+                SetActiveNavButton(navArchive);
+                LoadContentForm(new ArchiveForm());
+            };
+
+            navClient.Click += (s, e) =>
+            {
+                SetActiveNavButton(navClient);
+                LoadContentForm(new ClientViewForm());
+
+                userMenuExpanded = false;
+                userSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewUser, false);
+                LayoutSidebar();
+            };
+
+            navLibrarian.Click += (s, e) =>
+            {
+                SetActiveNavButton(navLibrarian);
+                LoadContentForm(new LibrarianViewForm());
+
+                userMenuExpanded = false;
+                userSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewUser, false);
+                LayoutSidebar();
+            };
+
+            navMember.Click += (s, e) =>
+            {
+                SetActiveNavButton(navMember);
+                LoadContentForm(new MemberViewForm());
+
+                userMenuExpanded = false;
+                userSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewUser, false);
+                LayoutSidebar();
+            };
+
+            navBorrowing.Click += (s, e) =>
+            {
+                SetActiveNavButton(navBorrowing);
+                LoadContentForm(new BorrowingViewForm());
+
+                circulationMenuExpanded = false;
+                circulationSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewCirculation, false);
+                LayoutSidebar();
+            };
+
+            navReturns.Click += (s, e) =>
+            {
+                SetActiveNavButton(navReturns);
+                LoadContentForm(new ReturnsViewForm());
+
+                circulationMenuExpanded = false;
+                circulationSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewCirculation, false);
+                LayoutSidebar();
+            };
+
+            navFines.Click += (s, e) =>
+            {
+                SetActiveNavButton(navFines);
+                LoadContentForm(new FinesViewForm());
+
+                circulationMenuExpanded = false;
+                circulationSubMenuPanel.Visible = false;
+                UpdateParentArrow(navViewCirculation, false);
+                LayoutSidebar();
+            };
+
+            navViewReports.Click += (s, e) =>
+            {
+                SetActiveNavButton(navViewReports);
+                LoadContentForm(new ReportsViewForm());
+            };
+
+            navViewUser.Click += (s, e) =>
+            {
+                userMenuExpanded = !userMenuExpanded;
+                userSubMenuPanel.Visible = userMenuExpanded;
+                UpdateParentArrow(navViewUser, userMenuExpanded);
+                LayoutSidebar();
+            };
+
+            navViewCirculation.Click += (s, e) =>
+            {
+                circulationMenuExpanded = !circulationMenuExpanded;
+                circulationSubMenuPanel.Visible = circulationMenuExpanded;
+                UpdateParentArrow(navViewCirculation, circulationMenuExpanded);
+                LayoutSidebar();
+            };
+
+            navSignOut.Click += (s, e) => DoLogout();
+
+            SetActiveNavButton(navDashboard);
+        }
+
+        private Button CreateSidebarNavButton(string icon, string text, bool hasArrow = false)
+        {
+            Button btn = new Button
+            {
+                Width = 220,
+                Height = 52,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = SidebarBack,
+                ForeColor = Color.FromArgb(214, 222, 228),
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(16, 0, 16, 0),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, 0, 6),
+                Tag = hasArrow
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = SidebarHover;
+            btn.FlatAppearance.MouseDownBackColor = SidebarHover;
+            btn.Text = hasArrow ? $"{icon}  {text}        ▾" : $"{icon}  {text}";
+
+            return btn;
+        }
+
+        private Button CreateSidebarSubButton(string text)
+        {
+            Button btn = new Button
+            {
+                Width = 180,
+                Height = 34,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = SidebarBack,
+                ForeColor = Color.FromArgb(172, 183, 191),
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(28, 0, 0, 0),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(18, 0, 0, 4),
+                Text = text
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 255, 255, 255);
+            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(40, 255, 255, 255);
+
+            return btn;
+        }
+
+        private Panel CreateSubMenuPanel()
+        {
+            return new Panel
+            {
+                Width = 220,
+                Height = 0,
+                BackColor = SidebarBack,
+                Margin = new Padding(0, -2, 0, 6)
+            };
+        }
+
+        private void LayoutSubMenuButtons()
+        {
+            if (userSubMenuPanel != null)
+            {
+                int top = 0;
+
+                navClient.Location = new Point(18, top);
+                navClient.Width = userSubMenuPanel.Width - 18;
+
+                top += navClient.Height + 4;
+
+                navLibrarian.Location = new Point(18, top);
+                navLibrarian.Width = userSubMenuPanel.Width - 18;
+
+                top += navLibrarian.Height + 4;
+
+                navMember.Location = new Point(18, top);
+                navMember.Width = userSubMenuPanel.Width - 18;
             }
 
-            time.AutoSize = true;
-            time.TextAlign = ContentAlignment.MiddleLeft;
+            if (circulationSubMenuPanel != null)
+            {
+                int top = 0;
+
+                navBorrowing.Location = new Point(18, top);
+                navBorrowing.Width = circulationSubMenuPanel.Width - 18;
+
+                top += navBorrowing.Height + 4;
+
+                navReturns.Location = new Point(18, top);
+                navReturns.Width = circulationSubMenuPanel.Width - 18;
+
+                top += navReturns.Height + 4;
+
+                navFines.Location = new Point(18, top);
+                navFines.Width = circulationSubMenuPanel.Width - 18;
+            }
+        }
+
+        private void UpdateParentArrow(Button btn, bool expanded)
+        {
+            string raw = btn.Text;
+            if (raw.EndsWith("▾") || raw.EndsWith("▸"))
+                raw = raw.Substring(0, raw.Length - 1).TrimEnd();
+
+            btn.Text = expanded ? raw + "  ▾" : raw + "  ▸";
+        }
+
+        private void SetActiveNavButton(Button btn)
+        {
+            activeNavButton = btn;
+            ApplyNewSidebarVisualState();
+        }
+
+        private void ApplyNewSidebarVisualState()
+        {
+            if (superAdminMenuHost == null) return;
+
+            foreach (Control ctrl in superAdminMenuHost.Controls)
+            {
+                if (ctrl is Button btn && btn != navSignOut)
+                {
+                    btn.BackColor = SidebarBack;
+                    btn.ForeColor = Color.FromArgb(214, 222, 228);
+                }
+                else if (ctrl is Panel panel)
+                {
+                    foreach (Control sub in panel.Controls)
+                    {
+                        if (sub is Button subBtn)
+                        {
+                            subBtn.BackColor = SidebarBack;
+                            subBtn.ForeColor = Color.FromArgb(172, 183, 191);
+                        }
+                    }
+                }
+            }
+
+            if (activeNavButton != null)
+            {
+                activeNavButton.BackColor = Color.FromArgb(25, 0, 184, 148);
+                activeNavButton.ForeColor = AccentMint;
+            }
+
+            navSignOut.BackColor = Color.FromArgb(18, 255, 255, 255);
+            navSignOut.ForeColor = Color.FromArgb(255, 138, 128);
+        }
+
+        private void SetupTopSearch()
+        {
+            if (topbar.Controls.Contains(topSearchHost)) return;
+
+            topSearchHost = new Panel
+            {
+                BackColor = ColorTranslator.FromHtml("#F1F5F9"),
+                Height = 38,
+                Width = 420
+            };
+
+            topSearchIcon = new Label
+            {
+                Text = "⌕",
+                Font = new Font("Segoe UI Symbol", 15F, FontStyle.Regular),
+                ForeColor = SecondaryText,
+                AutoSize = true,
+                BackColor = Color.Transparent
+            };
+
+            topSearchBox = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                BackColor = topSearchHost.BackColor,
+                ForeColor = SecondaryText,
+                Font = new Font("Segoe UI", 10F),
+                Text = "Search system resources..."
+            };
+
+            topSearchBox.GotFocus += (s, e) =>
+            {
+                if (topSearchBox.Text == "Search system resources...")
+                {
+                    topSearchBox.Text = "";
+                    topSearchBox.ForeColor = PrimaryText;
+                }
+            };
+
+            topSearchBox.LostFocus += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(topSearchBox.Text))
+                {
+                    topSearchBox.Text = "Search system resources...";
+                    topSearchBox.ForeColor = SecondaryText;
+                }
+            };
+
+            topSearchHost.Controls.Add(topSearchIcon);
+            topSearchHost.Controls.Add(topSearchBox);
+            topbar.Controls.Add(topSearchHost);
         }
 
         private void SetupResponsiveHeader()
@@ -183,9 +665,9 @@ namespace EducationSystem
             userHeaderPanel.SuspendLayout();
 
             userHeaderHost.Name = "userHeaderHost";
-            userHeaderHost.BackColor = Color.SeaShell;
+            userHeaderHost.BackColor = TopBack;
             userHeaderHost.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            userHeaderHost.Height = 50;
+            userHeaderHost.Height = 52;
 
             userHeaderPanel.Name = "userHeaderPanel";
             userHeaderPanel.AutoSize = true;
@@ -194,30 +676,31 @@ namespace EducationSystem
             userHeaderPanel.FlowDirection = FlowDirection.LeftToRight;
             userHeaderPanel.Margin = new Padding(0);
             userHeaderPanel.Padding = new Padding(0);
-            userHeaderPanel.BackColor = Color.SeaShell;
+            userHeaderPanel.BackColor = TopBack;
 
             if (ProfileImage.Parent != null) ProfileImage.Parent.Controls.Remove(ProfileImage);
             if (username.Parent != null) username.Parent.Controls.Remove(username);
             if (dropdownarrow.Parent != null) dropdownarrow.Parent.Controls.Remove(dropdownarrow);
 
-            ProfileImage.Size = new Size(32, 32);
+            ProfileImage.Size = new Size(38, 38);
             ProfileImage.SizeMode = PictureBoxSizeMode.Zoom;
-            ProfileImage.Margin = new Padding(0, 9, 8, 0);
+            ProfileImage.Margin = new Padding(0, 7, 10, 0);
             ProfileImage.Cursor = Cursors.Hand;
-            ProfileImage.BackColor = Color.SeaShell;
+            ProfileImage.BackColor = TopBack;
 
             username.AutoSize = true;
             username.MaximumSize = new Size(220, 0);
             username.AutoEllipsis = true;
             username.TextAlign = ContentAlignment.MiddleLeft;
-            username.Margin = new Padding(0, 13, 8, 0);
-            username.BackColor = Color.SeaShell;
+            username.Margin = new Padding(0, 14, 8, 0);
+            username.BackColor = TopBack;
+            username.Font = new Font("Segoe UI", 10.5F, FontStyle.Bold);
 
             dropdownarrow.AutoSize = true;
             dropdownarrow.TextAlign = ContentAlignment.MiddleLeft;
-            dropdownarrow.Margin = new Padding(0, 13, 0, 0);
+            dropdownarrow.Margin = new Padding(0, 14, 0, 0);
             dropdownarrow.Cursor = Cursors.Hand;
-            dropdownarrow.BackColor = Color.SeaShell;
+            dropdownarrow.BackColor = TopBack;
 
             userHeaderPanel.Controls.Add(ProfileImage);
             userHeaderPanel.Controls.Add(username);
@@ -237,7 +720,6 @@ namespace EducationSystem
             if (!topbar.Controls.Contains(userHeaderHost)) return;
 
             userHeaderPanel.PerformLayout();
-
             userHeaderHost.Width = userHeaderPanel.PreferredSize.Width;
             userHeaderHost.Height = Math.Max(50, userHeaderPanel.PreferredSize.Height);
 
@@ -251,24 +733,362 @@ namespace EducationSystem
 
             userHeaderPanel.Location = new Point(0, 0);
             userHeaderHost.BringToFront();
+
+            if (topSearchHost != null)
+            {
+                int leftX = 34;
+                topSearchHost.Location = new Point(leftX, (topbar.Height - topSearchHost.Height) / 2);
+                topSearchHost.Width = Math.Min(700, Math.Max(260, topbar.Width - userHeaderHost.Width - 90));
+                topSearchIcon.Location = new Point(12, 8);
+                topSearchBox.Location = new Point(42, 10);
+                topSearchBox.Width = topSearchHost.Width - 54;
+            }
+        }
+
+        private void SetupDashboardHome()
+        {
+            dashboardSubTitle = new Label
+            {
+                AutoSize = true,
+                Font = new Font("Segoe UI", 11F),
+                ForeColor = SecondaryText,
+                BackColor = Color.Transparent,
+                Text = "Admin Dashboard"
+            };
+
+            CreateHeroCards();
+            SetupSystemSpeedPanel();
+            SetupLibrariesPanel();
+            SetupLatestEventsPanel();
+
+            fabMonitor = new Button
+            {
+                Text = "📈",
+                Size = new Size(58, 58),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = AccentEmerald,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI Emoji", 20F),
+                Cursor = Cursors.Hand,
+                Visible = true
+            };
+            fabMonitor.FlatAppearance.BorderSize = 0;
+            fabMonitor.Click += (s, e) => LoadContentForm(new MonitoringForm());
+
+            Controls.Add(dashboardSubTitle);
+            Controls.Add(heroLibrariesCard);
+            Controls.Add(heroUsersCard);
+            Controls.Add(heroAlertsCard);
+            Controls.Add(speedPanel);
+            Controls.Add(librariesPanel);
+            Controls.Add(eventsPanel);
+            Controls.Add(fabMonitor);
+
+            dashboardSubTitle.BringToFront();
+            heroLibrariesCard.BringToFront();
+            heroUsersCard.BringToFront();
+            heroAlertsCard.BringToFront();
+            speedPanel.BringToFront();
+            librariesPanel.BringToFront();
+            eventsPanel.BringToFront();
+            fabMonitor.BringToFront();
+
+            TotalClients.Visible = false;
+            TotalMembers.Visible = false;
+            TotalBooks.Visible = false;
+            ActiveBorrowings.Visible = false;
+            chart1.Visible = false;
+            chart2.Visible = false;
+        }
+
+        private void CreateHeroCards()
+        {
+            heroLibrariesCard = CreateSoftCard(CardBack);
+            heroUsersCard = CreateSoftCard(CardDark);
+            heroAlertsCard = CreateSoftCard(CardSoft);
+
+            lblHeroLibrariesTitle = CreateLabel("TOTAL LIBRARIES", 11F, FontStyle.Bold, Color.FromArgb(60, 70, 72));
+            lblHeroLibrariesValue = CreateLabel("1,284", 34F, FontStyle.Bold, PrimaryText);
+            lblHeroLibrariesTrend = CreateLabel("↗ +12% from last month", 10.5F, FontStyle.Bold, AccentDeep);
+
+            lblHeroUsersTitle = CreateLabel("CURRENT USERS", 10F, FontStyle.Bold, AccentMint);
+            lblHeroUsersValue = CreateLabel("14.2k", 30F, FontStyle.Bold, AccentMint);
+
+            lblHeroAlertsTitle = CreateLabel("SYSTEM ALERTS", 10F, FontStyle.Bold, Color.FromArgb(60, 70, 72));
+            lblHeroAlertsValue = CreateLabel("03", 30F, FontStyle.Bold, PrimaryText);
+
+            Panel iconUsers = new Panel
+            {
+                Name = "iconUsers",
+                Size = new Size(42, 42),
+                BackColor = Color.FromArgb(30, 109, 250, 210)
+            };
+            Label iconUsersLabel = new Label
+            {
+                Text = "📊",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI Emoji", 15F),
+                ForeColor = AccentMint
+            };
+            iconUsers.Controls.Add(iconUsersLabel);
+
+            Panel iconAlerts = new Panel
+            {
+                Name = "iconAlerts",
+                Size = new Size(42, 42),
+                BackColor = Color.FromArgb(255, 235, 228)
+            };
+            Label iconAlertsLabel = new Label
+            {
+                Text = "⚠",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI Emoji", 15F),
+                ForeColor = Tertiary
+            };
+            iconAlerts.Controls.Add(iconAlertsLabel);
+
+            Label iconGlow = new Label
+            {
+                Text = "✣",
+                AutoSize = true,
+                Font = new Font("Segoe UI Symbol", 70F, FontStyle.Regular),
+                ForeColor = Color.FromArgb(22, 0, 107, 85),
+                BackColor = Color.Transparent,
+                Name = "heroGlow"
+            };
+
+            heroLibrariesCard.Controls.Add(lblHeroLibrariesTitle);
+            heroLibrariesCard.Controls.Add(lblHeroLibrariesValue);
+            heroLibrariesCard.Controls.Add(lblHeroLibrariesTrend);
+            heroLibrariesCard.Controls.Add(iconGlow);
+
+            heroUsersCard.Controls.Add(iconUsers);
+            heroUsersCard.Controls.Add(lblHeroUsersTitle);
+            heroUsersCard.Controls.Add(lblHeroUsersValue);
+
+            heroAlertsCard.Controls.Add(iconAlerts);
+            heroAlertsCard.Controls.Add(lblHeroAlertsTitle);
+            heroAlertsCard.Controls.Add(lblHeroAlertsValue);
+        }
+
+        private void SetupSystemSpeedPanel()
+        {
+            speedPanel = CreateSoftCard(CardSoftLow);
+
+            lblSpeedTitle = CreateLabel("System Speed", 22F, FontStyle.Bold, PrimaryText);
+            lblSpeedSub = CreateLabel("Real-time load balancing across regional nodes", 10.5F, FontStyle.Regular, SecondaryText);
+
+            speedChartCard = CreateSoftCard(CardBack);
+
+            speedBars.Clear();
+
+            for (int i = 0; i < 14; i++)
+            {
+                Panel bar = new Panel
+                {
+                    BackColor = i == 3 || i == 8 || i == 11 ? AccentEmerald : Color.FromArgb(170, 208, 198),
+                    Width = 40,
+                    Height = 80
+                };
+                speedBars.Add(bar);
+                speedChartCard.Controls.Add(bar);
+            }
+
+            speedPanel.Controls.Add(lblSpeedTitle);
+            speedPanel.Controls.Add(lblSpeedSub);
+            speedPanel.Controls.Add(speedChartCard);
+        }
+
+        private void SetupLibrariesPanel()
+        {
+            librariesPanel = CreateSoftCard(CardBack);
+
+            lblLibrariesTitle = CreateLabel("Main Libraries", 14F, FontStyle.Bold, PrimaryText);
+            lnkSeeAll = new LinkLabel
+            {
+                Text = "See All",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                LinkColor = AccentDeep,
+                ActiveLinkColor = AccentEmerald,
+                VisitedLinkColor = AccentDeep
+            };
+
+            dgvLibraries = new DataGridView
+            {
+                BackgroundColor = CardBack,
+                BorderStyle = BorderStyle.None,
+                RowHeadersVisible = false,
+                AllowUserToAddRows = false,
+                AllowUserToResizeRows = false,
+                AllowUserToResizeColumns = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                MultiSelect = false,
+                ReadOnly = true,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersHeight = 46,
+                GridColor = Color.FromArgb(240, 244, 245),
+                CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+                ScrollBars = ScrollBars.Vertical
+            };
+
+            dgvLibraries.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
+            dgvLibraries.DefaultCellStyle.ForeColor = PrimaryText;
+            dgvLibraries.DefaultCellStyle.BackColor = CardBack;
+            dgvLibraries.DefaultCellStyle.SelectionBackColor = Color.FromArgb(248, 251, 252);
+            dgvLibraries.DefaultCellStyle.SelectionForeColor = PrimaryText;
+            dgvLibraries.ColumnHeadersDefaultCellStyle.BackColor = CardBack;
+            dgvLibraries.ColumnHeadersDefaultCellStyle.ForeColor = SecondaryText;
+            dgvLibraries.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            dgvLibraries.ColumnHeadersDefaultCellStyle.SelectionBackColor = CardBack;
+            dgvLibraries.ColumnHeadersDefaultCellStyle.SelectionForeColor = SecondaryText;
+            dgvLibraries.RowTemplate.Height = 54;
+
+            dgvLibraries.Columns.Add("LibraryName", "LIBRARY NAME");
+            dgvLibraries.Columns.Add("Status", "STATUS");
+            dgvLibraries.Columns.Add("Users", "USERS");
+            dgvLibraries.Columns.Add("Uptime", "UPTIME");
+
+            dgvLibraries.Columns["LibraryName"].FillWeight = 42;
+            dgvLibraries.Columns["Status"].FillWeight = 22;
+            dgvLibraries.Columns["Users"].FillWeight = 16;
+            dgvLibraries.Columns["Uptime"].FillWeight = 20;
+
+            foreach (DataGridViewColumn col in dgvLibraries.Columns)
+                col.SortMode = DataGridViewColumnSortMode.NotSortable;
+
+            dgvLibraries.Rows.Add("Metropolitan Public Library", "Running Well", "4,502", "99.98%");
+            dgvLibraries.Rows.Add("Oxford Academic Wing", "Active", "12,190", "99.99%");
+            dgvLibraries.Rows.Add("Tech-Innovation Hub", "Small Issue", "840", "94.12%");
+            dgvLibraries.Rows.Add("Central Research Library", "Running Well", "8,304", "99.87%");
+            dgvLibraries.Rows.Add("City Learning Commons", "Active", "5,221", "99.92%");
+            dgvLibraries.Rows.Add("West Campus Library", "Running Well", "3,940", "99.71%");
+            dgvLibraries.Rows.Add("Digital Knowledge Hub", "Active", "7,112", "99.95%");
+
+            dgvLibraries.CellPainting += DgvLibraries_CellPainting;
+
+            librariesPanel.Controls.Add(lblLibrariesTitle);
+            librariesPanel.Controls.Add(lnkSeeAll);
+            librariesPanel.Controls.Add(dgvLibraries);
+        }
+
+        private void SetupLatestEventsPanel()
+        {
+            eventsPanel = CreateSoftCard(CardBack);
+
+            lblEventsTitle = CreateLabel("Latest Events", 14F, FontStyle.Bold, PrimaryText);
+
+            eventsFlow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoScroll = false,
+                BackColor = CardBack
+            };
+
+            eventsPanel.Controls.Add(lblEventsTitle);
+            eventsPanel.Controls.Add(eventsFlow);
+
+            AddEventItem("New Library Added", "National University of Arts", "12 minutes ago", AccentEmerald, "+");
+            AddEventItem("System Alert", "Server node us-east-2 slow", "1 hour ago", Tertiary, "!");
+            AddEventItem("Software Update", "Successfully sent to all sites", "4 hours ago", AccentDeep, "⟳");
+            AddEventItem("Backup Completed", "Cloud archive sync finished", "6 hours ago", AccentDeep, "✓");
+            AddEventItem("Client Expansion", "West Campus Library onboarded", "9 hours ago", AccentEmerald, "+");
+        }
+
+        private void AddEventItem(string title, string sub, string timeText, Color accent, string symbol)
+        {
+            Panel item = new Panel
+            {
+                Width = 280,
+                Height = 64,
+                BackColor = CardBack,
+                Margin = new Padding(0, 0, 0, 6)
+            };
+
+            Panel dot = new Panel
+            {
+                Size = new Size(22, 22),
+                BackColor = Color.FromArgb(30, accent),
+                Location = new Point(0, 2)
+            };
+            Label dotLabel = new Label
+            {
+                Text = symbol,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = accent
+            };
+            dot.Controls.Add(dotLabel);
+
+            Panel line = new Panel
+            {
+                Size = new Size(2, 40),
+                BackColor = Color.FromArgb(24, 60, 70, 72),
+                Location = new Point(10, 22)
+            };
+
+            Label t = CreateLabel(title, 10.5F, FontStyle.Bold, PrimaryText);
+            Label s = CreateLabel(sub, 9.5F, FontStyle.Regular, SecondaryText);
+            Label tm = CreateLabel(timeText, 8.8F, FontStyle.Regular, SecondaryText);
+
+            t.Location = new Point(32, 0);
+            s.Location = new Point(32, 20);
+            tm.Location = new Point(32, 40);
+
+            item.Controls.Add(line);
+            item.Controls.Add(dot);
+            item.Controls.Add(t);
+            item.Controls.Add(s);
+            item.Controls.Add(tm);
+
+            eventsFlow.Controls.Add(item);
+        }
+
+        private Panel CreateSoftCard(Color backColor)
+        {
+            Panel panel = new Panel
+            {
+                BackColor = backColor,
+                BorderStyle = BorderStyle.None
+            };
+
+            panel.Paint += (s, e) =>
+            {
+                using Pen pen = new Pen(Color.FromArgb(30, Outline), 1);
+                e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
+            };
+
+            return panel;
+        }
+
+        private Label CreateLabel(string text, float size, FontStyle style, Color color)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = true,
+                Font = new Font("Segoe UI", size, style),
+                ForeColor = color,
+                BackColor = Color.Transparent
+            };
         }
 
         private void ApplyResponsiveLayout()
         {
-            int w = this.ClientSize.Width;
+            int w = ClientSize.Width;
 
-            if (w >= 1280)
-            {
+            if (w >= 1320)
                 ApplyDesktopLayout();
-            }
-            else if (w >= 980)
-            {
+            else if (w >= 1060)
                 ApplyTabletLayout();
-            }
             else
-            {
                 ApplySmallLayout();
-            }
 
             PositionResponsiveHeader();
             LayoutSidebar();
@@ -277,101 +1097,80 @@ namespace EducationSystem
 
         private void ApplyDesktopLayout()
         {
-            Sidebar.Width = 225;
-            topbar.Height = 60;
-            panel1.Height = 45;
-
+            Sidebar.Width = 255;
+            topbar.Height = 68;
+            panel1.Height = 40;
             username.MaximumSize = new Size(220, 0);
 
             LayoutSidebarBranding(true);
-            SetSidebarButtonStyle(true);
+            LayoutSidebar();
         }
 
         private void ApplyTabletLayout()
         {
-            Sidebar.Width = 170;
-            topbar.Height = 56;
-            panel1.Height = 42;
-
-            username.MaximumSize = new Size(150, 0);
+            Sidebar.Width = 215;
+            topbar.Height = 64;
+            panel1.Height = 40;
+            username.MaximumSize = new Size(160, 0);
 
             LayoutSidebarBranding(true);
-            SetSidebarButtonStyle(true);
+            LayoutSidebar();
         }
 
         private void ApplySmallLayout()
         {
-            Sidebar.Width = 78;
-            topbar.Height = 52;
-            panel1.Height = 40;
-
-            username.MaximumSize = new Size(95, 0);
+            Sidebar.Width = 88;
+            topbar.Height = 58;
+            panel1.Height = 38;
+            username.MaximumSize = new Size(100, 0);
 
             LayoutSidebarBranding(false);
-            SetSidebarButtonStyle(false);
+            LayoutSidebar();
         }
 
         private void LayoutSidebar()
         {
-            LayoutSidebarButtons();
             LayoutSidebarBranding(Sidebar.Width > 120);
-        }
 
-        private void SetSidebarButtonStyle(bool showText)
-        {
-            ConfigureSidebarButton(button1, "📊  Dashboard", showText);
-            ConfigureSidebarButton(button2, "🏢  Client Management", showText);
-            ConfigureSidebarButton(button3, "🔎  Monitoring", showText);
-            ConfigureSidebarButton(button8, "⚙  System Configuration", showText);
-            ConfigureSidebarButton(button7, "🗂  Archive Management", showText);
-            ConfigureSidebarButton(button6, "⏻  Logout", showText);
-
-            button4.Visible = false; // remove Library Monitoring from sidebar
-            button5.Visible = false; // still unused
-        }
-
-        private void ConfigureSidebarButton(Button btn, string fullText, bool showText)
-        {
-            btn.Width = Sidebar.Width - 12;
-            btn.Left = 6;
-            btn.Height = 44;
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.UseVisualStyleBackColor = false;
-
-            if (showText)
+            if (superAdminMenuHost != null)
             {
-                btn.Text = fullText;
-                btn.TextAlign = ContentAlignment.MiddleLeft;
-                btn.Padding = new Padding(18, 0, 0, 0);
-            }
-            else
-            {
-                string iconOnly = fullText.Split(new[] { "  " }, StringSplitOptions.None)[0];
-                btn.Text = iconOnly;
-                btn.TextAlign = ContentAlignment.MiddleCenter;
-                btn.Padding = new Padding(0);
-            }
-        }
+                superAdminMenuHost.Width = Sidebar.Width;
 
-        private void LayoutSidebarButtons()
-        {
-            int top = sidebarBrandPanel.Bottom + 22;
-            int gap = 10;
+                int navWidth = Sidebar.Width - 28;
 
-            Button[] mainButtons = { button1, button2, button3, button8, button7 };
+                navDashboard.Width = navWidth;
+                navManageClients.Width = navWidth;
+                navMonitorSystem.Width = navWidth;
+                navConfigureModules.Width = navWidth;
+                navViewBookCatalog.Width = navWidth;
+                navViewUser.Width = navWidth;
+                navViewCirculation.Width = navWidth;
+                navViewReports.Width = navWidth;
+                navArchive.Width = navWidth;
 
-            foreach (Button btn in mainButtons)
-            {
-                btn.Top = top;
-                btn.Left = 6;
-                btn.Width = Sidebar.Width - 12;
-                top += btn.Height + gap;
+                userSubMenuPanel.Width = navWidth;
+                circulationSubMenuPanel.Width = navWidth;
+
+                navClient.Width = navWidth - 18;
+                navLibrarian.Width = navWidth - 18;
+                navMember.Width = navWidth - 18;
+                navBorrowing.Width = navWidth - 18;
+                navReturns.Width = navWidth - 18;
+                navFines.Width = navWidth - 18;
+
+                LayoutSubMenuButtons();
+
+                userSubMenuPanel.Height = userMenuExpanded ? 110 : 0;
+                circulationSubMenuPanel.Height = circulationMenuExpanded ? 110 : 0;
             }
 
-            button6.Left = 6;
-            button6.Width = Sidebar.Width - 12;
-            button6.Top = Sidebar.Height - button6.Height - 18;
+            if (sidebarBottomPanel != null)
+            {
+                sidebarBottomPanel.Width = Sidebar.Width;
+                navSignOut.Width = Sidebar.Width - 28;
+                navSignOut.Height = 48;
+                navSignOut.Location = new Point(14, 12);
+            }
         }
 
         private void LayoutDashboardHome()
@@ -382,191 +1181,149 @@ namespace EducationSystem
             int topH = topbar.Height;
             int footerH = panel1.Height;
 
-            int contentLeft = sidebarW + 28;
-            int contentTop = topH + 24;
-            int contentWidth = this.ClientSize.Width - sidebarW - 56;
-            int contentHeight = this.ClientSize.Height - topH - footerH - 36;
+            int left = sidebarW + 30;
+            int top = topH + 20;
+            int width = ClientSize.Width - sidebarW - 60;
 
-            if (contentWidth < 300 || contentHeight < 200) return;
+            label4.Location = new Point(left, top + 6);
+            label4.Text = "Dashboard";
+            label4.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
+            label4.ForeColor = PrimaryText;
+            label4.Visible = true;
 
-            welcomeLabel.Location = new Point(contentLeft, contentTop);
-            label4.Location = new Point(contentLeft, contentTop + 48);
+            dashboardSubTitle.Location = new Point(left + 2, label4.Bottom + 6);
+            dashboardSubTitle.Text = "Admin Dashboard";
+            dashboardSubTitle.Visible = true;
 
-            int cardsTop = contentTop + 96;
-            int gap = 20;
-            int cardHeight = 96;
+            int heroTop = dashboardSubTitle.Bottom + 22;
+            int heroGap = 20;
 
-            if (contentWidth >= 1200)
-            {
-                int cardWidth = (contentWidth - (gap * 3)) / 4;
+            int librariesW = (int)(width * 0.47);
+            int usersW = (int)(width * 0.22);
+            int alertsW = width - librariesW - usersW - (heroGap * 2);
 
-                TotalClients.Bounds = new Rectangle(contentLeft, cardsTop, cardWidth, cardHeight);
-                TotalMembers.Bounds = new Rectangle(contentLeft + cardWidth + gap, cardsTop, cardWidth, cardHeight);
-                TotalBooks.Bounds = new Rectangle(contentLeft + (cardWidth + gap) * 2, cardsTop, cardWidth, cardHeight);
-                ActiveBorrowings.Bounds = new Rectangle(contentLeft + (cardWidth + gap) * 3, cardsTop, cardWidth, cardHeight);
+            heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, 160);
+            heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + heroGap, heroTop, usersW, 160);
+            heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + heroGap, heroTop, alertsW, 160);
 
-                int chartsTop = cardsTop + cardHeight + 30;
-                int chartWidth = (contentWidth - gap) / 2;
-                int chartHeight = 330;
+            LayoutHeroCards();
 
-                chart1.Bounds = new Rectangle(contentLeft, chartsTop, chartWidth, chartHeight);
-                chart2.Bounds = new Rectangle(contentLeft + chartWidth + gap, chartsTop, chartWidth, chartHeight);
-            }
-            else if (contentWidth >= 820)
-            {
-                int cardWidth = (contentWidth - gap) / 2;
+            int speedTop = heroLibrariesCard.Bottom + 26;
+            speedPanel.Bounds = new Rectangle(left, speedTop, width, 390);
+            LayoutSpeedPanel();
 
-                TotalClients.Bounds = new Rectangle(contentLeft, cardsTop, cardWidth, cardHeight);
-                TotalMembers.Bounds = new Rectangle(contentLeft + cardWidth + gap, cardsTop, cardWidth, cardHeight);
-                TotalBooks.Bounds = new Rectangle(contentLeft, cardsTop + cardHeight + gap, cardWidth, cardHeight);
-                ActiveBorrowings.Bounds = new Rectangle(contentLeft + cardWidth + gap, cardsTop + cardHeight + gap, cardWidth, cardHeight);
+            int bottomTop = speedPanel.Bottom + 22;
+            int bottomGap = 24;
 
-                int chartsTop = cardsTop + (cardHeight * 2) + (gap * 2) + 24;
-                int chartHeight = 290;
+            int librariesPanelW = (int)(width * 0.66);
+            int eventsPanelW = width - librariesPanelW - bottomGap;
 
-                chart1.Bounds = new Rectangle(contentLeft, chartsTop, contentWidth, chartHeight);
-                chart2.Bounds = new Rectangle(contentLeft, chartsTop + chartHeight + gap, contentWidth, chartHeight);
-            }
-            else
-            {
-                int cardWidth = contentWidth;
+            int bottomPanelsHeight = 420;
 
-                TotalClients.Bounds = new Rectangle(contentLeft, cardsTop, cardWidth, cardHeight);
-                TotalMembers.Bounds = new Rectangle(contentLeft, cardsTop + cardHeight + gap, cardWidth, cardHeight);
-                TotalBooks.Bounds = new Rectangle(contentLeft, cardsTop + (cardHeight + gap) * 2, cardWidth, cardHeight);
-                ActiveBorrowings.Bounds = new Rectangle(contentLeft, cardsTop + (cardHeight + gap) * 3, cardWidth, cardHeight);
+            librariesPanel.Bounds = new Rectangle(left, bottomTop, librariesPanelW, bottomPanelsHeight);
+            eventsPanel.Bounds = new Rectangle(librariesPanel.Right + bottomGap, bottomTop, eventsPanelW, bottomPanelsHeight);
 
-                int chartsTop = cardsTop + (cardHeight + gap) * 4 + 24;
-                int chartHeight = 240;
+            LayoutLibrariesPanel();
+            LayoutEventsPanel();
 
-                chart1.Bounds = new Rectangle(contentLeft, chartsTop, contentWidth, chartHeight);
-                chart2.Bounds = new Rectangle(contentLeft, chartsTop + chartHeight + gap, contentWidth, chartHeight);
-            }
+            fabMonitor.Location = new Point(
+                ClientSize.Width - fabMonitor.Width - 26,
+                ClientSize.Height - footerH - fabMonitor.Height - 26
+            );
 
-            LayoutDashboardCardContents();
-            AlignFooterItems();
-        }
-
-        private void LayoutDashboardCardContents()
-        {
-            LayoutSingleDashboardCard(TotalClients, users, label3, label5);
-            LayoutSingleDashboardCard(TotalMembers, books, label6, label7);
-            LayoutSingleDashboardCard(TotalBooks, activity, label8, label9);
-            LayoutSingleDashboardCard(ActiveBorrowings, pictureBox5, label10, label11);
-        }
-
-        private void LayoutSingleDashboardCard(Panel card, PictureBox icon, Label titleLabel, Label valueLabel)
-        {
-            int iconSize = 56;
-            int groupWidth = 190;
-            int gap = 16;
-
-            int startX = Math.Max(12, (card.Width - groupWidth) / 2);
-
-            icon.Size = new Size(iconSize, iconSize);
-            icon.SizeMode = PictureBoxSizeMode.Zoom;
-            icon.Location = new Point(startX, (card.Height - iconSize) / 2);
-
-            int textX = icon.Right + gap;
-            int textWidth = groupWidth - iconSize - gap;
-
-            titleLabel.AutoSize = false;
-            titleLabel.Width = textWidth;
-            titleLabel.Height = 24;
-            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
-            titleLabel.Location = new Point(textX, card.Height / 2 - 20);
-
-            valueLabel.AutoSize = false;
-            valueLabel.Width = textWidth;
-            valueLabel.Height = 24;
-            valueLabel.TextAlign = ContentAlignment.MiddleCenter;
-            valueLabel.Location = new Point(textX, card.Height / 2 + 6);
-        }
-
-        private void AlignFooterItems()
-        {
-            if (panel1 == null) return;
-
-            panel1.Height = 56;
-
+            panel1.Height = 40;
             time.AutoSize = true;
-            int footerCenterY = Math.Max(0, (panel1.Height - time.Height) / 2);
-            time.Location = new Point(22, footerCenterY);
+            time.Location = new Point(10, Math.Max(0, (panel1.Height - time.Height) / 2));
 
-            button6.Left = 6;
-            button6.Width = Sidebar.Width - 12;
-            button6.Top = Sidebar.Height - button6.Height - 22;
+            int dashboardBottom = eventsPanel.Bottom + 40;
+            AutoScrollMinSize = new Size(0, dashboardBottom + panel1.Height);
+
+            panel1.BringToFront();
         }
 
-        private void StyleSidebarButton(Button btn)
+        private void LayoutHeroCards()
         {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 230, 230);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(210, 210, 210);
-            btn.Cursor = Cursors.Hand;
-            btn.UseVisualStyleBackColor = false;
-            btn.TextImageRelation = TextImageRelation.ImageBeforeText;
-            btn.ImageAlign = ContentAlignment.MiddleLeft;
-            btn.TextAlign = ContentAlignment.MiddleLeft;
+            lblHeroLibrariesTitle.Location = new Point(34, 34);
+            lblHeroLibrariesValue.Location = new Point(34, 58);
+            lblHeroLibrariesTrend.Location = new Point(36, 126);
+
+            Control? glow = heroLibrariesCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "heroGlow");
+            if (glow != null)
+                glow.Location = new Point(heroLibrariesCard.Width - 130, 8);
+
+            Control? iconUsers = heroUsersCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "iconUsers");
+            if (iconUsers != null) iconUsers.Location = new Point(26, 28);
+            lblHeroUsersTitle.Location = new Point(26, 82);
+            lblHeroUsersValue.Location = new Point(26, 106);
+
+            Control? iconAlerts = heroAlertsCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "iconAlerts");
+            if (iconAlerts != null) iconAlerts.Location = new Point(26, 28);
+            lblHeroAlertsTitle.Location = new Point(26, 82);
+            lblHeroAlertsValue.Location = new Point(26, 106);
         }
 
-        private void StyleDashboardCard(Panel card)
+        private void LayoutSpeedPanel()
         {
-            card.BackColor = Color.Maroon;
-            card.Cursor = Cursors.Hand;
+            lblSpeedTitle.Location = new Point(24, 24);
+            lblSpeedSub.Location = new Point(24, 58);
 
-            if (!card.Controls.OfType<Panel>().Any(p => p.Name == "accent"))
+            speedChartCard.Bounds = new Rectangle(24, 96, speedPanel.Width - 48, speedPanel.Height - 124);
+
+            int innerPad = 18;
+            int chartBottom = speedChartCard.Height - 18;
+            int gap = 8;
+            int barW = (speedChartCard.Width - (innerPad * 2) - (gap * (speedBars.Count - 1))) / speedBars.Count;
+
+            int[] heights = { 90, 148, 115, 196, 160, 126, 102, 136, 210, 148, 116, 176, 136, 90 };
+
+            for (int i = 0; i < speedBars.Count; i++)
             {
-                Panel accent = new Panel();
-                accent.Name = "accent";
-                accent.BackColor = Color.Goldenrod;
-                accent.Width = 6;
-                accent.Dock = DockStyle.Left;
-
-                card.Controls.Add(accent);
-                accent.BringToFront();
+                speedBars[i].Width = barW;
+                speedBars[i].Height = heights[i];
+                speedBars[i].Left = innerPad + (i * (barW + gap));
+                speedBars[i].Top = chartBottom - heights[i];
             }
+        }
+        private void LayoutLibrariesPanel()
+        {
+            lblLibrariesTitle.Location = new Point(24, 22);
+            lnkSeeAll.Location = new Point(librariesPanel.Width - lnkSeeAll.PreferredWidth - 24, 26);
 
-            card.MouseEnter += (s, e) => card.BackColor = Color.FromArgb(120, 0, 0);
-            card.MouseLeave += (s, e) => card.BackColor = Color.Maroon;
+            dgvLibraries.Location = new Point(0, 64);
+            dgvLibraries.Size = new Size(librariesPanel.Width - 2, librariesPanel.Height - 76);
+        }
+        private void LayoutEventsPanel()
+        {
+            lblEventsTitle.Location = new Point(24, 22);
+            eventsFlow.Location = new Point(24, 62);
+            eventsFlow.Size = new Size(eventsPanel.Width - 48, eventsPanel.Height - 86);
+
+            foreach (Control ctrl in eventsFlow.Controls)
+                ctrl.Width = eventsFlow.Width - 2;
         }
 
-        private void RefreshDashboardCounts()
+        private void RefreshDashboardData()
         {
-            int totalClientsCount = ClientArchiveStore.ActiveClients.Count;
-            int activeClientsCount = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Active");
-            int inactiveClientsCount = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Inactive");
-            int archivedClientsCount = ClientArchiveStore.ArchivedClients.Count;
+            LoadUserInfo();
+            label4.Text = "Dashboard";
 
-            label3.Text = "Total Clients";
-            label6.Text = "Active Clients";
-            label8.Text = "Inactive Clients";
-            label10.Text = "Archived Clients";
-
-            label5.Text = totalClientsCount.ToString();
-            label7.Text = activeClientsCount.ToString();
-            label9.Text = inactiveClientsCount.ToString();
-            label11.Text = archivedClientsCount.ToString();
-
-            label4.Text = "Super Admin Dashboard";
+            lblHeroLibrariesValue.Text = "1,284";
+            lblHeroUsersValue.Text = "14.2k";
+            lblHeroAlertsValue.Text = "03";
         }
 
         public void LoadUserInfo()
         {
             username.Text = string.IsNullOrWhiteSpace(UserSession.Username)
-                ? "Username"
+                ? "Super Admin"
                 : UserSession.Username;
 
             try
             {
-                if (!string.IsNullOrWhiteSpace(UserSession.ImagePath) &&
-                    File.Exists(UserSession.ImagePath))
+                if (!string.IsNullOrWhiteSpace(UserSession.ImagePath) && File.Exists(UserSession.ImagePath))
                 {
-                    using (var fs = new FileStream(UserSession.ImagePath, FileMode.Open, FileAccess.Read))
-                    {
-                        ProfileImage.Image = Image.FromStream(fs);
-                    }
+                    using var fs = new FileStream(UserSession.ImagePath, FileMode.Open, FileAccess.Read);
+                    ProfileImage.Image = Image.FromStream(fs);
                 }
                 else
                 {
@@ -580,21 +1337,19 @@ namespace EducationSystem
                 ProfileImage.Image = null;
             }
 
-            welcomeLabel.Text = $"Welcome, {username.Text}!";
-
             PositionResponsiveHeader();
         }
 
-        private void ApplyBranding(bool isDark)
+        private void ApplyBranding()
         {
             try
             {
-                string lightLogoPath = Path.Combine(Application.StartupPath, "Assets", "logo_light.png");
-                string darkLogoPath = Path.Combine(Application.StartupPath, "Assets", "logo_dark.png");
+                string logoPath = Path.Combine(Application.StartupPath, "Assets", "logo.png");
 
-                string selectedLogo = isDark ? darkLogoPath : lightLogoPath;
+                if (!File.Exists(logoPath))
+                    logoPath = FindAssetPath("logo.png");
 
-                if (File.Exists(selectedLogo))
+                if (File.Exists(logoPath))
                 {
                     if (pictureBox1.Image != null)
                     {
@@ -603,10 +1358,8 @@ namespace EducationSystem
                         oldImage.Dispose();
                     }
 
-                    using (var fs = new FileStream(selectedLogo, FileMode.Open, FileAccess.Read))
-                    {
-                        pictureBox1.Image = Image.FromStream(fs);
-                    }
+                    using var fs = new FileStream(logoPath, FileMode.Open, FileAccess.Read);
+                    pictureBox1.Image = Image.FromStream(fs);
                 }
 
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
@@ -615,136 +1368,22 @@ namespace EducationSystem
             {
             }
 
-            label1.ForeColor = isDark ? Color.WhiteSmoke : Color.Maroon;
-            label1.BackColor = Color.Transparent;
-            pictureBox1.BackColor = Color.Transparent;
-            sidebarBrandPanel.BackColor = Color.Transparent;
+            label1.ForeColor = AccentMint;
+            label1.BackColor = SidebarBack;
+            pictureBox1.BackColor = SidebarBack;
+            sidebarBrandPanel.BackColor = SidebarBack;
+            if (sidebarSubTitleLabel != null) sidebarSubTitleLabel.BackColor = SidebarBack;
         }
 
-        private void StartClock()
-        {
-            clockTimer.Interval = 1000;
-            clockTimer.Tick += ClockTimer_Tick;
-            clockTimer.Start();
-
-            UpdateDateTime();
-        }
-
-        private void ClockTimer_Tick(object? sender, EventArgs e)
-        {
-            UpdateDateTime();
-        }
-
-        private void UpdateDateTime()
-        {
-            time.Text = DateTime.Now.ToString("MMMM dd, yyyy - hh:mm:ss tt");
-            time.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-            time.ForeColor = UserSession.Theme == "Dark" ? Color.WhiteSmoke : Color.Maroon;
-            time.TextAlign = ContentAlignment.MiddleCenter;
-        }
-
-        private void LoadLineChart()
-        {
-            chart1.Series.Clear();
-            chart1.ChartAreas.Clear();
-            chart1.Legends.Clear();
-            chart1.Titles.Clear();
-
-            ChartArea area = new ChartArea("MainArea");
-            area.BackColor = Color.WhiteSmoke;
-            area.AxisX.MajorGrid.Enabled = false;
-            area.AxisY.MajorGrid.LineColor = Color.LightGray;
-            area.AxisX.LineColor = Color.Gray;
-            area.AxisY.LineColor = Color.Gray;
-            chart1.ChartAreas.Add(area);
-
-            Title title = new Title("Client Activity Trend");
-            title.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-            title.ForeColor = Color.Maroon;
-            chart1.Titles.Add(title);
-
-            Legend legend = new Legend("MainLegend");
-            legend.Enabled = false;
-            chart1.Legends.Add(legend);
-
-            Series series = new Series("Activity");
-            series.ChartType = SeriesChartType.Line;
-            series.BorderWidth = 3;
-            series.Color = Color.Maroon;
-            series.MarkerStyle = MarkerStyle.Circle;
-            series.MarkerSize = 7;
-
-            series.Points.AddXY("Mon", 10);
-            series.Points.AddXY("Tue", 18);
-            series.Points.AddXY("Wed", 12);
-            series.Points.AddXY("Thu", 20);
-            series.Points.AddXY("Fri", 15);
-
-            chart1.Series.Add(series);
-            chart1.BackColor = Color.WhiteSmoke;
-        }
-
-        private void LoadPieChart()
-        {
-            chart2.Series.Clear();
-            chart2.ChartAreas.Clear();
-            chart2.Legends.Clear();
-            chart2.Titles.Clear();
-
-            ChartArea area = new ChartArea("PieArea");
-            area.BackColor = Color.White;
-            chart2.ChartAreas.Add(area);
-
-            Title title = new Title("Client Distribution");
-            title.Font = new Font("Segoe UI", 11, FontStyle.Bold);
-            title.ForeColor = Color.Maroon;
-            chart2.Titles.Add(title);
-
-            Legend legend = new Legend("PieLegend");
-            legend.Docking = Docking.Bottom;
-            chart2.Legends.Add(legend);
-
-            Series series = new Series("Status");
-            series.ChartType = SeriesChartType.Doughnut;
-            series.IsValueShownAsLabel = true;
-            series.BorderWidth = 2;
-
-            int active = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Active");
-            int inactive = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Inactive");
-            int archived = ClientArchiveStore.ArchivedClients.Count;
-
-            if (active == 0 && inactive == 0 && archived == 0)
-            {
-                series.Points.AddXY("No Clients Yet", 1);
-                series.Points[0].Color = Color.Gainsboro;
-                series.Points[0].Label = "No Data";
-                legend.Enabled = false;
-            }
-            else
-            {
-                legend.Enabled = true;
-
-                series.Points.AddXY("Active Clients", active);
-                series.Points.AddXY("Inactive Clients", inactive);
-                series.Points.AddXY("Archived Clients", archived);
-
-                series.Points[0].Color = Color.RoyalBlue;
-                series.Points[1].Color = Color.Goldenrod;
-                series.Points[2].Color = Color.Firebrick;
-            }
-
-            chart2.Series.Add(series);
-            chart2.BackColor = Color.White;
-        }
         private string FindAssetPath(string fileName)
         {
             string[] possiblePaths =
             {
-        Path.Combine(Application.StartupPath, "Assets", fileName),
-        Path.Combine(Application.StartupPath, "..", "..", "..", "Assets", fileName),
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", fileName),
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Assets", fileName)
-    };
+                Path.Combine(Application.StartupPath, "Assets", fileName),
+                Path.Combine(Application.StartupPath, "..", "..", "..", "Assets", fileName),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", fileName),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "Assets", fileName)
+            };
 
             foreach (string path in possiblePaths)
             {
@@ -756,108 +1395,132 @@ namespace EducationSystem
             return "";
         }
 
-        private void LoadSuperAdminCardIcons()
+        private void StartClock()
         {
-            try
+            clockTimer.Interval = 1000;
+            clockTimer.Tick += ClockTimer_Tick;
+            clockTimer.Start();
+            UpdateDateTime();
+        }
+
+        private void ClockTimer_Tick(object? sender, EventArgs e)
+        {
+            UpdateDateTime();
+        }
+
+        private void UpdateDateTime()
+        {
+            time.Text = DateTime.Now.ToString("MMMM dd, yyyy - hh:mm:ss tt");
+            time.Font = new Font("Segoe UI", 8.8F, FontStyle.Regular);
+            time.ForeColor = SecondaryText;
+            time.TextAlign = ContentAlignment.MiddleLeft;
+        }
+
+        private void DgvLibraries_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
+        {
+            if (e.RowIndex < 0) return;
+
+            string colName = dgvLibraries.Columns[e.ColumnIndex].Name;
+
+            if (colName == "Status")
             {
-                string clientsPath = FindAssetPath("clients.png");
-                string activePath = FindAssetPath("active.png");
-                string inactivePath = FindAssetPath("inactive.png");
-                string archivePath = FindAssetPath("archive.png");
+                e.PaintBackground(e.CellBounds, true);
 
-                if (!string.IsNullOrWhiteSpace(clientsPath))
+                string text = e.FormattedValue?.ToString() ?? "";
+                Color back = GoodSoft;
+                Color fore = AccentDeep;
+
+                if (text == "Small Issue")
                 {
-                    if (users.Image != null)
-                    {
-                        var old = users.Image;
-                        users.Image = null;
-                        old.Dispose();
-                    }
-                    users.Image = Image.FromFile(clientsPath);
+                    back = Color.FromArgb(255, 214, 204);
+                    fore = Tertiary;
                 }
 
-                if (!string.IsNullOrWhiteSpace(activePath))
+                Size size = TextRenderer.MeasureText(text, new Font("Segoe UI", 8.5F, FontStyle.Bold));
+                Rectangle badge = new Rectangle(
+                    e.CellBounds.X + 6,
+                    e.CellBounds.Y + (e.CellBounds.Height - 24) / 2,
+                    size.Width + 18,
+                    24
+                );
+
+                if (e.Graphics != null)
                 {
-                    if (books.Image != null)
-                    {
-                        var old = books.Image;
-                        books.Image = null;
-                        old.Dispose();
-                    }
-                    books.Image = Image.FromFile(activePath);
+                    using (SolidBrush brush = new SolidBrush(back))
+                        e.Graphics.FillRectangle(brush, badge);
+
+                    TextRenderer.DrawText(
+                        e.Graphics,
+                        text,
+                        new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                        badge,
+                        fore,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+                    );
                 }
 
-                if (!string.IsNullOrWhiteSpace(inactivePath))
-                {
-                    if (activity.Image != null)
-                    {
-                        var old = activity.Image;
-                        activity.Image = null;
-                        old.Dispose();
-                    }
-                    activity.Image = Image.FromFile(inactivePath);
-                }
-
-                if (!string.IsNullOrWhiteSpace(archivePath))
-                {
-                    if (pictureBox5.Image != null)
-                    {
-                        var old = pictureBox5.Image;
-                        pictureBox5.Image = null;
-                        old.Dispose();
-                    }
-                    pictureBox5.Image = Image.FromFile(archivePath);
-                }
-
-                users.SizeMode = PictureBoxSizeMode.Zoom;
-                books.SizeMode = PictureBoxSizeMode.Zoom;
-                activity.SizeMode = PictureBoxSizeMode.Zoom;
-                pictureBox5.SizeMode = PictureBoxSizeMode.Zoom;
-
-                users.BackColor = Color.Maroon;
-                books.BackColor = Color.Maroon;
-                activity.BackColor = Color.Maroon;
-                pictureBox5.BackColor = Color.Maroon;
+                e.Handled = true;
             }
-            catch (Exception ex)
+            else if (colName == "Uptime")
             {
-                MessageBox.Show("Error loading dashboard icons: " + ex.Message);
+                e.PaintBackground(e.CellBounds, true);
+
+                string text = e.FormattedValue?.ToString() ?? "";
+                Color fore = text == "94.12%" ? Tertiary : AccentDeep;
+
+                if (e.Graphics != null)
+                {
+                    TextRenderer.DrawText(
+                        e.Graphics,
+                        text,
+                        new Font("Segoe UI", 10F, FontStyle.Bold),
+                        e.CellBounds,
+                        fore,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                    );
+                }
+
+                e.Handled = true;
             }
         }
+
         private void ShowDashboardHome()
         {
-            RefreshDashboardCounts();
-            LoadLineChart();
-            LoadPieChart();
-            LoadUserInfo();
+            RefreshDashboardData();
             ApplyTheme(UserSession.Theme);
-            LoadSuperAdminCardIcons();
 
             label4.Visible = true;
-            TotalClients.Visible = true;
-            TotalMembers.Visible = true;
-            TotalBooks.Visible = true;
-            ActiveBorrowings.Visible = true;
-            chart1.Visible = true;
-            chart2.Visible = true;
-            panel1.Visible = true;
+            dashboardSubTitle.Visible = true;
+            heroLibrariesCard.Visible = true;
+            heroUsersCard.Visible = true;
+            heroAlertsCard.Visible = true;
+            speedPanel.Visible = true;
+            librariesPanel.Visible = true;
+            eventsPanel.Visible = true;
+            fabMonitor.Visible = true;
 
             panelContent.Controls.Clear();
             panelContent.Visible = false;
 
+            SetActiveNavButton(navDashboard);
+            UpdateTopHeaderSearchVisibility();
             ApplyResponsiveLayout();
         }
 
         private void HideDashboardHome()
         {
             label4.Visible = false;
-            TotalClients.Visible = false;
-            TotalMembers.Visible = false;
-            TotalBooks.Visible = false;
-            ActiveBorrowings.Visible = false;
-            chart1.Visible = false;
-            chart2.Visible = false;
+            dashboardSubTitle.Visible = false;
+            heroLibrariesCard.Visible = false;
+            heroUsersCard.Visible = false;
+            heroAlertsCard.Visible = false;
+            speedPanel.Visible = false;
+            librariesPanel.Visible = false;
+            eventsPanel.Visible = false;
+            fabMonitor.Visible = false;
             panel1.Visible = true;
+
+            UpdateTopHeaderSearchVisibility();
         }
 
         public void LoadContentForm(Form form)
@@ -866,6 +1529,7 @@ namespace EducationSystem
 
             panelContent.Controls.Clear();
             panelContent.Visible = true;
+            UpdateTopHeaderSearchVisibility();
             panelContent.BringToFront();
             panel1.BringToFront();
 
@@ -902,9 +1566,7 @@ namespace EducationSystem
             LoginForm? login = Application.OpenForms.OfType<LoginForm>().FirstOrDefault();
 
             if (login == null || login.IsDisposed)
-            {
                 login = new LoginForm();
-            }
 
             login.Show();
             login.BringToFront();
@@ -915,125 +1577,48 @@ namespace EducationSystem
 
         public void ApplyTheme(string theme)
         {
-            bool isDark = theme == "Dark";
+            BackColor = FormBack;
+            Sidebar.BackColor = SidebarBack;
+            topbar.BackColor = TopBack;
+            panel1.BackColor = FooterBack;
+            panelContent.BackColor = FormBack;
 
-            Color formBack = isDark ? Color.FromArgb(28, 28, 28) : Color.FromArgb(252, 248, 244);
-            Color sidebarBack = isDark ? Color.FromArgb(35, 35, 35) : Color.FromArgb(245, 238, 230);
-            Color topBack = isDark ? Color.FromArgb(35, 35, 35) : Color.FromArgb(250, 245, 240);
-            Color footerBack = isDark ? Color.FromArgb(35, 35, 35) : Color.FromArgb(250, 245, 240);
-            Color textColor = isDark ? Color.WhiteSmoke : Color.Maroon;
-            Color contentBack = isDark ? Color.FromArgb(28, 28, 28) : Color.FromArgb(252, 248, 244);
-            Color menuBack = isDark ? Color.FromArgb(45, 45, 45) : Color.FromArgb(255, 252, 248);
-            Color menuText = isDark ? Color.WhiteSmoke : Color.Black;
+            label1.ForeColor = AccentMint;
+            username.ForeColor = PrimaryText;
+            time.ForeColor = SecondaryText;
+            label4.ForeColor = PrimaryText;
+            dropdownarrow.ForeColor = PrimaryText;
+            dashboardSubTitle.ForeColor = SecondaryText;
 
-            Color cardBack = Color.Maroon;
-            Color cardAccent = Color.FromArgb(184, 134, 11);
+            userHeaderPanel.BackColor = TopBack;
+            userHeaderHost.BackColor = TopBack;
+            ProfileImage.BackColor = TopBack;
+            username.BackColor = TopBack;
+            dropdownarrow.BackColor = TopBack;
 
-            BackColor = formBack;
-            Sidebar.BackColor = sidebarBack;
-            topbar.BackColor = topBack;
-            panel1.BackColor = footerBack;
-            panelContent.BackColor = contentBack;
-
-            label1.ForeColor = textColor;
-            username.ForeColor = textColor;
-            time.ForeColor = textColor;
-            label4.ForeColor = textColor;
-            dropdownarrow.ForeColor = textColor;
-            welcomeLabel.ForeColor = textColor;
-            welcomeLabel.BackColor = Color.Transparent;
-
-            userHeaderPanel.BackColor = topBack;
-            userHeaderHost.BackColor = topBack;
-            ProfileImage.BackColor = topBack;
-            username.BackColor = topBack;
-            dropdownarrow.BackColor = topBack;
-
-            foreach (Control ctrl in Sidebar.Controls)
-            {
-                if (ctrl is Button btn)
-                {
-                    btn.ForeColor = textColor;
-                    btn.BackColor = sidebarBack;
-                    btn.FlatAppearance.MouseOverBackColor = isDark
-                        ? Color.FromArgb(60, 60, 60)
-                        : Color.FromArgb(232, 220, 210);
-                    btn.FlatAppearance.MouseDownBackColor = isDark
-                        ? Color.FromArgb(75, 75, 75)
-                        : Color.FromArgb(220, 205, 195);
-                }
-            }
-
-            contextMenuStrip1.BackColor = menuBack;
-            contextMenuStrip1.ForeColor = menuText;
+            contextMenuStrip1.BackColor = Color.White;
+            contextMenuStrip1.ForeColor = PrimaryText;
 
             foreach (ToolStripItem item in contextMenuStrip1.Items)
             {
-                item.BackColor = menuBack;
-                item.ForeColor = menuText;
+                item.BackColor = Color.White;
+                item.ForeColor = PrimaryText;
             }
 
-            chart1.BackColor = isDark ? Color.FromArgb(45, 45, 45) : Color.FromArgb(255, 252, 248);
-            chart2.BackColor = isDark ? Color.FromArgb(45, 45, 45) : Color.FromArgb(255, 252, 248);
-
-            TotalClients.BackColor = cardBack;
-            TotalMembers.BackColor = cardBack;
-            TotalBooks.BackColor = cardBack;
-            ActiveBorrowings.BackColor = cardBack;
-
-            SetCardAccentColor(TotalClients, cardAccent);
-            SetCardAccentColor(TotalMembers, cardAccent);
-            SetCardAccentColor(TotalBooks, cardAccent);
-            SetCardAccentColor(ActiveBorrowings, cardAccent);
-
-            ApplyBranding(isDark);
+            ApplyBranding();
+            ApplyNewSidebarVisualState();
             LayoutSidebar();
             PositionResponsiveHeader();
         }
-        private void SetCardAccentColor(Panel card, Color accentColor)
-        {
-            foreach (Control ctrl in card.Controls)
-            {
-                if (ctrl is Panel panel && panel.Name == "accent")
-                {
-                    panel.BackColor = accentColor;
-                }
-            }
-        }
 
-        private void button1_Click_1(object? sender, EventArgs e)
-        {
-            ShowDashboardHome();
-        }
-
-        private void button2_Click(object? sender, EventArgs e)
-        {
-            LoadContentForm(new ClientsForm());
-        }
-
-        private void button3_Click(object? sender, EventArgs e)
-        {
-            LoadContentForm(new MonitoringForm());
-        }
-
-        private void button4_Click(object? sender, EventArgs e)
-        {
-            LoadContentForm(new ModulesForm());
-        }
-
-        private void button5_Click(object? sender, EventArgs e)
-        {
-        }
-
-        private void button6_Click(object? sender, EventArgs e)
-        {
-            DoLogout();
-        }
-
-        private void ArchiveButton_Click(object? sender, EventArgs e)
-        {
-            LoadContentForm(new ArchiveForm());
-        }
+        private void button1_Click_1(object? sender, EventArgs e) => ShowDashboardHome();
+        private void button2_Click(object? sender, EventArgs e) => LoadContentForm(new ClientsForm());
+        private void button3_Click(object? sender, EventArgs e) => LoadContentForm(new MonitoringForm());
+        private void button4_Click(object? sender, EventArgs e) => LoadContentForm(new OversightForm());
+        private void button5_Click(object? sender, EventArgs e) => LoadContentForm(new LogsForm());
+        private void button6_Click(object? sender, EventArgs e) => DoLogout();
+        private void ArchiveButton_Click(object? sender, EventArgs e) => LoadContentForm(new ArchiveForm());
+        private void button8_Click(object? sender, EventArgs e) => LoadContentForm(new OversightForm());
 
         private void dropdownarrow_Click(object? sender, EventArgs e)
         {
@@ -1055,25 +1640,12 @@ namespace EducationSystem
             contextMenuStrip1.Show(ProfileImage, 0, ProfileImage.Height);
         }
 
-        private void topbar_Paint(object? sender, PaintEventArgs e)
-        {
-        }
-
-        private void label1_Click(object? sender, EventArgs e)
-        {
-        }
-
-        private void pictureBox1_Click(object? sender, EventArgs e)
-        {
-        }
-
-        private void label3_Click(object? sender, EventArgs e)
-        {
-        }
-
-        private void pictureBox2_Click_1(object? sender, EventArgs e)
-        {
-        }
+        private void topbar_Paint(object? sender, PaintEventArgs e) { }
+        private void label1_Click(object? sender, EventArgs e) { }
+        private void pictureBox1_Click(object? sender, EventArgs e) { }
+        private void label3_Click(object? sender, EventArgs e) { }
+        private void pictureBox2_Click_1(object? sender, EventArgs e) { }
+        private void panelContent_Paint(object sender, PaintEventArgs e) { }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
@@ -1084,16 +1656,6 @@ namespace EducationSystem
             }
 
             base.OnFormClosed(e);
-        }
-
-        private void button8_Click(object sender, EventArgs e)
-        {
-            LoadContentForm(new OversightForm());
-        }
-
-        private void panelContent_Paint(object sender, PaintEventArgs e)
-        {
-
         }
     }
 }

@@ -2,15 +2,8 @@
 {
     partial class LoginForm
     {
-        /// <summary>
-        ///  Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        ///  Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -22,168 +15,213 @@
 
         #region Windows Form Designer generated code
 
-        /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(LoginForm));
-            label1 = new Label();
-            label2 = new Label();
-            emailadd = new TextBox();
-            label3 = new Label();
-            password = new TextBox();
-            login = new Button();
-            panelRight = new Panel();
-            picEye = new PictureBox();
+            panelLeft = new Panel();
+            lblFooter = new Label();
+            lblStatus = new Label();
+            lblQuote = new Label();
             picLogo = new PictureBox();
+            panelRight = new Panel();
+            lblPortalStatus = new Label();
+            picEye = new PictureBox();
             linkLabel1 = new LinkLabel();
             rememberme = new CheckBox();
+            login = new Button();
+            password = new TextBox();
+            lblPassword = new Label();
+            emailadd = new TextBox();
+            lblEmail = new Label();
+            lblSubtitle = new Label();
+            lblWelcome = new Label();
             notifyIcon1 = new NotifyIcon(components);
+            panelLeft.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
             panelRight.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)picEye).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
             SuspendLayout();
             // 
-            // label1
+            // panelLeft
             // 
-            label1.AutoSize = true;
-            label1.Font = new Font("Segoe UI Black", 20.25F, FontStyle.Bold | FontStyle.Italic, GraphicsUnit.Point, 0);
-            label1.ForeColor = Color.Maroon;
-            label1.Location = new Point(436, 39);
-            label1.Name = "label1";
-            label1.Size = new Size(206, 37);
-            label1.TabIndex = 0;
-            label1.Text = "LibraFlow ERP";
-            label1.Click += label1_Click;
+            panelLeft.Controls.Add(lblFooter);
+            panelLeft.Controls.Add(lblStatus);
+            panelLeft.Controls.Add(lblQuote);
+            panelLeft.Controls.Add(picLogo);
+            panelLeft.Dock = DockStyle.Left;
+            panelLeft.Location = new Point(0, 0);
+            panelLeft.Name = "panelLeft";
+            panelLeft.Size = new Size(420, 560);
+            panelLeft.TabIndex = 0;
+            panelLeft.Paint += panelLeft_Paint;
             // 
-            // label2
+            // lblFooter
             // 
-            label2.AutoSize = true;
-            label2.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label2.ForeColor = Color.Maroon;
-            label2.Location = new Point(404, 97);
-            label2.Name = "label2";
-            label2.Size = new Size(83, 15);
-            label2.TabIndex = 1;
-            label2.Text = "Email Address";
+            lblFooter.AutoSize = true;
+            lblFooter.Font = new Font("Segoe UI", 8F, FontStyle.Regular);
+            lblFooter.Location = new Point(92, 495);
+            lblFooter.Name = "lblFooter";
+            lblFooter.Size = new Size(221, 13);
+            lblFooter.TabIndex = 3;
+            lblFooter.Text = "© 2026 LIBRAFLOW ERP • PRIVACY • TERMS";
             // 
-            // emailadd
+            // lblStatus
             // 
-            emailadd.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            emailadd.ForeColor = Color.Sienna;
-            emailadd.Location = new Point(404, 115);
-            emailadd.Multiline = true;
-            emailadd.Name = "emailadd";
-            emailadd.Size = new Size(265, 28);
-            emailadd.TabIndex = 2;
+            lblStatus.AutoSize = true;
+            lblStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblStatus.Location = new Point(90, 462);
+            lblStatus.Name = "lblStatus";
+            lblStatus.Size = new Size(196, 15);
+            lblStatus.TabIndex = 2;
+            lblStatus.Text = "SYSTEM STATUS • ALL OPERATIONAL";
             // 
-            // label3
+            // lblQuote
             // 
-            label3.AutoSize = true;
-            label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            label3.ForeColor = Color.Maroon;
-            label3.Location = new Point(404, 166);
-            label3.Name = "label3";
-            label3.Size = new Size(59, 15);
-            label3.TabIndex = 3;
-            label3.Text = "Password";
-            // 
-            // password
-            // 
-            password.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            password.Font = new Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            password.ForeColor = Color.Sienna;
-            password.Location = new Point(405, 184);
-            password.Name = "password";
-            password.PasswordChar = '*';
-            password.Size = new Size(265, 25);
-            password.TabIndex = 4;
-            password.UseSystemPasswordChar = true;
-            password.TextChanged += textBox2_TextChanged;
-            // 
-            // login
-            // 
-            login.BackColor = Color.Maroon;
-            login.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            login.ForeColor = SystemColors.ButtonHighlight;
-            login.Location = new Point(404, 261);
-            login.Name = "login";
-            login.Size = new Size(265, 34);
-            login.TabIndex = 5;
-            login.Text = "Login";
-            login.UseVisualStyleBackColor = false;
-            login.Click += btnLogin_Click;
-            // 
-            // panelRight
-            // 
-            panelRight.BackColor = Color.SeaShell;
-            panelRight.Controls.Add(picEye);
-            panelRight.Controls.Add(picLogo);
-            panelRight.Controls.Add(linkLabel1);
-            panelRight.Controls.Add(rememberme);
-            panelRight.Controls.Add(login);
-            panelRight.Controls.Add(label3);
-            panelRight.Controls.Add(emailadd);
-            panelRight.Controls.Add(label2);
-            panelRight.Controls.Add(label1);
-            panelRight.Controls.Add(password);
-            panelRight.Dock = DockStyle.Right;
-            panelRight.Location = new Point(-2, 0);
-            panelRight.Name = "panelRight";
-            panelRight.Size = new Size(738, 450);
-            panelRight.TabIndex = 6;
-            panelRight.Paint += panelRight_Paint;
-            // 
-            // picEye
-            // 
-            picEye.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            picEye.BackColor = SystemColors.Window;
-            picEye.Cursor = Cursors.Hand;
-            picEye.Image = (Image)resources.GetObject("picEye.Image");
-            picEye.Location = new Point(635, 186);
-            picEye.Name = "picEye";
-            picEye.Size = new Size(33, 20);
-            picEye.SizeMode = PictureBoxSizeMode.Zoom;
-            picEye.TabIndex = 8;
-            picEye.TabStop = false;
+            lblQuote.AutoSize = true;
+            lblQuote.Font = new Font("Segoe UI", 12F, FontStyle.Italic);
+            lblQuote.Location = new Point(62, 314);
+            lblQuote.Name = "lblQuote";
+            lblQuote.Size = new Size(275, 63);
+            lblQuote.TabIndex = 1;
+            lblQuote.Text = "\"Easy tools for managing books,\r\nmembers, and records.\"";
             // 
             // picLogo
             // 
             picLogo.BackColor = Color.Transparent;
-            picLogo.Image = (Image)resources.GetObject("picLogo.Image");
-            picLogo.Location = new Point(53, 4);
+            picLogo.Location = new Point(40, 78);
             picLogo.Name = "picLogo";
-            picLogo.Size = new Size(346, 386);
+            picLogo.Size = new Size(340, 220);
             picLogo.SizeMode = PictureBoxSizeMode.Zoom;
             picLogo.TabIndex = 0;
             picLogo.TabStop = false;
             picLogo.Click += picLogo_Click;
             // 
+            // panelRight
+            // 
+            panelRight.Controls.Add(lblPortalStatus);
+            panelRight.Controls.Add(picEye);
+            panelRight.Controls.Add(linkLabel1);
+            panelRight.Controls.Add(rememberme);
+            panelRight.Controls.Add(login);
+            panelRight.Controls.Add(password);
+            panelRight.Controls.Add(lblPassword);
+            panelRight.Controls.Add(emailadd);
+            panelRight.Controls.Add(lblEmail);
+            panelRight.Controls.Add(lblSubtitle);
+            panelRight.Controls.Add(lblWelcome);
+            panelRight.Dock = DockStyle.Fill;
+            panelRight.Location = new Point(420, 0);
+            panelRight.Name = "panelRight";
+            panelRight.Size = new Size(480, 560);
+            panelRight.TabIndex = 1;
+            panelRight.Paint += panelRight_Paint;
+            // 
+            // lblPortalStatus
+            // 
+            lblPortalStatus.AutoSize = true;
+            lblPortalStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblPortalStatus.Location = new Point(96, 420);
+            lblPortalStatus.Name = "lblPortalStatus";
+            lblPortalStatus.Size = new Size(237, 15);
+            lblPortalStatus.TabIndex = 10;
+            lblPortalStatus.Text = "SYSTEM STATUS • ALL SYSTEMS OPERATIONAL";
+            // 
+            // picEye
+            // 
+            picEye.Cursor = Cursors.Hand;
+            picEye.Location = new Point(381, 254);
+            picEye.Name = "picEye";
+            picEye.Size = new Size(22, 22);
+            picEye.SizeMode = PictureBoxSizeMode.Zoom;
+            picEye.TabIndex = 9;
+            picEye.TabStop = false;
+            // 
             // linkLabel1
             // 
-            linkLabel1.ActiveLinkColor = Color.DarkRed;
             linkLabel1.AutoSize = true;
-            linkLabel1.LinkColor = Color.Red;
-            linkLabel1.Location = new Point(480, 298);
+            linkLabel1.Location = new Point(315, 215);
             linkLabel1.Name = "linkLabel1";
-            linkLabel1.Size = new Size(127, 15);
-            linkLabel1.TabIndex = 7;
+            linkLabel1.Size = new Size(91, 15);
+            linkLabel1.TabIndex = 8;
             linkLabel1.TabStop = true;
-            linkLabel1.Text = "Forgot Your Password?";
+            linkLabel1.Text = "Forgot Password?";
             // 
             // rememberme
             // 
             rememberme.AutoSize = true;
-            rememberme.ForeColor = Color.Maroon;
-            rememberme.Location = new Point(405, 224);
+            rememberme.Location = new Point(78, 299);
             rememberme.Name = "rememberme";
-            rememberme.Size = new Size(109, 19);
-            rememberme.TabIndex = 6;
-            rememberme.Text = "Remember me?";
+            rememberme.Size = new Size(138, 19);
+            rememberme.TabIndex = 7;
+            rememberme.Text = "Keep me logged in";
             rememberme.UseVisualStyleBackColor = true;
+            // 
+            // login
+            // 
+            login.Location = new Point(78, 344);
+            login.Name = "login";
+            login.Size = new Size(330, 40);
+            login.TabIndex = 6;
+            login.Text = "LOGIN TO PORTAL";
+            login.UseVisualStyleBackColor = true;
+            login.Click += btnLogin_Click;
+            // 
+            // password
+            // 
+            password.BorderStyle = BorderStyle.None;
+            password.Location = new Point(78, 244);
+            password.Name = "password";
+            password.Size = new Size(330, 16);
+            password.TabIndex = 5;
+            password.TextChanged += textBox2_TextChanged;
+            // 
+            // lblPassword
+            // 
+            lblPassword.AutoSize = true;
+            lblPassword.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblPassword.Location = new Point(78, 215);
+            lblPassword.Name = "lblPassword";
+            lblPassword.Size = new Size(68, 15);
+            lblPassword.TabIndex = 4;
+            lblPassword.Text = "PASSWORD";
+            // 
+            // emailadd
+            // 
+            emailadd.BorderStyle = BorderStyle.None;
+            emailadd.Location = new Point(78, 168);
+            emailadd.Name = "emailadd";
+            emailadd.Size = new Size(330, 16);
+            emailadd.TabIndex = 3;
+            // 
+            // lblEmail
+            // 
+            lblEmail.AutoSize = true;
+            lblEmail.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            lblEmail.Location = new Point(78, 139);
+            lblEmail.Name = "lblEmail";
+            lblEmail.Size = new Size(92, 15);
+            lblEmail.TabIndex = 2;
+            lblEmail.Text = "EMAIL ADDRESS";
+            // 
+            // lblSubtitle
+            // 
+            lblSubtitle.AutoSize = true;
+            lblSubtitle.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
+            lblSubtitle.Location = new Point(78, 90);
+            lblSubtitle.Name = "lblSubtitle";
+            lblSubtitle.Size = new Size(271, 19);
+            lblSubtitle.TabIndex = 1;
+            lblSubtitle.Text = "Please enter your credentials to access the portal.";
+            // 
+            // lblWelcome
+            // 
+            lblWelcome.AutoSize = true;
+            lblWelcome.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
+            lblWelcome.Location = new Point(78, 40);
+            lblWelcome.Name = "lblWelcome";
+            lblWelcome.Size = new Size(223, 45);
+            lblWelcome.TabIndex = 0;
+            lblWelcome.Text = "Welcome back";
             // 
             // notifyIcon1
             // 
@@ -194,32 +232,44 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            BackColor = Color.SeaShell;
-            ClientSize = new Size(736, 450);
+            ClientSize = new Size(900, 560);
             Controls.Add(panelRight);
+            Controls.Add(panelLeft);
+            MinimumSize = new Size(860, 540);
             Name = "LoginForm";
-            Text = "A";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "Login";
             Load += LoginForm_Load;
+            panelLeft.ResumeLayout(false);
+            panelLeft.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
             panelRight.ResumeLayout(false);
             panelRight.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)picEye).EndInit();
-            ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
             ResumeLayout(false);
         }
 
         #endregion
 
-        private Label label1;
-        private Label label2;
+        private Panel panelLeft;
+        private Panel panelRight;
+        private PictureBox picLogo;
+        private Label lblQuote;
+        private Label lblStatus;
+        private Label lblFooter;
+
+        private Label lblWelcome;
+        private Label lblSubtitle;
+        private Label lblEmail;
         private TextBox emailadd;
-        private Label label3;
+        private Label lblPassword;
         private TextBox password;
         private Button login;
-        private Panel panelRight;
-        private LinkLabel linkLabel1;
         private CheckBox rememberme;
-        private PictureBox picLogo;
-        private NotifyIcon notifyIcon1;
+        private LinkLabel linkLabel1;
         private PictureBox picEye;
+        private Label lblPortalStatus;
+
+        private NotifyIcon notifyIcon1;
     }
 }

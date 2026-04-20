@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -7,130 +8,169 @@ namespace EducationSystem
 {
     public partial class ClientsForm : Form
     {
+        private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color SurfaceLowest = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color SurfaceVariant = ColorTranslator.FromHtml("#DDE4E6");
+
+        private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color SecondaryText = ColorTranslator.FromHtml("#6B7E95");
+
+        private readonly Color AccentEmerald = ColorTranslator.FromHtml("#00B894");
+        private readonly Color AccentDeep = ColorTranslator.FromHtml("#006B55");
+
+        private Panel headerPanel = null!;
+        private Label lblBreadcrumb = null!;
         private Label lblTitle = null!;
+        private Button btnAddSchool = null!;
+
+        private Panel tableCard = null!;
+        private Panel toolbarPanel = null!;
+        private Panel searchHost = null!;
+        private Label lblSearchIcon = null!;
         private TextBox txtSearch = null!;
-        private Button btnSearch = null!;
-        private Button btnAddClient = null!;
-        private ComboBox cboStatusFilter = null!;
-        private Label lblFilter = null!;
+        private Button btnFilter = null!;
+        private Button btnExport = null!;
 
-        private Label lblTotalClients = null!;
-        private Label lblActiveClients = null!;
-        private Label lblInactiveClients = null!;
-
-        private Panel topPanel = null!;
-        private Panel summaryPanel = null!;
-        private Panel tableContainer = null!;
         private DataGridView dgvClients = null!;
-        private Label lblEmpty = null!;
+        private Panel footerPanel = null!;
+        private Label lblFooterInfo = null!;
+        private Button btnPrev = null!;
+        private Button btnPage1 = null!;
+        private Button btnPage2 = null!;
+        private Button btnPage3 = null!;
+        private Button btnNext = null!;
 
         public ClientsForm()
         {
             InitializeComponent();
             BuildClientsUI();
-            SeedSampleDataOnce();
             LoadClientsToGrid();
-            UpdateSummaryLabels();
         }
 
         private void BuildClientsUI()
         {
-            BackColor = Color.Snow;
+            BackColor = Background;
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
+            AutoScroll = true;
 
-            topPanel = new Panel
+            headerPanel = new Panel
             {
-                BackColor = Color.Snow,
                 Dock = DockStyle.Top,
-                Height = 165
+                Height = 150,
+                BackColor = Background
+            };
+
+            lblBreadcrumb = new Label
+            {
+                Text = "Admin   ›   Client Libraries",
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                ForeColor = SecondaryText,
+                AutoSize = true,
+                Location = new Point(34, 20)
             };
 
             lblTitle = new Label
             {
-                Text = "Client Management",
-                Font = new Font("Segoe UI", 16, FontStyle.Bold),
-                ForeColor = Color.Maroon,
+                Text = "Institutional Directory",
+                Font = new Font("Segoe UI", 28F, FontStyle.Bold),
+                ForeColor = OnSurface,
                 AutoSize = true,
-                Location = new Point(30, 15)
+                Location = new Point(34, 48)
+            };
+
+            btnAddSchool = new Button
+            {
+                Text = "＋ Add New School",
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                Size = new Size(240, 50),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = AccentEmerald,
+                ForeColor = Color.White,
+                Cursor = Cursors.Hand,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+            btnAddSchool.FlatAppearance.BorderSize = 0;
+            btnAddSchool.Click += btnAddClient_Click;
+
+            headerPanel.Controls.Add(lblBreadcrumb);
+            headerPanel.Controls.Add(lblTitle);
+            headerPanel.Controls.Add(btnAddSchool);
+
+            tableCard = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = SurfaceLowest,
+                Padding = new Padding(34, 0, 34, 24),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            toolbarPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 88,
+                BackColor = SurfaceLowest
+            };
+
+            searchHost = new Panel
+            {
+                BackColor = SurfaceLow,
+                Size = new Size(480, 44)
+            };
+
+            lblSearchIcon = new Label
+            {
+                Text = "⌕",
+                Font = new Font("Segoe UI Symbol", 18F),
+                ForeColor = SecondaryText,
+                AutoSize = true
             };
 
             txtSearch = new TextBox
             {
-                Font = new Font("Segoe UI", 10),
-                Size = new Size(250, 30),
-                Location = new Point(30, 58),
-                BorderStyle = BorderStyle.FixedSingle,
-                BackColor = Color.White
+                BorderStyle = BorderStyle.None,
+                BackColor = SurfaceLow,
+                ForeColor = SecondaryText,
+                Font = new Font("Segoe UI", 11F),
+                Text = "Search by school name, ID or email..."
             };
 
-            btnSearch = new Button
+            txtSearch.GotFocus += (s, e) =>
             {
-                Text = "Search",
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Size = new Size(90, 30),
-                Location = new Point(290, 58)
+                if (txtSearch.Text == "Search by school name, ID or email...")
+                {
+                    txtSearch.Text = "";
+                    txtSearch.ForeColor = OnSurface;
+                }
             };
-            StyleButton(btnSearch);
-            btnSearch.Click += btnSearch_Click;
 
-            lblFilter = new Label
+            txtSearch.LostFocus += (s, e) =>
             {
-                Text = "Status:",
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.Maroon,
-                AutoSize = true,
-                Location = new Point(400, 63)
+                if (string.IsNullOrWhiteSpace(txtSearch.Text))
+                {
+                    txtSearch.Text = "Search by school name, ID or email...";
+                    txtSearch.ForeColor = SecondaryText;
+                }
             };
 
-            cboStatusFilter = new ComboBox
-            {
-                Font = new Font("Segoe UI", 10),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Size = new Size(150, 30),
-                Location = new Point(455, 58)
-            };
-            cboStatusFilter.Items.AddRange(new object[] { "All", "Active", "Inactive" });
-            cboStatusFilter.SelectedIndex = 0;
-            cboStatusFilter.SelectedIndexChanged += cboStatusFilter_SelectedIndexChanged;
+            txtSearch.TextChanged += (s, e) => LoadClientsToGrid();
 
-            btnAddClient = new Button
-            {
-                Text = "+ ADD NEW CLIENT",
-                Font = new Font("Segoe UI", 9, FontStyle.Bold),
-                Size = new Size(150, 32),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            StyleButton(btnAddClient);
-            btnAddClient.Click += btnAddClient_Click;
+            btnFilter = CreateToolbarIconButton("☰");
+            btnExport = CreateToolbarIconButton("⇩");
 
-            summaryPanel = new Panel
-            {
-                BackColor = Color.Snow,
-                Location = new Point(30, 100),
-                Size = new Size(500, 45)
-            };
+            searchHost.Controls.Add(lblSearchIcon);
+            searchHost.Controls.Add(txtSearch);
 
-            lblTotalClients = CreateSummaryLabel("Total Clients: 0", new Point(0, 10));
-            lblActiveClients = CreateSummaryLabel("Active: 0", new Point(170, 10));
-            lblInactiveClients = CreateSummaryLabel("Inactive: 0", new Point(290, 10));
-
-            summaryPanel.Controls.Add(lblTotalClients);
-            summaryPanel.Controls.Add(lblActiveClients);
-            summaryPanel.Controls.Add(lblInactiveClients);
-
-            topPanel.Controls.Add(lblTitle);
-            topPanel.Controls.Add(txtSearch);
-            topPanel.Controls.Add(btnSearch);
-            topPanel.Controls.Add(lblFilter);
-            topPanel.Controls.Add(cboStatusFilter);
-            topPanel.Controls.Add(btnAddClient);
-            topPanel.Controls.Add(summaryPanel);
+            toolbarPanel.Controls.Add(searchHost);
+            toolbarPanel.Controls.Add(btnFilter);
+            toolbarPanel.Controls.Add(btnExport);
 
             dgvClients = new DataGridView
             {
                 Dock = DockStyle.Fill,
+                BackgroundColor = SurfaceLowest,
                 BorderStyle = BorderStyle.None,
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
@@ -141,330 +181,283 @@ namespace EducationSystem
                 ReadOnly = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 EnableHeadersVisualStyles = false,
-                ColumnHeadersHeight = 38,
-                RowTemplate = { Height = 38 },
-                GridColor = Color.Gainsboro,
+                ColumnHeadersHeight = 54,
+                GridColor = SurfaceVariant,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.Single,
-                BackgroundColor = Color.WhiteSmoke
+                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
+                ScrollBars = ScrollBars.Vertical
             };
 
-            dgvClients.ColumnHeadersDefaultCellStyle.BackColor = Color.WhiteSmoke;
-            dgvClients.ColumnHeadersDefaultCellStyle.ForeColor = Color.Black;
-            dgvClients.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            dgvClients.ColumnHeadersDefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleLeft;
-            dgvClients.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.WhiteSmoke;
-            dgvClients.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.Black;
+            dgvClients.RowTemplate.Height = 78;
+            dgvClients.DefaultCellStyle.Padding = new Padding(8, 6, 8, 6);
+            dgvClients.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 10, 8, 10);
 
-            dgvClients.DefaultCellStyle.BackColor = Color.White;
-            dgvClients.DefaultCellStyle.ForeColor = Color.Black;
-            dgvClients.DefaultCellStyle.Font = new Font("Segoe UI", 10);
-            dgvClients.DefaultCellStyle.SelectionBackColor = Color.FromArgb(230, 230, 230);
-            dgvClients.DefaultCellStyle.SelectionForeColor = Color.Black;
-            dgvClients.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
+            dgvClients.ColumnHeadersDefaultCellStyle.BackColor = SurfaceLow;
+            dgvClients.ColumnHeadersDefaultCellStyle.ForeColor = SecondaryText;
+            dgvClients.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            dgvClients.ColumnHeadersDefaultCellStyle.SelectionBackColor = SurfaceLow;
+            dgvClients.ColumnHeadersDefaultCellStyle.SelectionForeColor = SecondaryText;
 
-            dgvClients.Columns.Add("ID", "Client ID");
-            dgvClients.Columns.Add("Name", "Library Name");
-            dgvClients.Columns.Add("Email", "Email");
-            dgvClients.Columns.Add("Status", "Status");
+            dgvClients.DefaultCellStyle.BackColor = SurfaceLowest;
+            dgvClients.DefaultCellStyle.ForeColor = OnSurface;
+            dgvClients.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
+            dgvClients.DefaultCellStyle.SelectionBackColor = Color.FromArgb(243, 249, 248);
+            dgvClients.DefaultCellStyle.SelectionForeColor = OnSurface;
+            dgvClients.AlternatingRowsDefaultCellStyle.BackColor = SurfaceLowest;
 
-            DataGridViewButtonColumn editCol = new DataGridViewButtonColumn
-            {
-                Name = "Edit",
-                HeaderText = "Edit",
-                Text = "✎",
-                UseColumnTextForButtonValue = true,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 70
-            };
+            dgvClients.Columns.Add("DbClientID", "DBID");
+            dgvClients.Columns["DbClientID"].Visible = false;
 
-            DataGridViewButtonColumn archiveCol = new DataGridViewButtonColumn
-            {
-                Name = "Archive",
-                HeaderText = "Archive",
-                Text = "📥",
-                UseColumnTextForButtonValue = true,
-                AutoSizeMode = DataGridViewAutoSizeColumnMode.None,
-                Width = 80
-            };
+            dgvClients.Columns.Add("SchoolName", "SCHOOL NAME");
+            dgvClients.Columns.Add("Email", "EMAIL");
+            dgvClients.Columns.Add("UserCount", "USER COUNT");
+            dgvClients.Columns.Add("Status", "STATUS");
+            dgvClients.Columns.Add("Actions", "ACTIONS");
 
-            dgvClients.Columns.Add(editCol);
-            dgvClients.Columns.Add(archiveCol);
+            dgvClients.Columns["SchoolName"].FillWeight = 34;
+            dgvClients.Columns["Email"].FillWeight = 24;
+            dgvClients.Columns["UserCount"].FillWeight = 14;
+            dgvClients.Columns["Status"].FillWeight = 14;
+            dgvClients.Columns["Actions"].FillWeight = 14;
 
             foreach (DataGridViewColumn col in dgvClients.Columns)
-            {
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
-            }
 
-            dgvClients.Columns["ID"].FillWeight = 18;
-            dgvClients.Columns["Name"].FillWeight = 28;
-            dgvClients.Columns["Email"].FillWeight = 26;
-            dgvClients.Columns["Status"].FillWeight = 14;
-
+            dgvClients.CellPainting += dgvClients_CellPainting;
             dgvClients.CellClick += dgvClients_CellClick;
-            dgvClients.CellFormatting += dgvClients_CellFormatting;
 
-            lblEmpty = new Label
+            footerPanel = new Panel
             {
-                Text = "No clients found.",
-                Font = new Font("Segoe UI", 11, FontStyle.Italic),
-                ForeColor = Color.DimGray,
-                AutoSize = true,
-                Visible = false
+                Dock = DockStyle.Bottom,
+                Height = 64,
+                BackColor = Color.FromArgb(250, 252, 252)
             };
 
-            tableContainer = new Panel
+            lblFooterInfo = new Label
             {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(30, 0, 30, 20),
-                BackColor = Color.Snow
+                Text = "Showing 0 institutions",
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Regular),
+                ForeColor = SecondaryText,
+                AutoSize = true
             };
 
-            tableContainer.Controls.Add(dgvClients);
-            tableContainer.Controls.Add(lblEmpty);
+            btnPrev = CreatePagerButton("‹", false);
+            btnPage1 = CreatePagerButton("1", true);
+            btnPage2 = CreatePagerButton("2", false);
+            btnPage3 = CreatePagerButton("3", false);
+            btnNext = CreatePagerButton("›", false);
 
-            Controls.Add(tableContainer);
-            Controls.Add(topPanel);
+            footerPanel.Controls.Add(lblFooterInfo);
+            footerPanel.Controls.Add(btnPrev);
+            footerPanel.Controls.Add(btnPage1);
+            footerPanel.Controls.Add(btnPage2);
+            footerPanel.Controls.Add(btnPage3);
+            footerPanel.Controls.Add(btnNext);
+
+            tableCard.Controls.Add(dgvClients);
+            tableCard.Controls.Add(footerPanel);
+            tableCard.Controls.Add(toolbarPanel);
+
+            Controls.Add(tableCard);
+            Controls.Add(headerPanel);
 
             Resize += ClientsForm_Resize;
-            AdjustTopControls();
-            PositionEmptyLabel();
+            AdjustResponsiveLayout();
         }
 
-        private Label CreateSummaryLabel(string text, Point location)
+        private Button CreateToolbarIconButton(string text)
         {
-            return new Label
+            Button btn = new Button
             {
                 Text = text,
-                Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                ForeColor = Color.Maroon,
-                AutoSize = true,
-                Location = location
+                FlatStyle = FlatStyle.Flat,
+                Width = 40,
+                Height = 40,
+                BackColor = Color.Transparent,
+                ForeColor = OnSurface,
+                Font = new Font("Segoe UI Symbol", 14F, FontStyle.Regular),
+                Cursor = Cursors.Hand,
+                TabStop = false
             };
+            btn.FlatAppearance.BorderSize = 0;
+            btn.FlatAppearance.MouseOverBackColor = SurfaceLow;
+            return btn;
         }
 
-        private void StyleButton(Button btn)
+        private Button CreatePagerButton(string text, bool active)
         {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(230, 230, 230);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(210, 210, 210);
-            btn.UseVisualStyleBackColor = false;
-            btn.BackColor = Color.Maroon;
-            btn.ForeColor = Color.WhiteSmoke;
-            btn.Cursor = Cursors.Hand;
-
-            btn.MouseEnter += (s, e) =>
+            Button btn = new Button
             {
-                btn.BackColor = Color.FromArgb(230, 230, 230);
-                btn.ForeColor = Color.Black;
+                Text = text,
+                FlatStyle = FlatStyle.Flat,
+                Width = 40,
+                Height = 40,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                TabStop = false
             };
 
-            btn.MouseLeave += (s, e) =>
+            if (active)
             {
-                btn.BackColor = Color.Maroon;
-                btn.ForeColor = Color.WhiteSmoke;
-            };
+                btn.BackColor = AccentEmerald;
+                btn.ForeColor = Color.White;
+                btn.FlatAppearance.BorderSize = 0;
+            }
+            else
+            {
+                btn.BackColor = Color.Transparent;
+                btn.ForeColor = OnSurface;
+                btn.FlatAppearance.BorderColor = SurfaceVariant;
+                btn.FlatAppearance.BorderSize = 1;
+            }
+
+            return btn;
+        }
+
+        private void AdjustResponsiveLayout()
+        {
+            if (btnAddSchool == null) return;
+
+            btnAddSchool.Location = new Point(ClientSize.Width - btnAddSchool.Width - 40, 54);
+
+            tableCard.Padding = new Padding(34, 0, 34, 24);
+
+            searchHost.Location = new Point(26, 22);
+            searchHost.Size = new Size(Math.Min(480, Math.Max(300, ClientSize.Width / 3)), 44);
+
+            lblSearchIcon.Location = new Point(12, 8);
+            txtSearch.Location = new Point(46, 12);
+            txtSearch.Width = searchHost.Width - 58;
+
+            btnExport.Location = new Point(tableCard.Width - 84, 24);
+            btnFilter.Location = new Point(btnExport.Left - 48, 24);
+
+            lblFooterInfo.Location = new Point(26, 22);
+
+            btnNext.Location = new Point(footerPanel.Width - 44, 12);
+            btnPage3.Location = new Point(btnNext.Left - 48, 12);
+            btnPage2.Location = new Point(btnPage3.Left - 48, 12);
+            btnPage1.Location = new Point(btnPage2.Left - 48, 12);
+            btnPrev.Location = new Point(btnPage1.Left - 48, 12);
         }
 
         private void ClientsForm_Resize(object? sender, EventArgs e)
         {
-            AdjustTopControls();
-            PositionEmptyLabel();
-        }
-
-        private void AdjustTopControls()
-        {
-            if (btnAddClient == null || txtSearch == null || btnSearch == null)
-                return;
-
-            int rightMargin = 30;
-            btnAddClient.Location = new Point(
-                Math.Max(cboStatusFilter.Right + 40, ClientSize.Width - btnAddClient.Width - rightMargin),
-                txtSearch.Top - 1
-            );
-        }
-
-        private void PositionEmptyLabel()
-        {
-            if (lblEmpty == null || tableContainer == null) return;
-
-            lblEmpty.Location = new Point(
-                Math.Max(30, (tableContainer.Width - lblEmpty.Width) / 2),
-                Math.Max(40, (tableContainer.Height - lblEmpty.Height) / 2)
-            );
-            lblEmpty.BringToFront();
-        }
-
-        private void SeedSampleDataOnce()
-        {
-            if (ClientArchiveStore.IsSeeded) return;
-
-            ClientArchiveStore.ActiveClients.Add(new ClientItem
-            {
-                ClientID = "CL001",
-                LibraryName = "ABC School Library",
-                Email = "abc@gmail.com",
-                Password = "abc123",
-                Status = "Active"
-            });
-
-            ClientArchiveStore.ActiveClients.Add(new ClientItem
-            {
-                ClientID = "CL002",
-                LibraryName = "XYZ College Library",
-                Email = "xyz@gmail.com",
-                Password = "xyz123",
-                Status = "Active"
-            });
-
-            ClientArchiveStore.ActiveClients.Add(new ClientItem
-            {
-                ClientID = "CL003",
-                LibraryName = "LMN Center",
-                Email = "lmn@gmail.com",
-                Password = "lmn123",
-                Status = "Inactive"
-            });
-
-            ClientArchiveStore.IsSeeded = true;
+            AdjustResponsiveLayout();
         }
 
         private void LoadClientsToGrid()
         {
-            string keyword = txtSearch?.Text.Trim().ToLower() ?? "";
-            string statusFilter = cboStatusFilter?.SelectedItem?.ToString() ?? "All";
-
             dgvClients.Rows.Clear();
 
-            var filtered = ClientArchiveStore.ActiveClients.Where(c =>
+            string searchText = "";
+            if (txtSearch != null &&
+                !string.IsNullOrWhiteSpace(txtSearch.Text) &&
+                txtSearch.Text != "Search by school name, ID or email...")
             {
-                bool matchesKeyword =
-                    string.IsNullOrWhiteSpace(keyword) ||
-                    c.ClientID.ToLower().Contains(keyword) ||
-                    c.LibraryName.ToLower().Contains(keyword) ||
-                    c.Email.ToLower().Contains(keyword) ||
-                    c.Status.ToLower().Contains(keyword);
+                searchText = txtSearch.Text.Trim();
+            }
 
-                bool matchesStatus =
-                    statusFilter == "All" ||
-                    c.Status.Equals(statusFilter, StringComparison.OrdinalIgnoreCase);
+            List<ClientDbItem> clients = ClientService.GetClients(searchText);
 
-                return matchesKeyword && matchesStatus;
-            }).ToList();
-
-            foreach (var client in filtered)
+            foreach (ClientDbItem client in clients)
             {
+                string schoolCell = GetInitials(client.LibraryName) + "|" + client.LibraryName + "|" + client.LibraryCode;
+
                 dgvClients.Rows.Add(
-                    client.ClientID,
-                    client.LibraryName,
+                    client.DbClientID,
+                    schoolCell,
                     client.Email,
-                    client.Status
+                    client.UserCount.ToString("N0"),
+                    client.Status,
+                    "Edit|Delete"
                 );
             }
 
             dgvClients.ClearSelection();
-            lblEmpty.Visible = filtered.Count == 0;
-            PositionEmptyLabel();
-            UpdateSummaryLabels();
+            lblFooterInfo.Text = $"Showing 1 - {clients.Count} of {clients.Count} institutions";
         }
 
-        private void UpdateSummaryLabels()
+        private string GetInitials(string libraryName)
         {
-            int total = ClientArchiveStore.ActiveClients.Count;
-            int active = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Active");
-            int inactive = ClientArchiveStore.ActiveClients.Count(c => c.Status == "Inactive");
-
-            lblTotalClients.Text = $"Total Clients: {total}";
-            lblActiveClients.Text = $"Active: {active}";
-            lblInactiveClients.Text = $"Inactive: {inactive}";
-        }
-
-        private string GenerateNextClientId()
-        {
-            if (!ClientArchiveStore.ActiveClients.Any() && !ClientArchiveStore.ArchivedClients.Any())
-                return "CL001";
-
-            int maxActive = ClientArchiveStore.ActiveClients
-                .Select(c => ExtractIdNumber(c.ClientID))
-                .DefaultIfEmpty(0)
-                .Max();
-
-            int maxArchived = ClientArchiveStore.ArchivedClients
-                .Select(c => ExtractIdNumber(c.ClientID))
-                .DefaultIfEmpty(0)
-                .Max();
-
-            int next = Math.Max(maxActive, maxArchived) + 1;
-            return "CL" + next.ToString("D3");
-        }
-
-        private int ExtractIdNumber(string clientId)
-        {
-            if (string.IsNullOrWhiteSpace(clientId) || clientId.Length < 3) return 0;
-
-            string numberPart = clientId.Replace("CL", "");
-            return int.TryParse(numberPart, out int number) ? number : 0;
-        }
-
-        private void btnSearch_Click(object? sender, EventArgs e)
-        {
-            LoadClientsToGrid();
-        }
-
-        private void cboStatusFilter_SelectedIndexChanged(object? sender, EventArgs e)
-        {
-            LoadClientsToGrid();
+            string[] words = libraryName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0) return "CL";
+            if (words.Length == 1) return words[0].Substring(0, Math.Min(2, words[0].Length)).ToUpper();
+            return (words[0][0].ToString() + words[1][0].ToString()).ToUpper();
         }
 
         private void btnAddClient_Click(object? sender, EventArgs e)
         {
-            string newId = GenerateNextClientId();
+            string newId = ClientService.GenerateNextLibraryCode();
 
-            using (var dialog = new ClientDialogForm("Add New Client", newId))
+            using ClientDialogForm dialog = new ClientDialogForm("Register New Client", newId);
+
+            if (dialog.ShowDialog() == DialogResult.OK)
             {
-                if (dialog.ShowDialog() == DialogResult.OK)
+                try
                 {
-                    ClientArchiveStore.ActiveClients.Add(new ClientItem
-                    {
-                        ClientID = dialog.ClientIDValue,
-                        LibraryName = dialog.LibraryNameValue,
-                        Email = dialog.EmailValue,
-                        Password = dialog.PasswordValue,
-                        Status = dialog.StatusValue
-                    });
+                    ClientService.AddClientWithAdmin(
+                        dialog.ClientIDValue,
+                        dialog.LibraryNameValue,
+                        dialog.EmailValue,
+                        dialog.PasswordValue,
+                        dialog.StatusValue
+                    );
 
+                    MessageBox.Show("Client saved successfully.");
                     LoadClientsToGrid();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error saving client:\n\n" + ex.Message);
                 }
             }
         }
 
-        private void EditClient(string clientId)
+        private void EditClient(int dbClientId, string libraryCode)
         {
-            var client = ClientArchiveStore.ActiveClients.FirstOrDefault(c => c.ClientID == clientId);
+            ClientDbItem? client = ClientService.GetClients()
+                .FirstOrDefault(c => c.DbClientID == dbClientId);
+
             if (client == null) return;
 
-            using (var dialog = new ClientDialogForm("Edit Client", client.ClientID, client))
+            ClientItem editItem = new ClientItem
             {
-                if (dialog.ShowDialog() == DialogResult.OK)
-                {
-                    client.LibraryName = dialog.LibraryNameValue;
-                    client.Email = dialog.EmailValue;
-                    client.Password = dialog.PasswordValue;
-                    client.Status = dialog.StatusValue;
+                ClientID = libraryCode,
+                LibraryName = client.LibraryName,
+                Email = client.Email,
+                Password = client.PasswordText,
+                Status = client.Status
+            };
 
+            using ClientDialogForm dialog = new ClientDialogForm("Edit Client", libraryCode, editItem);
+
+            if (dialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    ClientService.UpdateClientWithAdmin(
+                        dbClientId,
+                        dialog.LibraryNameValue,
+                        dialog.EmailValue,
+                        dialog.PasswordValue,
+                        dialog.StatusValue
+                    );
+
+                    MessageBox.Show("Client updated successfully.");
                     LoadClientsToGrid();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error updating client:\n\n" + ex.Message);
                 }
             }
         }
 
-        private void ArchiveClient(string clientId)
+        private void ArchiveClient(int dbClientId, string libraryName)
         {
-            var client = ClientArchiveStore.ActiveClients.FirstOrDefault(c => c.ClientID == clientId);
-            if (client == null) return;
-
             DialogResult result = MessageBox.Show(
-                $"Are you sure you want to archive client '{client.LibraryName}' ({client.ClientID})?",
+                $"Are you sure you want to archive '{libraryName}'?",
                 "Archive Client",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
@@ -472,60 +465,153 @@ namespace EducationSystem
 
             if (result == DialogResult.Yes)
             {
-                client.Status = "Archived";
-                ClientArchiveStore.ArchivedClients.Add(client);
-                ClientArchiveStore.ActiveClients.Remove(client);
-
-                string nextArchiveId = "AR" + (ArchiveStore.ArchivedItems.Count + 1).ToString("D3");
-
-                ArchiveStore.ArchivedItems.Add(new ArchiveItem
+                try
                 {
-                    ArchiveID = nextArchiveId,
-                    Module = "Clients",
-                    RecordID = client.ClientID,
-                    ItemName = client.LibraryName,
-                    ExtraInfo = client.Email,
-                    ArchivedBy = string.IsNullOrWhiteSpace(UserSession.Username) ? "Super Admin" : UserSession.Username,
-                    ArchivedDate = DateTime.Now,
-                    Status = "Archived"
-                });
+                    ClientService.ArchiveClient(
+                        dbClientId,
+                        string.IsNullOrWhiteSpace(UserSession.Username) ? "Super Admin" : UserSession.Username
+                    );
 
-                LoadClientsToGrid();
+                    MessageBox.Show("Client archived successfully.");
+                    LoadClientsToGrid();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error archiving client:\n\n" + ex.Message);
+                }
             }
         }
 
         private void dgvClients_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
+            if (dgvClients.Columns[e.ColumnIndex].Name != "Actions") return;
 
-            string clientId = dgvClients.Rows[e.RowIndex].Cells["ID"].Value?.ToString() ?? "";
+            int dbClientId = Convert.ToInt32(dgvClients.Rows[e.RowIndex].Cells["DbClientID"].Value);
+            string schoolCell = dgvClients.Rows[e.RowIndex].Cells["SchoolName"].Value?.ToString() ?? "";
+            string[] parts = schoolCell.Split('|');
+            if (parts.Length < 3) return;
 
-            if (dgvClients.Columns[e.ColumnIndex].Name == "Edit")
-            {
-                EditClient(clientId);
-            }
-            else if (dgvClients.Columns[e.ColumnIndex].Name == "Archive")
-            {
-                ArchiveClient(clientId);
-            }
+            string libraryName = parts[1];
+            string libraryCode = parts[2];
+
+            int relativeX = dgvClients.PointToClient(Cursor.Position).X
+                            - dgvClients.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false).X;
+
+            if (relativeX < 36)
+                EditClient(dbClientId, libraryCode);
+            else
+                ArchiveClient(dbClientId, libraryName);
         }
 
-        private void dgvClients_CellFormatting(object? sender, DataGridViewCellFormattingEventArgs e)
+        private void dgvClients_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
-            if (dgvClients.Columns[e.ColumnIndex].Name == "Status" && e.Value != null)
-            {
-                string status = e.Value.ToString() ?? "";
+            if (e.RowIndex < 0) return;
 
-                if (status == "Active")
-                {
-                    e.CellStyle.ForeColor = Color.DarkGreen;
-                    e.CellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-                }
-                else if (status == "Inactive")
-                {
-                    e.CellStyle.ForeColor = Color.DarkGoldenrod;
-                    e.CellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-                }
+            string columnName = dgvClients.Columns[e.ColumnIndex].Name;
+
+            if (columnName == "SchoolName")
+            {
+                e.PaintBackground(e.CellBounds, true);
+
+                string raw = e.FormattedValue?.ToString() ?? "";
+                string[] parts = raw.Split('|');
+                string initials = parts.Length > 0 ? parts[0] : "";
+                string schoolName = parts.Length > 1 ? parts[1] : "";
+                string clientId = parts.Length > 2 ? parts[2] : "";
+
+                Rectangle avatar = new Rectangle(e.CellBounds.X + 14, e.CellBounds.Y + (e.CellBounds.Height - 40) / 2, 40, 40);
+
+                using (SolidBrush brush = new SolidBrush(SurfaceLow))
+                    e.Graphics.FillRectangle(brush, avatar);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    initials,
+                    new Font("Segoe UI", 11F, FontStyle.Bold),
+                    avatar,
+                    AccentDeep,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+                );
+
+                Rectangle nameRect = new Rectangle(avatar.Right + 12, e.CellBounds.Y + 14, e.CellBounds.Width - avatar.Width - 26, 24);
+                Rectangle idRect = new Rectangle(avatar.Right + 12, e.CellBounds.Y + 38, e.CellBounds.Width - avatar.Width - 26, 18);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    schoolName,
+                    new Font("Segoe UI", 10.5F, FontStyle.Bold),
+                    nameRect,
+                    OnSurface,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                );
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    "ID: " + clientId,
+                    new Font("Segoe UI", 8.5F, FontStyle.Regular),
+                    idRect,
+                    SecondaryText,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                );
+
+                e.Handled = true;
+            }
+            else if (columnName == "Status")
+            {
+                e.PaintBackground(e.CellBounds, true);
+
+                string text = e.FormattedValue?.ToString() ?? "";
+                bool isActive = text.Equals("Active", StringComparison.OrdinalIgnoreCase);
+
+                Rectangle track = new Rectangle(e.CellBounds.X + 12, e.CellBounds.Y + (e.CellBounds.Height - 24) / 2, 40, 22);
+                Rectangle knob = isActive
+                    ? new Rectangle(track.Right - 20, track.Y + 1, 20, 20)
+                    : new Rectangle(track.X, track.Y + 1, 20, 20);
+
+                using (SolidBrush trackBrush = new SolidBrush(isActive ? AccentEmerald : Color.FromArgb(220, 226, 230)))
+                    e.Graphics.FillRectangle(trackBrush, track);
+
+                using (SolidBrush knobBrush = new SolidBrush(Color.White))
+                    e.Graphics.FillEllipse(knobBrush, knob);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    isActive ? "Active" : "Inactive",
+                    new Font("Segoe UI", 9F, FontStyle.Bold),
+                    new Rectangle(track.Right + 10, e.CellBounds.Y, e.CellBounds.Width - track.Width - 18, e.CellBounds.Height),
+                    isActive ? AccentDeep : OnSurface,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                );
+
+                e.Handled = true;
+            }
+            else if (columnName == "Actions")
+            {
+                e.PaintBackground(e.CellBounds, true);
+
+                Rectangle editRect = new Rectangle(e.CellBounds.X + 12, e.CellBounds.Y + (e.CellBounds.Height - 24) / 2, 24, 24);
+                Rectangle delRect = new Rectangle(e.CellBounds.X + 52, e.CellBounds.Y + (e.CellBounds.Height - 24) / 2, 24, 24);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    "✎",
+                    new Font("Segoe UI Symbol", 12F, FontStyle.Regular),
+                    editRect,
+                    SecondaryText,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+                );
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    "🗑",
+                    new Font("Segoe UI Emoji", 11F, FontStyle.Regular),
+                    delRect,
+                    SecondaryText,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
+                );
+
+                e.Handled = true;
             }
         }
     }

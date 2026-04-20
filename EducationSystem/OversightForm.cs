@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -6,388 +7,780 @@ namespace EducationSystem
 {
     public partial class OversightForm : Form
     {
+        private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color SurfaceLowest = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color SurfaceHigh = ColorTranslator.FromHtml("#E2E9EC");
+        private readonly Color SurfaceHighest = ColorTranslator.FromHtml("#DDE4E6");
+        private readonly Color OutlineVariant = ColorTranslator.FromHtml("#BBCAC3");
+
+        private readonly Color Primary = ColorTranslator.FromHtml("#006B55");
+        private readonly Color PrimaryContainer = ColorTranslator.FromHtml("#00B894");
+        private readonly Color SecondaryContainer = ColorTranslator.FromHtml("#B7EBD7");
+        private readonly Color OnPrimaryContainer = ColorTranslator.FromHtml("#004233");
+        private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color OnSurfaceVariant = ColorTranslator.FromHtml("#3C4A44");
+
+        private Panel contentPanel = null!;
         private Label lblTitle = null!;
-        private Label lblSubInfo = null!;
+        private Label lblSubtitle = null!;
 
-        private Panel mainPanel = null!;
+        private Panel userAccessPanel = null!;
+        private Panel softwarePanel = null!;
+        private Panel hardwarePanel = null!;
+        private Panel architecturePanel = null!;
+        private Panel feesPanel = null!;
+        private Panel policyPanel = null!;
+        private Panel maintenancePanel = null!;
+        private Panel footerActionsPanel = null!;
 
-        private GroupBox grpUserPermissions = null!;
-        private CheckBox chkAdminManageLibrarians = null!;
-        private CheckBox chkLibrarianManageMembers = null!;
-        private CheckBox chkMemberViewOwnStatus = null!;
+        private CheckBox chkAdminFull = null!;
+        private CheckBox chkStaffRules = null!;
+        private CheckBox chkStudentFaculty = null!;
+        private CheckBox chkGuestRead = null!;
 
-        private GroupBox grpFineSettings = null!;
-        private Label lblFinePerDay = null!;
-        private NumericUpDown numFinePerDay = null!;
-        private Label lblMaxFine = null!;
-        private NumericUpDown numMaxFine = null!;
+        private NumericUpDown nudDailyFee = null!;
+        private NumericUpDown nudMaxFee = null!;
+        private NumericUpDown nudLostBookFee = null!;
 
-        private GroupBox grpBorrowingLimits = null!;
-        private Label lblStudentLimit = null!;
-        private NumericUpDown numStudentLimit = null!;
-        private Label lblTeacherLimit = null!;
-        private NumericUpDown numTeacherLimit = null!;
-        private Label lblBorrowDays = null!;
-        private NumericUpDown numBorrowDays = null!;
+        private CheckBox chkAutoRenew = null!;
+        private CheckBox chkBlockOutstanding = null!;
+        private CheckBox chkCrossCampus = null!;
 
-        private GroupBox grpCirculationRules = null!;
-        private CheckBox chkAllowRenewal = null!;
-        private Label lblRenewalLimit = null!;
-        private NumericUpDown numRenewalLimit = null!;
-        private CheckBox chkBlockOverdueBorrowing = null!;
+        private Button btnAdjustFee = null!;
+        private Button btnExportConfig = null!;
+        private Button btnRestoreBackup = null!;
+        private Button btnRunUpdates = null!;
+        private Button btnDiscard = null!;
+        private Button btnApply = null!;
 
-        private GroupBox grpDataMaintenance = null!;
-        private Button btnBackup = null!;
-        private Button btnClearLogs = null!;
-        private Button btnResetDemo = null!;
+        private Panel swBox1 = null!;
+        private Panel swBox2 = null!;
+        private Panel swBox3 = null!;
+        private Panel swBox4 = null!;
 
-        private Button btnSave = null!;
+        private Panel module1 = null!;
+        private Panel module2 = null!;
+        private Panel module3 = null!;
+        private Panel module4 = null!;
+
+        private Label archChip1 = null!;
+        private Label archChip2 = null!;
+        private Label archChip3 = null!;
+        private Label rolesText = null!;
 
         public OversightForm()
         {
             InitializeComponent();
-            BuildUI();
-            Resize += OversightForm_Resize;
+
+            if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
+            {
+                BuildUI();
+                Resize += OversightForm_Resize;
+                AdjustLayout();
+            }
         }
 
         private void BuildUI()
         {
-            BackColor = Color.Snow;
+            BackColor = Background;
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
             AutoScroll = true;
 
+            contentPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Background,
+                AutoScroll = true
+            };
+
             lblTitle = new Label
             {
                 Text = "System Configuration",
-                Font = new Font("Segoe UI", 16F, FontStyle.Bold),
-                ForeColor = Color.Maroon,
+                Font = new Font("Segoe UI", 24F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true
+            };
+
+            lblSubtitle = new Label
+            {
+                Text = "Manage core institutional rules and LibraFlow LMS technical protocols.",
+                Font = new Font("Segoe UI", 11F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
+            };
+
+            userAccessPanel = CreateCardPanel();
+            softwarePanel = CreateCardPanel();
+            hardwarePanel = CreateCardPanel();
+            architecturePanel = CreateCardPanel();
+            feesPanel = CreateCardPanel();
+            policyPanel = CreateCardPanel();
+            maintenancePanel = CreateCardPanel();
+
+            footerActionsPanel = new Panel
+            {
+                BackColor = Background
+            };
+
+            BuildUserAccessPanel();
+            BuildSoftwarePanel();
+            BuildHardwarePanel();
+            BuildArchitecturePanel();
+            BuildFeesPanel();
+            BuildPolicyPanel();
+            BuildMaintenancePanel();
+            BuildFooterActionsPanel();
+
+            contentPanel.Controls.Add(lblTitle);
+            contentPanel.Controls.Add(lblSubtitle);
+            contentPanel.Controls.Add(userAccessPanel);
+            contentPanel.Controls.Add(softwarePanel);
+            contentPanel.Controls.Add(hardwarePanel);
+            contentPanel.Controls.Add(architecturePanel);
+            contentPanel.Controls.Add(feesPanel);
+            contentPanel.Controls.Add(policyPanel);
+            contentPanel.Controls.Add(maintenancePanel);
+            contentPanel.Controls.Add(footerActionsPanel);
+
+            Controls.Add(contentPanel);
+        }
+
+        private Panel CreateCardPanel()
+        {
+            Panel panel = new Panel
+            {
+                BackColor = SurfaceLowest,
+                BorderStyle = BorderStyle.None
+            };
+
+            panel.Paint += (s, e) =>
+            {
+                using Pen pen = new Pen(Color.FromArgb(38, OutlineVariant), 1);
+                e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
+            };
+
+            return panel;
+        }
+
+        private Panel CreateModulePanel()
+        {
+            Panel panel = new Panel
+            {
+                BackColor = SurfaceLowest,
+                BorderStyle = BorderStyle.None
+            };
+
+            panel.Paint += (s, e) =>
+            {
+                using Pen pen = new Pen(Color.FromArgb(55, OutlineVariant), 1);
+                e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
+            };
+
+            return panel;
+        }
+
+        private Panel CreateSoftInfoBox(string title, string value, bool addLeftAccent = false)
+        {
+            Panel box = new Panel
+            {
+                BackColor = SurfaceLow,
+                BorderStyle = BorderStyle.None
+            };
+
+            box.Paint += (s, e) =>
+            {
+                using Pen pen = new Pen(Color.FromArgb(28, OutlineVariant), 1);
+                e.Graphics.DrawRectangle(pen, 0, 0, box.Width - 1, box.Height - 1);
+
+                if (addLeftAccent)
+                {
+                    using SolidBrush brush = new SolidBrush(Color.FromArgb(40, Primary));
+                    e.Graphics.FillRectangle(brush, 0, 0, 4, box.Height);
+                }
+            };
+
+            Label lblBoxTitle = new Label
+            {
+                Text = title.ToUpper(),
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = Primary,
                 AutoSize = true,
-                Location = new Point(24, 20)
+                Location = new Point(16, 14)
             };
 
-            lblSubInfo = new Label
+            Label lblValue = new Label
             {
-                Text = "Manage permissions, fine settings, borrowing limits, circulation rules, and maintenance tools.",
-                Font = new Font("Segoe UI", 9F, FontStyle.Regular),
-                ForeColor = Color.DimGray,
+                Text = value,
+                Font = new Font("Segoe UI", 11F, addLeftAccent ? FontStyle.Bold : FontStyle.Regular),
+                ForeColor = OnSurface,
                 AutoSize = true,
-                Location = new Point(26, 52)
+                Location = new Point(16, 42)
             };
 
-            mainPanel = new Panel
-            {
-                BackColor = Color.Snow,
-                Location = new Point(24, 85),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                AutoScroll = false
-            };
-
-            BuildUserPermissionsGroup();
-            BuildFineSettingsGroup();
-            BuildBorrowingLimitsGroup();
-            BuildCirculationRulesGroup();
-            BuildDataMaintenanceGroup();
-            BuildSaveButton();
-
-            mainPanel.Controls.Add(grpUserPermissions);
-            mainPanel.Controls.Add(grpFineSettings);
-            mainPanel.Controls.Add(grpBorrowingLimits);
-            mainPanel.Controls.Add(grpCirculationRules);
-            mainPanel.Controls.Add(grpDataMaintenance);
-            mainPanel.Controls.Add(btnSave);
-
-            Controls.Add(lblTitle);
-            Controls.Add(lblSubInfo);
-            Controls.Add(mainPanel);
-
-            ApplyResponsiveLayout();
+            box.Controls.Add(lblBoxTitle);
+            box.Controls.Add(lblValue);
+            return box;
         }
 
-        private void OversightForm_Resize(object? sender, EventArgs e)
+        private Label CreateSectionTitle(string text, string icon)
         {
-            ApplyResponsiveLayout();
-        }
-
-        private void ApplyResponsiveLayout()
-        {
-            int margin = 24;
-            int topY = 85;
-            int contentWidth = Math.Max(760, ClientSize.Width - (margin * 2));
-
-            mainPanel.Location = new Point(margin, topY);
-            mainPanel.Size = new Size(contentWidth, 760);
-
-            bool singleColumn = contentWidth < 950;
-
-            int gap = 20;
-            int groupHeightSmall = 150;
-            int groupHeightMedium = 180;
-
-            if (!singleColumn)
+            return new Label
             {
-                int halfWidth = (contentWidth - gap) / 2;
-
-                grpUserPermissions.Location = new Point(0, 0);
-                grpUserPermissions.Size = new Size(halfWidth, groupHeightSmall);
-
-                grpFineSettings.Location = new Point(halfWidth + gap, 0);
-                grpFineSettings.Size = new Size(halfWidth, groupHeightSmall);
-
-                grpBorrowingLimits.Location = new Point(0, groupHeightSmall + gap);
-                grpBorrowingLimits.Size = new Size(halfWidth, groupHeightMedium);
-
-                grpCirculationRules.Location = new Point(halfWidth + gap, groupHeightSmall + gap);
-                grpCirculationRules.Size = new Size(halfWidth, groupHeightMedium);
-
-                grpDataMaintenance.Location = new Point(0, groupHeightSmall + groupHeightMedium + (gap * 2));
-                grpDataMaintenance.Size = new Size(contentWidth, 140);
-
-                btnSave.Location = new Point(contentWidth - btnSave.Width, grpDataMaintenance.Bottom + 18);
-            }
-            else
-            {
-                int fullWidth = contentWidth;
-                int y = 0;
-
-                grpUserPermissions.Location = new Point(0, y);
-                grpUserPermissions.Size = new Size(fullWidth, groupHeightSmall);
-                y += grpUserPermissions.Height + gap;
-
-                grpFineSettings.Location = new Point(0, y);
-                grpFineSettings.Size = new Size(fullWidth, groupHeightSmall);
-                y += grpFineSettings.Height + gap;
-
-                grpBorrowingLimits.Location = new Point(0, y);
-                grpBorrowingLimits.Size = new Size(fullWidth, groupHeightMedium);
-                y += grpBorrowingLimits.Height + gap;
-
-                grpCirculationRules.Location = new Point(0, y);
-                grpCirculationRules.Size = new Size(fullWidth, groupHeightMedium);
-                y += grpCirculationRules.Height + gap;
-
-                grpDataMaintenance.Location = new Point(0, y);
-                grpDataMaintenance.Size = new Size(fullWidth, 160);
-                y += grpDataMaintenance.Height + gap;
-
-                btnSave.Location = new Point(fullWidth - btnSave.Width, y);
-            }
-
-            LayoutMaintenanceButtons();
-        }
-
-        private void LayoutMaintenanceButtons()
-        {
-            int padding = 20;
-            int gap = 16;
-            int availableWidth = grpDataMaintenance.ClientSize.Width - (padding * 2);
-
-            if (availableWidth >= 520)
-            {
-                btnBackup.Location = new Point(padding, 45);
-                btnClearLogs.Location = new Point(btnBackup.Right + gap, 45);
-                btnResetDemo.Location = new Point(btnClearLogs.Right + gap, 45);
-            }
-            else
-            {
-                btnBackup.Location = new Point(padding, 35);
-                btnClearLogs.Location = new Point(padding, btnBackup.Bottom + 12);
-                btnResetDemo.Location = new Point(padding, btnClearLogs.Bottom + 12);
-            }
-        }
-
-        private void BuildUserPermissionsGroup()
-        {
-            grpUserPermissions = CreateGroupBox("User Permissions");
-
-            chkAdminManageLibrarians = new CheckBox
-            {
-                Text = "Client/Admin can manage librarians",
-                Location = new Point(20, 35),
-                AutoSize = true,
-                Checked = true
-            };
-
-            chkLibrarianManageMembers = new CheckBox
-            {
-                Text = "Librarian can manage members",
-                Location = new Point(20, 65),
-                AutoSize = true,
-                Checked = true
-            };
-
-            chkMemberViewOwnStatus = new CheckBox
-            {
-                Text = "Member can view own borrowing status only",
-                Location = new Point(20, 95),
-                AutoSize = true,
-                Checked = true
-            };
-
-            grpUserPermissions.Controls.Add(chkAdminManageLibrarians);
-            grpUserPermissions.Controls.Add(chkLibrarianManageMembers);
-            grpUserPermissions.Controls.Add(chkMemberViewOwnStatus);
-        }
-
-        private void BuildFineSettingsGroup()
-        {
-            grpFineSettings = CreateGroupBox("Fine Penalty Settings");
-
-            lblFinePerDay = CreateLabel("Fine per day:", new Point(20, 38));
-            numFinePerDay = CreateNumeric(new Point(140, 35), 1, 1000, 5);
-
-            lblMaxFine = CreateLabel("Maximum fine:", new Point(20, 78));
-            numMaxFine = CreateNumeric(new Point(140, 75), 1, 10000, 100);
-
-            grpFineSettings.Controls.Add(lblFinePerDay);
-            grpFineSettings.Controls.Add(numFinePerDay);
-            grpFineSettings.Controls.Add(lblMaxFine);
-            grpFineSettings.Controls.Add(numMaxFine);
-        }
-
-        private void BuildBorrowingLimitsGroup()
-        {
-            grpBorrowingLimits = CreateGroupBox("Borrowing Limits");
-
-            lblStudentLimit = CreateLabel("Student max books:", new Point(20, 38));
-            numStudentLimit = CreateNumeric(new Point(170, 35), 1, 20, 3);
-
-            lblTeacherLimit = CreateLabel("Teacher max books:", new Point(20, 78));
-            numTeacherLimit = CreateNumeric(new Point(170, 75), 1, 20, 5);
-
-            lblBorrowDays = CreateLabel("Borrow duration (days):", new Point(20, 118));
-            numBorrowDays = CreateNumeric(new Point(170, 115), 1, 60, 7);
-
-            grpBorrowingLimits.Controls.Add(lblStudentLimit);
-            grpBorrowingLimits.Controls.Add(numStudentLimit);
-            grpBorrowingLimits.Controls.Add(lblTeacherLimit);
-            grpBorrowingLimits.Controls.Add(numTeacherLimit);
-            grpBorrowingLimits.Controls.Add(lblBorrowDays);
-            grpBorrowingLimits.Controls.Add(numBorrowDays);
-        }
-
-        private void BuildCirculationRulesGroup()
-        {
-            grpCirculationRules = CreateGroupBox("Circulation Rules");
-
-            chkAllowRenewal = new CheckBox
-            {
-                Text = "Allow book renewal",
-                Location = new Point(20, 35),
-                AutoSize = true,
-                Checked = true
-            };
-
-            lblRenewalLimit = CreateLabel("Renewal limit:", new Point(20, 75));
-            numRenewalLimit = CreateNumeric(new Point(140, 72), 0, 10, 2);
-
-            chkBlockOverdueBorrowing = new CheckBox
-            {
-                Text = "Block borrowing when account has overdue items",
-                Location = new Point(20, 115),
-                AutoSize = true,
-                Checked = true
-            };
-
-            grpCirculationRules.Controls.Add(chkAllowRenewal);
-            grpCirculationRules.Controls.Add(lblRenewalLimit);
-            grpCirculationRules.Controls.Add(numRenewalLimit);
-            grpCirculationRules.Controls.Add(chkBlockOverdueBorrowing);
-        }
-
-        private void BuildDataMaintenanceGroup()
-        {
-            grpDataMaintenance = CreateGroupBox("Data Maintenance");
-
-            btnBackup = CreateActionButton("Backup Database", new Size(130, 36));
-            btnBackup.Click += (s, e) =>
-                MessageBox.Show("Database backup process started.", "Backup", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            btnClearLogs = CreateActionButton("Clear Old Logs", new Size(130, 36));
-            btnClearLogs.Click += (s, e) =>
-                MessageBox.Show("Old logs cleaned successfully.", "Data Maintenance", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            btnResetDemo = CreateActionButton("Reset Demo Data", new Size(130, 36));
-            btnResetDemo.Click += (s, e) =>
-                MessageBox.Show("Demo data reset completed.", "Data Maintenance", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-            grpDataMaintenance.Controls.Add(btnBackup);
-            grpDataMaintenance.Controls.Add(btnClearLogs);
-            grpDataMaintenance.Controls.Add(btnResetDemo);
-        }
-
-        private void BuildSaveButton()
-        {
-            btnSave = new Button
-            {
-                Text = "Save Configuration",
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                Size = new Size(170, 40),
-                BackColor = Color.Maroon,
-                ForeColor = Color.WhiteSmoke,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
-            btnSave.FlatAppearance.BorderSize = 0;
-            btnSave.Click += BtnSave_Click;
-        }
-
-        private GroupBox CreateGroupBox(string text)
-        {
-            return new GroupBox
-            {
-                Text = text,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                ForeColor = Color.Maroon,
-                BackColor = Color.WhiteSmoke
+                Text = $"{icon}  {text}",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true
             };
         }
 
-        private Label CreateLabel(string text, Point location)
+        private Label CreateMiniTitle(string text)
         {
             return new Label
             {
                 Text = text,
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
-                ForeColor = Color.Black,
-                AutoSize = true,
-                Location = location
+                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
             };
         }
 
-        private NumericUpDown CreateNumeric(Point location, decimal min, decimal max, decimal value)
+        private Label CreateChip(string text)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = true,
+                Padding = new Padding(8, 4, 8, 4),
+                BackColor = SecondaryContainer,
+                ForeColor = ColorTranslator.FromHtml("#3B6B5C"),
+                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
+            };
+        }
+
+        private CheckBox CreateConfigCheckBox(string text, bool isChecked)
+        {
+            return new CheckBox
+            {
+                Text = text,
+                Checked = isChecked,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10.5F),
+                ForeColor = OnSurfaceVariant,
+                BackColor = SurfaceLowest
+            };
+        }
+
+        private CheckBox CreatePolicyCheckBox(string text, bool isChecked)
+        {
+            return new CheckBox
+            {
+                Text = text,
+                Checked = isChecked,
+                AutoSize = true,
+                Font = new Font("Segoe UI", 10.5F),
+                ForeColor = OnSurfaceVariant,
+                BackColor = SurfaceLowest
+            };
+        }
+
+        private NumericUpDown CreateStyledNumeric(decimal value, decimal increment, int decimals)
         {
             return new NumericUpDown
             {
-                Location = location,
-                Size = new Size(100, 25),
-                Minimum = min,
-                Maximum = max,
+                DecimalPlaces = decimals,
+                Increment = increment,
                 Value = value,
-                Font = new Font("Segoe UI", 10F, FontStyle.Regular)
+                Minimum = 0,
+                Maximum = 1000,
+                Size = new Size(230, 40),
+                Font = new Font("Segoe UI", 11F),
+                BackColor = SurfaceHigh,
+                BorderStyle = BorderStyle.FixedSingle,
+                ForeColor = OnSurface
             };
         }
 
-        private Button CreateActionButton(string text, Size size)
+        private void StyleFlatButton(Button btn, Color back, Color fore)
         {
-            Button btn = new Button
-            {
-                Text = text,
-                Size = size,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                BackColor = Color.Maroon,
-                ForeColor = Color.WhiteSmoke,
-                FlatStyle = FlatStyle.Flat,
-                Cursor = Cursors.Hand
-            };
+            btn.FlatStyle = FlatStyle.Flat;
             btn.FlatAppearance.BorderSize = 0;
-            return btn;
+            btn.BackColor = back;
+            btn.ForeColor = fore;
+            btn.Cursor = Cursors.Hand;
+            btn.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
         }
 
-        private void BtnSave_Click(object? sender, EventArgs e)
+        private void BuildUserAccessPanel()
         {
-            MessageBox.Show("System configuration saved successfully.", "Save Configuration", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            Label title = CreateSectionTitle("User Access", "🛡");
+
+            chkAdminFull = CreateConfigCheckBox("Admin Full Access", true);
+            chkStaffRules = CreateConfigCheckBox("Staff can change rules", true);
+            chkStudentFaculty = CreateConfigCheckBox("Student/Faculty Access", false);
+            chkGuestRead = CreateConfigCheckBox("Guest Access (Read)", false);
+
+            userAccessPanel.Controls.Add(title);
+            userAccessPanel.Controls.Add(chkAdminFull);
+            userAccessPanel.Controls.Add(chkStaffRules);
+            userAccessPanel.Controls.Add(chkStudentFaculty);
+            userAccessPanel.Controls.Add(chkGuestRead);
+
+            title.Location = new Point(22, 20);
+            chkAdminFull.Location = new Point(22, 70);
+            chkStaffRules.Location = new Point(22, 105);
+            chkStudentFaculty.Location = new Point(22, 140);
+            chkGuestRead.Location = new Point(22, 175);
+        }
+
+        private void BuildSoftwarePanel()
+        {
+            Label title = CreateSectionTitle("Software Requirements", "💻");
+
+            swBox1 = CreateSoftInfoBox("Operating Systems", "Windows, macOS, Linux");
+            swBox2 = CreateSoftInfoBox("Browsers", "Chrome, Firefox, Edge, Safari");
+            swBox3 = CreateSoftInfoBox("Backend Environment", "C# / ASP.NET Core", true);
+            swBox4 = CreateSoftInfoBox("Database Engine", "MonsterASP SQL Database", true);
+
+            softwarePanel.Controls.Add(title);
+            softwarePanel.Controls.Add(swBox1);
+            softwarePanel.Controls.Add(swBox2);
+            softwarePanel.Controls.Add(swBox3);
+            softwarePanel.Controls.Add(swBox4);
+
+            title.Location = new Point(22, 20);
+        }
+
+        private void BuildHardwarePanel()
+        {
+            Label title = CreateSectionTitle("Hardware Specs (Min)", "🧠");
+
+            hardwarePanel.Controls.Add(title);
+            title.Location = new Point(22, 20);
+
+            AddSpecRow(hardwarePanel, "Processor", "Intel Core i3+", 72);
+            AddSpecRow(hardwarePanel, "RAM", "2 GB or more", 112);
+            AddSpecRow(hardwarePanel, "Storage", "10 GB or more", 152);
+        }
+
+        private void AddSpecRow(Panel parent, string label, string value, int top)
+        {
+            Label lblLeft = new Label
+            {
+                Text = label,
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true,
+                Location = new Point(22, top)
+            };
+
+            Label lblRight = new Label
+            {
+                Text = value,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true,
+                Location = new Point(175, top)
+            };
+
+            Panel line = new Panel
+            {
+                BackColor = Color.FromArgb(22, OutlineVariant),
+                Size = new Size(240, 1),
+                Location = new Point(22, top + 28)
+            };
+
+            parent.Controls.Add(lblLeft);
+            parent.Controls.Add(lblRight);
+            parent.Controls.Add(line);
+        }
+
+        private void BuildArchitecturePanel()
+        {
+            Label title = CreateSectionTitle("Architecture & Core Modules", "✳");
+            Label lblArch = CreateMiniTitle("SYSTEM ARCHITECTURE");
+            Label lblRoles = CreateMiniTitle("USER ROLES");
+            Label lblModules = CreateMiniTitle("KEY LIBRAFLOW MODULES");
+
+            archChip1 = CreateChip("CLIENT-SERVER");
+            archChip2 = CreateChip("ERP SAAS ARCHITECTURE");
+            archChip3 = CreateChip("CLOUD");
+
+            rolesText = new Label
+            {
+                Text = "Admin, Librarian, Student/Faculty",
+                Font = new Font("Segoe UI", 10F),
+                ForeColor = OnSurface,
+                AutoSize = true
+            };
+
+            module1 = CreateModuleBox("OPAC", "CATALOG");
+            module2 = CreateModuleBox("Circulation", "LENDING");
+            module3 = CreateModuleBox("Members", "MANAGEMENT");
+            module4 = CreateModuleBox("Reporting", "MIS/ANALYTICS");
+
+            architecturePanel.Controls.Add(title);
+            architecturePanel.Controls.Add(lblArch);
+            architecturePanel.Controls.Add(lblRoles);
+            architecturePanel.Controls.Add(lblModules);
+            architecturePanel.Controls.Add(archChip1);
+            architecturePanel.Controls.Add(archChip2);
+            architecturePanel.Controls.Add(archChip3);
+            architecturePanel.Controls.Add(rolesText);
+            architecturePanel.Controls.Add(module1);
+            architecturePanel.Controls.Add(module2);
+            architecturePanel.Controls.Add(module3);
+            architecturePanel.Controls.Add(module4);
+
+            title.Location = new Point(22, 20);
+            lblArch.Location = new Point(22, 72);
+            lblRoles.Location = new Point(312, 72);
+            rolesText.Location = new Point(312, 98);
+            lblModules.Location = new Point(22, 164);
+        }
+
+        private Panel CreateModuleBox(string title, string subtitle)
+        {
+            Panel box = CreateModulePanel();
+
+            Label lbl1 = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = Primary,
+                AutoSize = true,
+                Location = new Point(14, 10)
+            };
+
+            Label lbl2 = new Label
+            {
+                Text = subtitle,
+                Font = new Font("Segoe UI", 8F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true,
+                Location = new Point(14, 30)
+            };
+
+            box.Controls.Add(lbl1);
+            box.Controls.Add(lbl2);
+            return box;
+        }
+
+        private void BuildFeesPanel()
+        {
+            Label title = CreateSectionTitle("Circulation Fees", "💵");
+
+            Label lblDaily = new Label
+            {
+                Text = "Daily late fee ($)",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
+            };
+
+            Label lblMax = new Label
+            {
+                Text = "Maximum total fee ($)",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
+            };
+
+            Label lblLost = new Label
+            {
+                Text = "Fee for lost books ($)",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
+            };
+
+            nudDailyFee = CreateStyledNumeric(1.50m, 0.25m, 2);
+            nudMaxFee = CreateStyledNumeric(25.00m, 1.00m, 2);
+            nudLostBookFee = CreateStyledNumeric(10.00m, 1.00m, 2);
+
+            btnAdjustFee = new Button
+            {
+                Text = "✎  Adjust fee levels",
+                AutoSize = true
+            };
+            StyleFlatButton(btnAdjustFee, SurfaceLowest, Primary);
+
+            feesPanel.Controls.Add(title);
+            feesPanel.Controls.Add(lblDaily);
+            feesPanel.Controls.Add(lblMax);
+            feesPanel.Controls.Add(lblLost);
+            feesPanel.Controls.Add(nudDailyFee);
+            feesPanel.Controls.Add(nudMaxFee);
+            feesPanel.Controls.Add(nudLostBookFee);
+            feesPanel.Controls.Add(btnAdjustFee);
+
+            title.Location = new Point(22, 20);
+
+            lblDaily.Location = new Point(22, 74);
+            nudDailyFee.Location = new Point(22, 96);
+
+            lblMax.Location = new Point(300, 74);
+            nudMaxFee.Location = new Point(300, 96);
+
+            lblLost.Location = new Point(22, 160);
+            nudLostBookFee.Location = new Point(22, 182);
+
+            btnAdjustFee.Location = new Point(300, 180);
+        }
+
+        private void BuildPolicyPanel()
+        {
+            Label title = CreateSectionTitle("System Policy", "⇄");
+
+            chkAutoRenew = CreatePolicyCheckBox("Allow automatic renewals", true);
+            chkBlockOutstanding = CreatePolicyCheckBox("Block accounts with outstanding fees", false);
+            chkCrossCampus = CreatePolicyCheckBox("Cross-campus borrowing enabled", true);
+
+            policyPanel.Controls.Add(title);
+            policyPanel.Controls.Add(chkAutoRenew);
+            policyPanel.Controls.Add(chkBlockOutstanding);
+            policyPanel.Controls.Add(chkCrossCampus);
+
+            title.Location = new Point(22, 20);
+            chkAutoRenew.Location = new Point(22, 72);
+            chkBlockOutstanding.Location = new Point(22, 116);
+            chkCrossCampus.Location = new Point(22, 160);
+        }
+
+        private void BuildMaintenancePanel()
+        {
+            Label icon = new Label
+            {
+                Text = "🗄",
+                Font = new Font("Segoe UI Emoji", 16F),
+                ForeColor = Primary,
+                AutoSize = true,
+                Location = new Point(22, 22)
+            };
+
+            Label title = new Label
+            {
+                Text = "System Maintenance",
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true,
+                Location = new Point(56, 20)
+            };
+
+            Label subtitle = new Label
+            {
+                Text = "Configure automated backup and LibraFlow system synchronization cycles.",
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true,
+                Location = new Point(56, 46)
+            };
+
+            btnExportConfig = new Button { Text = "↓  Export Config", Size = new Size(130, 56) };
+            btnRestoreBackup = new Button { Text = "☁  Restore Backup", Size = new Size(142, 56) };
+            btnRunUpdates = new Button { Text = "⟳  Run Updates", Size = new Size(150, 56) };
+
+            StyleFlatButton(btnExportConfig, SurfaceLow, OnSurface);
+            StyleFlatButton(btnRestoreBackup, SurfaceLow, OnSurface);
+            StyleFlatButton(btnRunUpdates, Primary, Color.White);
+
+            maintenancePanel.Controls.Add(icon);
+            maintenancePanel.Controls.Add(title);
+            maintenancePanel.Controls.Add(subtitle);
+            maintenancePanel.Controls.Add(btnExportConfig);
+            maintenancePanel.Controls.Add(btnRestoreBackup);
+            maintenancePanel.Controls.Add(btnRunUpdates);
+        }
+
+        private void BuildFooterActionsPanel()
+        {
+            Panel line = new Panel
+            {
+                BackColor = Color.FromArgb(24, OutlineVariant),
+                Dock = DockStyle.Top,
+                Height = 1
+            };
+
+            btnDiscard = new Button
+            {
+                Text = "Discard Changes",
+                Size = new Size(170, 48)
+            };
+            StyleFlatButton(btnDiscard, Background, OnSurfaceVariant);
+
+            btnApply = new Button
+            {
+                Text = "💾  Apply Configuration",
+                Size = new Size(250, 48)
+            };
+            StyleFlatButton(btnApply, PrimaryContainer, OnPrimaryContainer);
+
+            footerActionsPanel.Controls.Add(line);
+            footerActionsPanel.Controls.Add(btnDiscard);
+            footerActionsPanel.Controls.Add(btnApply);
+        }
+
+        private void OversightForm_Resize(object? sender, EventArgs e)
+        {
+            AdjustLayout();
+        }
+
+        private void AdjustLayout()
+        {
+            int margin = 34;
+            int gap = 22;
+            int contentWidth = ClientSize.Width - (margin * 2);
+            int y = 108;
+
+            lblTitle.Location = new Point(margin, 24);
+            lblSubtitle.Location = new Point(margin + 2, 66);
+
+            if (contentWidth >= 1150)
+            {
+                int leftW = (contentWidth - gap) * 4 / 12;
+                int rightW = contentWidth - gap - leftW;
+
+                userAccessPanel.Bounds = new Rectangle(margin, y, leftW, 230);
+                softwarePanel.Bounds = new Rectangle(userAccessPanel.Right + gap, y, rightW, 230);
+
+                LayoutSoftwarePanelWide();
+
+                int y2 = userAccessPanel.Bottom + gap;
+                hardwarePanel.Bounds = new Rectangle(margin, y2, leftW, 250);
+                architecturePanel.Bounds = new Rectangle(hardwarePanel.Right + gap, y2, rightW, 250);
+
+                LayoutArchitectureWide();
+
+                int y3 = hardwarePanel.Bottom + gap;
+                int feesW = (contentWidth - gap) * 7 / 12;
+                int policyW = contentWidth - gap - feesW;
+
+                feesPanel.Bounds = new Rectangle(margin, y3, feesW, 242);
+                policyPanel.Bounds = new Rectangle(feesPanel.Right + gap, y3, policyW, 242);
+
+                LayoutFeesWide();
+
+                int y4 = feesPanel.Bottom + gap;
+                maintenancePanel.Bounds = new Rectangle(margin, y4, contentWidth, 102);
+
+                btnExportConfig.Location = new Point(maintenancePanel.Width - 448, 22);
+                btnRestoreBackup.Location = new Point(btnExportConfig.Right + 16, 22);
+                btnRunUpdates.Location = new Point(btnRestoreBackup.Right + 16, 22);
+
+                int y5 = maintenancePanel.Bottom + 18;
+                footerActionsPanel.Bounds = new Rectangle(margin, y5, contentWidth, 92);
+
+                btnApply.Location = new Point(footerActionsPanel.Width - btnApply.Width - 10, 22);
+                btnDiscard.Location = new Point(btnApply.Left - btnDiscard.Width - 20, 22);
+            }
+            else
+            {
+                int fullW = contentWidth;
+
+                userAccessPanel.Bounds = new Rectangle(margin, y, fullW, 230);
+
+                int y2 = userAccessPanel.Bottom + gap;
+                softwarePanel.Bounds = new Rectangle(margin, y2, fullW, 250);
+                LayoutSoftwarePanelNarrow();
+
+                int y3 = softwarePanel.Bottom + gap;
+                hardwarePanel.Bounds = new Rectangle(margin, y3, fullW, 250);
+
+                int y4 = hardwarePanel.Bottom + gap;
+                architecturePanel.Bounds = new Rectangle(margin, y4, fullW, 300);
+                LayoutArchitectureNarrow();
+
+                int y5 = architecturePanel.Bottom + gap;
+                feesPanel.Bounds = new Rectangle(margin, y5, fullW, 242);
+                LayoutFeesNarrow();
+
+                int y6 = feesPanel.Bottom + gap;
+                policyPanel.Bounds = new Rectangle(margin, y6, fullW, 242);
+
+                int y7 = policyPanel.Bottom + gap;
+                maintenancePanel.Bounds = new Rectangle(margin, y7, fullW, 152);
+
+                btnExportConfig.Location = new Point(22, 78);
+                btnRestoreBackup.Location = new Point(btnExportConfig.Right + 16, 78);
+                btnRunUpdates.Location = new Point(btnRestoreBackup.Right + 16, 78);
+
+                int y8 = maintenancePanel.Bottom + 18;
+                footerActionsPanel.Bounds = new Rectangle(margin, y8, fullW, 92);
+
+                btnApply.Location = new Point(footerActionsPanel.Width - btnApply.Width - 10, 22);
+                btnDiscard.Location = new Point(btnApply.Left - btnDiscard.Width - 20, 22);
+            }
+
+            contentPanel.AutoScrollMinSize = new Size(0, footerActionsPanel.Bottom + 32);
+        }
+
+        private void LayoutSoftwarePanelWide()
+        {
+            swBox1.Bounds = new Rectangle(22, 64, 252, 76);
+            swBox2.Bounds = new Rectangle(300, 64, 252, 76);
+            swBox3.Bounds = new Rectangle(22, 160, 252, 76);
+            swBox4.Bounds = new Rectangle(300, 160, 252, 76);
+        }
+
+        private void LayoutSoftwarePanelNarrow()
+        {
+            int gap = 18;
+            int boxW = (softwarePanel.Width - 22 - 22 - gap) / 2;
+
+            swBox1.Bounds = new Rectangle(22, 64, boxW, 76);
+            swBox2.Bounds = new Rectangle(swBox1.Right + gap, 64, boxW, 76);
+            swBox3.Bounds = new Rectangle(22, 160, boxW, 76);
+            swBox4.Bounds = new Rectangle(swBox3.Right + gap, 160, boxW, 76);
+        }
+
+        private void LayoutArchitectureWide()
+        {
+            archChip1.Location = new Point(22, 98);
+            archChip2.Location = new Point(128, 98);
+            archChip3.Location = new Point(22, 128);
+
+            rolesText.Location = new Point(312, 98);
+
+            module1.Bounds = new Rectangle(22, 192, 124, 56);
+            module2.Bounds = new Rectangle(160, 192, 124, 56);
+            module3.Bounds = new Rectangle(298, 192, 124, 56);
+            module4.Bounds = new Rectangle(436, 192, 124, 56);
+        }
+
+        private void LayoutArchitectureNarrow()
+        {
+            archChip1.Location = new Point(22, 98);
+            archChip2.Location = new Point(128, 98);
+            archChip3.Location = new Point(22, 128);
+
+            rolesText.Location = new Point(22, 170);
+
+            int gap = 14;
+            int moduleY = 220;
+            int moduleW = (architecturePanel.Width - 22 - 22 - (gap * 3)) / 4;
+
+            module1.Bounds = new Rectangle(22, moduleY, moduleW, 56);
+            module2.Bounds = new Rectangle(module1.Right + gap, moduleY, moduleW, 56);
+            module3.Bounds = new Rectangle(module2.Right + gap, moduleY, moduleW, 56);
+            module4.Bounds = new Rectangle(module3.Right + gap, moduleY, moduleW, 56);
+        }
+
+        private void LayoutFeesWide()
+        {
+            nudDailyFee.Location = new Point(22, 96);
+            nudMaxFee.Location = new Point(300, 96);
+            nudLostBookFee.Location = new Point(22, 182);
+            btnAdjustFee.Location = new Point(300, 180);
+        }
+
+        private void LayoutFeesNarrow()
+        {
+            nudDailyFee.Location = new Point(22, 96);
+            nudMaxFee.Location = new Point(300, 96);
+            nudLostBookFee.Location = new Point(22, 182);
+            btnAdjustFee.Location = new Point(300, 180);
         }
     }
 }

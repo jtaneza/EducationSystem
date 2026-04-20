@@ -17,12 +17,12 @@
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(DashboardForm));
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea5 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend5 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series5 = new System.Windows.Forms.DataVisualization.Charting.Series();
-            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea6 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
-            System.Windows.Forms.DataVisualization.Charting.Legend legend6 = new System.Windows.Forms.DataVisualization.Charting.Legend();
-            System.Windows.Forms.DataVisualization.Charting.Series series6 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea1 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
             Sidebar = new Panel();
             button8 = new Button();
             button7 = new Button();
@@ -247,7 +247,7 @@
             dropdownarrow.FlatStyle = FlatStyle.Flat;
             dropdownarrow.Font = new Font("Segoe UI", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
             dropdownarrow.ForeColor = Color.Maroon;
-            dropdownarrow.Location = new Point(1332, 15);
+            dropdownarrow.Location = new Point(1342, 15);
             dropdownarrow.Name = "dropdownarrow";
             dropdownarrow.Size = new Size(24, 30);
             dropdownarrow.TabIndex = 5;
@@ -277,7 +277,7 @@
             // 
             username.AutoSize = true;
             username.ForeColor = Color.Maroon;
-            username.Location = new Point(1253, 18);
+            username.Location = new Point(1222, 18);
             username.Name = "username";
             username.Size = new Size(80, 20);
             username.TabIndex = 4;
@@ -286,7 +286,7 @@
             // ProfileImage
             // 
             ProfileImage.Image = (Image)resources.GetObject("ProfileImage.Image");
-            ProfileImage.Location = new Point(1212, 8);
+            ProfileImage.Location = new Point(1305, 8);
             ProfileImage.Margin = new Padding(3, 4, 3, 4);
             ProfileImage.Name = "ProfileImage";
             ProfileImage.Size = new Size(36, 37);
@@ -537,34 +537,34 @@
             chart1.BackColor = Color.WhiteSmoke;
             chart1.BackImageTransparentColor = Color.DimGray;
             chart1.BorderlineColor = Color.OrangeRed;
-            chartArea5.Name = "ChartArea1";
-            chart1.ChartAreas.Add(chartArea5);
-            legend5.Name = "Legend1";
-            chart1.Legends.Add(legend5);
+            chartArea1.Name = "ChartArea1";
+            chart1.ChartAreas.Add(chartArea1);
+            legend1.Name = "Legend1";
+            chart1.Legends.Add(legend1);
             chart1.Location = new Point(254, 279);
             chart1.Name = "chart1";
-            series5.ChartArea = "ChartArea1";
-            series5.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
-            series5.Legend = "Legend1";
-            series5.Name = "Series1";
-            chart1.Series.Add(series5);
+            series1.ChartArea = "ChartArea1";
+            series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Line;
+            series1.Legend = "Legend1";
+            series1.Name = "Series1";
+            chart1.Series.Add(series1);
             chart1.Size = new Size(596, 300);
             chart1.TabIndex = 11;
             chart1.Text = "chart1";
             // 
             // chart2
             // 
-            chartArea6.Name = "ChartArea1";
-            chart2.ChartAreas.Add(chartArea6);
-            legend6.Name = "Legend1";
-            chart2.Legends.Add(legend6);
+            chartArea2.Name = "ChartArea1";
+            chart2.ChartAreas.Add(chartArea2);
+            legend2.Name = "Legend1";
+            chart2.Legends.Add(legend2);
             chart2.Location = new Point(896, 289);
             chart2.Name = "chart2";
-            series6.ChartArea = "ChartArea1";
-            series6.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Pie;
-            series6.Legend = "Legend1";
-            series6.Name = "Series1";
-            chart2.Series.Add(series6);
+            series2.ChartArea = "ChartArea1";
+            series2.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Pie;
+            series2.Legend = "Legend1";
+            series2.Name = "Series1";
+            chart2.Series.Add(series2);
             chart2.Size = new Size(447, 272);
             chart2.TabIndex = 12;
             chart2.Text = "chart2";

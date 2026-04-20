@@ -1,394 +1,404 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
 using System.Windows.Forms;
 
 namespace EducationSystem
 {
     public partial class SettingsForm : Form
     {
-        private Panel mainPanel = null!;
+        private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
+        private readonly Color SurfaceLowest = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color SurfaceHigh = ColorTranslator.FromHtml("#E2E9EC");
+        private readonly Color SurfaceVariant = ColorTranslator.FromHtml("#DDE4E6");
+
+        private readonly Color Primary = ColorTranslator.FromHtml("#006B55");
+        private readonly Color PrimaryContainer = ColorTranslator.FromHtml("#00B894");
+        private readonly Color PrimaryFixed = ColorTranslator.FromHtml("#6DFAD2");
+
+        private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color OnSurfaceVariant = ColorTranslator.FromHtml("#3C4A44");
+
+        private readonly Color Tertiary = ColorTranslator.FromHtml("#A03F30");
+        private readonly Color TertiaryContainer = ColorTranslator.FromHtml("#F7816D");
+        private readonly Color ErrorContainer = ColorTranslator.FromHtml("#FFDAD6");
+
+        private readonly List<ModuleCard> moduleCards = new();
 
         private Label lblTitle = null!;
-        private Panel titleLine = null!;
-
-        private PictureBox picProfile = null!;
-        private Label lblPhotoNote = null!;
-        private Button btnBrowsePhoto = null!;
-
-        private Label lblName = null!;
-        private Label lblUsername = null!;
-        private Label lblEmail = null!;
-        private Label lblCurrentPassword = null!;
-        private Label lblNewPassword = null!;
-        private Label lblConfirmPassword = null!;
-
-        private TextBox txtName = null!;
-        private TextBox txtUsername = null!;
-        private TextBox txtEmail = null!;
-        private TextBox txtCurrentPassword = null!;
-        private TextBox txtNewPassword = null!;
-        private TextBox txtConfirmPassword = null!;
-
-        private Button btnUpdate = null!;
-        private Button btnChangePassword = null!;
-        private Button btnBack = null!;
-
-        private string selectedImagePath = "";
-        private bool focusPasswordSection = false;
+        private Label lblSubtitle = null!;
+        private Panel canvasPanel = null!;
 
         public SettingsForm()
         {
             InitializeComponent();
-            BuildSettingsUI();
-            LoadSettingsData();
+            BuildModulesUI();
         }
 
-        public void OpenPasswordSection()
+        private void BuildModulesUI()
         {
-            focusPasswordSection = true;
-        }
-
-        private void StylePrimaryButton(Button btn)
-        {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(130, 0, 0);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(90, 0, 0);
-            btn.BackColor = Color.Maroon;
-            btn.ForeColor = Color.White;
-            btn.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-            btn.Cursor = Cursors.Hand;
-        }
-
-        private void StyleGoldButton(Button btn)
-        {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(205, 150, 0);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(170, 120, 0);
-            btn.BackColor = Color.Goldenrod;
-            btn.ForeColor = Color.White;
-            btn.Font = new Font("Segoe UI", 9, FontStyle.Bold);
-            btn.Cursor = Cursors.Hand;
-        }
-
-        private Label CreateFieldLabel(string text, int x, int y)
-        {
-            Label lbl = new Label();
-            lbl.Text = text;
-            lbl.Location = new Point(x, y);
-            lbl.AutoSize = true;
-            lbl.Font = new Font("Segoe UI", 8, FontStyle.Bold);
-            lbl.ForeColor = Color.Sienna;
-            return lbl;
-        }
-
-        private TextBox CreateFieldBox(int x, int y, int width)
-        {
-            TextBox txt = new TextBox();
-            txt.Location = new Point(x, y);
-            txt.Size = new Size(width, 25);
-            txt.BorderStyle = BorderStyle.FixedSingle;
-            txt.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            return txt;
-        }
-
-        private void BuildSettingsUI()
-        {
-            BackColor = Color.Snow;
+            BackColor = Background;
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
             AutoScroll = true;
 
-            mainPanel = new Panel();
-            mainPanel.Location = new Point(70, 30);
-            mainPanel.Size = new Size(980, 420);
-            mainPanel.BackColor = Color.White;
-            mainPanel.BorderStyle = BorderStyle.FixedSingle;
+            canvasPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Background
+            };
+            Controls.Add(canvasPanel);
 
-            lblTitle = new Label();
-            lblTitle.Text = "◉ ACCOUNT SETTINGS";
-            lblTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            lblTitle.ForeColor = Color.Black;
-            lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(18, 14);
+            lblTitle = new Label
+            {
+                Text = "System Modules",
+                Font = new Font("Segoe UI", 28F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true
+            };
 
-            titleLine = new Panel();
-            titleLine.BackColor = Color.Goldenrod;
-            titleLine.Location = new Point(0, 42);
-            titleLine.Size = new Size(mainPanel.Width, 2);
+            lblSubtitle = new Label
+            {
+                Text = "Enable or disable features across the entire platform.",
+                Font = new Font("Segoe UI", 12F, FontStyle.Regular),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true
+            };
 
-            picProfile = new PictureBox();
-            picProfile.Size = new Size(88, 88);
-            picProfile.Location = new Point(110, 95);
-            picProfile.SizeMode = PictureBoxSizeMode.Zoom;
-            picProfile.BackColor = Color.White;
-            picProfile.Paint += PicProfile_Paint;
+            canvasPanel.Controls.Add(lblTitle);
+            canvasPanel.Controls.Add(lblSubtitle);
 
-            lblPhotoNote = new Label();
-            lblPhotoNote.Text = "Profile Picture";
-            lblPhotoNote.Font = new Font("Segoe UI", 8, FontStyle.Regular);
-            lblPhotoNote.ForeColor = Color.DimGray;
-            lblPhotoNote.AutoSize = true;
-            lblPhotoNote.Location = new Point(108, 190);
+            moduleCards.Add(CreateModuleCard(
+                "Dark Mode Theme",
+                "Allow users to switch to a darker interface for comfort.",
+                "🌙",
+                ColorTranslator.FromHtml("#0E1A44"),
+                PrimaryFixed,
+                true,
+                "STATUS: ACTIVE",
+                Color.FromArgb(30, 180, 110),
+                true));
 
-            btnBrowsePhoto = new Button();
-            btnBrowsePhoto.Text = "Change";
-            btnBrowsePhoto.Size = new Size(90, 32);
-            btnBrowsePhoto.Location = new Point(105, 220);
-            StyleGoldButton(btnBrowsePhoto);
-            btnBrowsePhoto.Click += BtnBrowsePhoto_Click;
+            moduleCards.Add(CreateModuleCard(
+                "Email Alerts",
+                "Send automatic messages for due dates and new books.",
+                "✉",
+                Color.FromArgb(220, 245, 235),
+                Primary,
+                true,
+                "STATUS: ACTIVE",
+                Color.FromArgb(30, 180, 110),
+                false));
 
-            int formX = 280;
-            int fieldWidth = 630;
+            moduleCards.Add(CreateModuleCard(
+                "Advanced Search",
+                "Enable complex filters for title, author, and ISBN.",
+                "⌕",
+                SurfaceHigh,
+                OnSurface,
+                true,
+                "STATUS: ACTIVE",
+                Color.FromArgb(30, 180, 110),
+                false));
 
-            lblName = CreateFieldLabel("Name", formX, 70);
-            txtName = CreateFieldBox(formX, 88, fieldWidth);
+            moduleCards.Add(CreateModuleCard(
+                "Maintenance Mode",
+                "Pause user access for system updates.",
+                "⚙",
+                Color.FromArgb(255, 242, 238),
+                Tertiary,
+                false,
+                "STATUS: DISABLED",
+                Color.FromArgb(140, 150, 160),
+                false));
 
-            lblUsername = CreateFieldLabel("Username", formX, 125);
-            txtUsername = CreateFieldBox(formX, 143, fieldWidth);
+            moduleCards.Add(CreateModuleCard(
+                "Member Ratings",
+                "Let students rate and review books they have read.",
+                "★",
+                Color.FromArgb(210, 245, 232),
+                Primary,
+                true,
+                "STATUS: ACTIVE",
+                Color.FromArgb(30, 180, 110),
+                false));
 
-            lblEmail = CreateFieldLabel("Email", formX, 180);
-            txtEmail = CreateFieldBox(formX, 198, fieldWidth);
+            moduleCards.Add(CreateModuleCard(
+                "Digital Archive",
+                "Enable the storage and recovery of old records.",
+                "🗃",
+                Color.FromArgb(230, 250, 242),
+                Color.FromArgb(25, 140, 95),
+                false,
+                "STATUS: PENDING CONFIG",
+                Color.FromArgb(120, 130, 150),
+                false));
 
-            int passY = 255;
+            foreach (var card in moduleCards)
+                canvasPanel.Controls.Add(card.Container);
 
-            lblCurrentPassword = CreateFieldLabel("Current Password", formX, passY);
-            txtCurrentPassword = CreateFieldBox(formX, passY + 18, 190);
-            txtCurrentPassword.UseSystemPasswordChar = true;
-
-            lblNewPassword = CreateFieldLabel("New Password", formX + 215, passY);
-            txtNewPassword = CreateFieldBox(formX + 215, passY + 18, 190);
-            txtNewPassword.UseSystemPasswordChar = true;
-
-            lblConfirmPassword = CreateFieldLabel("Confirm Password", formX + 440, passY);
-            txtConfirmPassword = CreateFieldBox(formX + 440, passY + 18, 190);
-            txtConfirmPassword.UseSystemPasswordChar = true;
-
-            int btnY = 345;
-
-            btnUpdate = new Button();
-            btnUpdate.Text = "Update";
-            btnUpdate.Size = new Size(100, 34);
-            btnUpdate.Location = new Point(620, btnY);
-            StylePrimaryButton(btnUpdate);
-            btnUpdate.Click += BtnUpdate_Click;
-
-            btnChangePassword = new Button();
-            btnChangePassword.Text = "Change Password";
-            btnChangePassword.Size = new Size(150, 34);
-            btnChangePassword.Location = new Point(730, btnY);
-            StylePrimaryButton(btnChangePassword);
-            btnChangePassword.Click += BtnChangePassword_Click;
-
-            btnBack = new Button();
-            btnBack.Text = "Back";
-            btnBack.Size = new Size(80, 34);
-            btnBack.Location = new Point(890, btnY);
-            StylePrimaryButton(btnBack);
-            btnBack.Click += BtnBack_Click;
-
-            mainPanel.Controls.Add(lblTitle);
-            mainPanel.Controls.Add(titleLine);
-
-            mainPanel.Controls.Add(picProfile);
-            mainPanel.Controls.Add(lblPhotoNote);
-            mainPanel.Controls.Add(btnBrowsePhoto);
-
-            mainPanel.Controls.Add(lblName);
-            mainPanel.Controls.Add(txtName);
-            mainPanel.Controls.Add(lblUsername);
-            mainPanel.Controls.Add(txtUsername);
-            mainPanel.Controls.Add(lblEmail);
-            mainPanel.Controls.Add(txtEmail);
-
-            mainPanel.Controls.Add(lblCurrentPassword);
-            mainPanel.Controls.Add(txtCurrentPassword);
-            mainPanel.Controls.Add(lblNewPassword);
-            mainPanel.Controls.Add(txtNewPassword);
-            mainPanel.Controls.Add(lblConfirmPassword);
-            mainPanel.Controls.Add(txtConfirmPassword);
-
-            mainPanel.Controls.Add(btnUpdate);
-            mainPanel.Controls.Add(btnChangePassword);
-            mainPanel.Controls.Add(btnBack);
-
-            Controls.Add(mainPanel);
-
-            Shown += SettingsForm_Shown;
+            Resize += SettingsForm_Resize;
+            AdjustLayout();
         }
 
-        private void LoadSettingsData()
+        private ModuleCard CreateModuleCard(
+            string title,
+            string description,
+            string iconText,
+            Color iconBack,
+            Color iconFore,
+            bool enabled,
+            string statusText,
+            Color statusFore,
+            bool neonGlow)
         {
-            txtName.Text = string.IsNullOrWhiteSpace(UserSession.Role) ? "Admin" : UserSession.Role;
-            txtUsername.Text = string.IsNullOrWhiteSpace(UserSession.Username) ? "admin" : UserSession.Username;
-            txtEmail.Text = string.IsNullOrWhiteSpace(UserSession.Email) ? "supadmin@gmail.com" : UserSession.Email;
-
-            selectedImagePath = UserSession.ImagePath ?? "";
-
-            try
+            Panel card = new Panel
             {
-                if (!string.IsNullOrWhiteSpace(UserSession.ImagePath) && File.Exists(UserSession.ImagePath))
+                BackColor = SurfaceLowest,
+                BorderStyle = BorderStyle.FixedSingle
+            };
+
+            if (neonGlow)
+                card.Paint += (s, e) =>
                 {
-                    using (var bmpTemp = new Bitmap(UserSession.ImagePath))
-                    {
-                        picProfile.Image = new Bitmap(bmpTemp);
-                    }
-                }
-                else
+                    using Pen p = new Pen(Color.FromArgb(25, 109, 250, 210), 1);
+                    e.Graphics.DrawRectangle(p, 0, 0, card.Width - 1, card.Height - 1);
+                };
+
+            Panel iconPanel = new Panel
+            {
+                Size = new Size(52, 52),
+                BackColor = iconBack
+            };
+
+            Label iconLabel = new Label
+            {
+                Text = iconText,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI Emoji", 18F),
+                ForeColor = iconFore
+            };
+            iconPanel.Controls.Add(iconLabel);
+
+            ToggleSwitch toggle = new ToggleSwitch
+            {
+                IsOn = enabled,
+                OnColor = PrimaryContainer,
+                OffColor = Color.FromArgb(215, 221, 225),
+                KnobColor = Color.White
+            };
+
+            Label titleLabel = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                ForeColor = OnSurface,
+                AutoSize = true
+            };
+
+            Label descLabel = new Label
+            {
+                Text = description,
+                Font = new Font("Segoe UI", 10.5F, FontStyle.Regular),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = false
+            };
+
+            Panel statusDot = new Panel
+            {
+                Size = new Size(8, 8),
+                BackColor = statusFore
+            };
+            statusDot.Paint += (s, e) =>
+            {
+                using SolidBrush b = new SolidBrush(statusFore);
+                e.Graphics.FillEllipse(b, 0, 0, statusDot.Width - 1, statusDot.Height - 1);
+            };
+
+            Label statusLabel = new Label
+            {
+                Text = statusText,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = statusFore,
+                AutoSize = true
+            };
+
+            card.Controls.Add(iconPanel);
+            card.Controls.Add(toggle);
+            card.Controls.Add(titleLabel);
+            card.Controls.Add(descLabel);
+            card.Controls.Add(statusDot);
+            card.Controls.Add(statusLabel);
+
+            return new ModuleCard
+            {
+                Container = card,
+                IconPanel = iconPanel,
+                Toggle = toggle,
+                TitleLabel = titleLabel,
+                DescriptionLabel = descLabel,
+                StatusDot = statusDot,
+                StatusLabel = statusLabel
+            };
+        }
+
+        private void AdjustLayout()
+        {
+            int margin = 34;
+            int gap = 28;
+            int width = ClientSize.Width - (margin * 2);
+
+            lblTitle.Location = new Point(margin, 34);
+            lblSubtitle.Location = new Point(margin, 82);
+
+            int top = lblSubtitle.Bottom + 34;
+
+            if (width >= 1120)
+            {
+                int cardWidth = (width - (gap * 2)) / 3;
+                int cardHeight = 278;
+
+                for (int i = 0; i < moduleCards.Count; i++)
                 {
-                    picProfile.Image = null;
+                    int row = i / 3;
+                    int col = i % 3;
+
+                    int x = margin + (col * (cardWidth + gap));
+                    int y = top + (row * (cardHeight + 34));
+
+                    moduleCards[i].Container.Bounds = new Rectangle(x, y, cardWidth, cardHeight);
+                    LayoutModuleCard(moduleCards[i]);
                 }
+
+                canvasPanel.AutoScrollMinSize = new Size(0, top + (2 * (278 + 34)) + 24);
             }
-            catch
+            else if (width >= 760)
             {
-                picProfile.Image = null;
-            }
+                int cardWidth = (width - gap) / 2;
+                int cardHeight = 278;
 
-            MakePictureCircular();
-        }
-
-        private void MakePictureCircular()
-        {
-            GraphicsPath path = new GraphicsPath();
-            path.AddEllipse(0, 0, picProfile.Width - 1, picProfile.Height - 1);
-            picProfile.Region = new Region(path);
-        }
-
-        private void PicProfile_Paint(object? sender, PaintEventArgs e)
-        {
-            using Pen pen = new Pen(Color.FromArgb(180, 60, 255), 2);
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            e.Graphics.DrawEllipse(pen, 1, 1, picProfile.Width - 3, picProfile.Height - 3);
-        }
-
-        private void SettingsForm_Shown(object? sender, EventArgs e)
-        {
-            if (focusPasswordSection)
-            {
-                txtCurrentPassword.Focus();
-            }
-        }
-
-        private void BtnBack_Click(object? sender, EventArgs e)
-        {
-            Form? parentForm = this.Parent?.FindForm();
-            if (parentForm is DashboardForm dashboard)
-            {
-                dashboard.LoadContentForm(new ProfileForm());
-            }
-        }
-
-        private void BtnBrowsePhoto_Click(object? sender, EventArgs e)
-        {
-            using (OpenFileDialog ofd = new OpenFileDialog())
-            {
-                ofd.Title = "Select Profile Picture";
-                ofd.Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp";
-
-                if (ofd.ShowDialog() == DialogResult.OK)
+                for (int i = 0; i < moduleCards.Count; i++)
                 {
-                    selectedImagePath = ofd.FileName;
+                    int row = i / 2;
+                    int col = i % 2;
 
-                    try
-                    {
-                        using (var bmpTemp = new Bitmap(selectedImagePath))
-                        {
-                            picProfile.Image = new Bitmap(bmpTemp);
-                        }
-                    }
-                    catch
-                    {
-                        MessageBox.Show("Unable to load selected image.");
-                    }
+                    int x = margin + (col * (cardWidth + gap));
+                    int y = top + (row * (cardHeight + 28));
+
+                    moduleCards[i].Container.Bounds = new Rectangle(x, y, cardWidth, cardHeight);
+                    LayoutModuleCard(moduleCards[i]);
                 }
+
+                canvasPanel.AutoScrollMinSize = new Size(0, top + (3 * (278 + 28)) + 24);
+            }
+            else
+            {
+                int cardWidth = width;
+                int cardHeight = 278;
+
+                for (int i = 0; i < moduleCards.Count; i++)
+                {
+                    int y = top + (i * (cardHeight + 24));
+                    moduleCards[i].Container.Bounds = new Rectangle(margin, y, cardWidth, cardHeight);
+                    LayoutModuleCard(moduleCards[i]);
+                }
+
+                canvasPanel.AutoScrollMinSize = new Size(0, top + (moduleCards.Count * (278 + 24)) + 24);
             }
         }
 
-        private void BtnUpdate_Click(object? sender, EventArgs e)
+        private void LayoutModuleCard(ModuleCard card)
         {
-            if (string.IsNullOrWhiteSpace(txtName.Text))
-            {
-                MessageBox.Show("Please enter name.");
-                txtName.Focus();
-                return;
-            }
+            card.IconPanel.Location = new Point(34, 34);
+            card.Toggle.Location = new Point(card.Container.Width - 96, 34);
 
-            if (string.IsNullOrWhiteSpace(txtUsername.Text))
-            {
-                MessageBox.Show("Please enter username.");
-                txtUsername.Focus();
-                return;
-            }
+            card.TitleLabel.Location = new Point(34, 126);
+            card.DescriptionLabel.Location = new Point(34, 168);
+            card.DescriptionLabel.Size = new Size(card.Container.Width - 68, 62);
 
-            if (string.IsNullOrWhiteSpace(txtEmail.Text))
-            {
-                MessageBox.Show("Please enter email.");
-                txtEmail.Focus();
-                return;
-            }
-
-            UserSession.Role = txtName.Text.Trim();
-            UserSession.Username = txtUsername.Text.Trim();
-            UserSession.Email = txtEmail.Text.Trim();
-
-            if (!string.IsNullOrWhiteSpace(selectedImagePath))
-            {
-                UserSession.ImagePath = selectedImagePath;
-            }
-
-            Form? parentForm = this.Parent?.FindForm();
-            if (parentForm is DashboardForm dashboard)
-            {
-                dashboard.LoadUserInfo();
-            }
-
-            MessageBox.Show("Account updated successfully.");
+            card.StatusDot.Location = new Point(36, card.Container.Height - 44);
+            card.StatusLabel.Location = new Point(card.StatusDot.Right + 10, card.Container.Height - 49);
         }
 
-        private void BtnChangePassword_Click(object? sender, EventArgs e)
+        private void SettingsForm_Resize(object? sender, EventArgs e)
         {
-            string currentPassword = txtCurrentPassword.Text.Trim();
-            string newPassword = txtNewPassword.Text.Trim();
-            string confirmPassword = txtConfirmPassword.Text.Trim();
+            AdjustLayout();
+        }
 
-            if (string.IsNullOrWhiteSpace(currentPassword))
+        private sealed class ModuleCard
+        {
+            public Panel Container = null!;
+            public Panel IconPanel = null!;
+            public ToggleSwitch Toggle = null!;
+            public Label TitleLabel = null!;
+            public Label DescriptionLabel = null!;
+            public Panel StatusDot = null!;
+            public Label StatusLabel = null!;
+        }
+        public void OpenPasswordSection()
+        {
+            MessageBox.Show(
+                "Password settings are not available in System Modules.",
+                "Information",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
+        }
+
+        private sealed class ToggleSwitch : Control
+        {
+            public bool IsOn { get; set; }
+            public Color OnColor { get; set; } = Color.MediumSeaGreen;
+            public Color OffColor { get; set; } = Color.LightGray;
+            public Color KnobColor { get; set; } = Color.White;
+
+            public ToggleSwitch()
             {
-                MessageBox.Show("Please enter current password.");
-                txtCurrentPassword.Focus();
-                return;
+                Size = new Size(62, 32);
+                Cursor = Cursors.Hand;
+                DoubleBuffered = true;
+                Click += (s, e) =>
+                {
+                    IsOn = !IsOn;
+                    Invalidate();
+                };
             }
 
-            if (currentPassword != (UserSession.Password ?? ""))
+            protected override void OnPaint(PaintEventArgs e)
             {
-                MessageBox.Show("Current password is incorrect.");
-                txtCurrentPassword.Focus();
-                return;
+                base.OnPaint(e);
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                Rectangle track = new Rectangle(0, 2, Width - 1, Height - 5);
+                using (SolidBrush brush = new SolidBrush(IsOn ? OnColor : OffColor))
+                    e.Graphics.FillRoundedRectangle(brush, track, 15);
+
+                int knobX = IsOn ? Width - 30 : 2;
+                Rectangle knob = new Rectangle(knobX, 2, 28, 28);
+
+                using (SolidBrush knobBrush = new SolidBrush(KnobColor))
+                    e.Graphics.FillEllipse(knobBrush, knob);
             }
+        }
+    }
 
-            if (string.IsNullOrWhiteSpace(newPassword))
-            {
-                MessageBox.Show("Please enter new password.");
-                txtNewPassword.Focus();
-                return;
-            }
+    internal static class GraphicsExtensions
+    {
+        public static void FillRoundedRectangle(this Graphics g, Brush brush, Rectangle bounds, int radius)
+        {
+            using System.Drawing.Drawing2D.GraphicsPath path = new();
+            int d = radius * 2;
 
-            if (newPassword != confirmPassword)
-            {
-                MessageBox.Show("Confirm password does not match.");
-                txtConfirmPassword.Focus();
-                return;
-            }
+            path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
+            path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
+            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
 
-            UserSession.Password = newPassword;
-            txtCurrentPassword.Clear();
-            txtNewPassword.Clear();
-            txtConfirmPassword.Clear();
-
-            MessageBox.Show("Password changed successfully.");
+            g.FillPath(brush, path);
         }
     }
 }
