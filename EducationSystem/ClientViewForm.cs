@@ -112,9 +112,9 @@ namespace EducationSystem
             lblTitle = new Label
             {
                 AutoSize = true,
-                Font = new Font("Segoe UI", 32F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 25F, FontStyle.Bold),
                 ForeColor = OnSurface,
-                Text = "Institutional Client Directory"
+                Text = "Client Directory"
             };
 
             lblSubTitle = new Label

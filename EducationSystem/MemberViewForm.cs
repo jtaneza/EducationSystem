@@ -83,7 +83,7 @@ namespace EducationSystem
             lblTitle = new Label
             {
                 Text = "Member Directory",
-                Font = new Font("Segoe UI", 24F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 25F, FontStyle.Bold),
                 ForeColor = OnSurface,
                 AutoSize = true
             };

@@ -95,14 +95,14 @@ namespace EducationSystem
             lblTitle = new Label
             {
                 Text = "Global Borrowing Records",
-                Font = new Font("Segoe UI", 28F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 25F, FontStyle.Bold),
                 ForeColor = OnSurface,
                 AutoSize = true
             };
 
             lblSubTitle = new Label
             {
-                Text = "Comprehensive oversight of all active book circulations across the institutional network.",
+                Text = " Comprehensive oversight of all active book circulations.",
                 Font = new Font("Segoe UI", 12F),
                 ForeColor = OnSurfaceVariant,
                 AutoSize = true

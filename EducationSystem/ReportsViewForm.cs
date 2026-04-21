@@ -101,7 +101,7 @@ namespace EducationSystem
             lblTitle = new Label
             {
                 Text = "System Oversight Reports",
-                Font = new Font("Segoe UI", 28F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 25F, FontStyle.Bold),
                 ForeColor = OnSurface,
                 AutoSize = true
             };
