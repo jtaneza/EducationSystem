@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -22,6 +23,7 @@ namespace EducationSystem
         private readonly Color TertiaryContainer = ColorTranslator.FromHtml("#F7816D");
         private readonly Color Tertiary = ColorTranslator.FromHtml("#A03F30");
 
+        private Panel canvas = null!;
         private Panel headerPanel = null!;
         private Label lblTitle = null!;
         private Label lblSubTitle = null!;
@@ -31,6 +33,7 @@ namespace EducationSystem
         private Label lblSearchIcon = null!;
         private TextBox txtSearch = null!;
         private Button btnFilter = null!;
+        private Panel filterRow = null!;
 
         private Panel statsPanel = null!;
         private Panel cardTotal = null!;
@@ -55,12 +58,16 @@ namespace EducationSystem
         private Button btnNext = null!;
 
         private List<MemberItem> allRows = new List<MemberItem>();
+        private List<MemberItem> currentPageRows = new List<MemberItem>();
+        private int currentPage = 1;
+        private int totalPages = 1;
+        private const int PageSize = 5;
 
         public MemberViewForm()
         {
             InitializeComponent();
             BuildUI();
-            SeedData();
+            LoadMembersFromDatabase();
             LoadSchoolFilter();
             LoadGrid();
         }
@@ -71,11 +78,20 @@ namespace EducationSystem
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
-            AutoScroll = true;
+            AutoScroll = false;
+
+            canvas = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Background,
+                AutoScroll = true
+            };
+            canvas.HorizontalScroll.Enabled = false;
+            canvas.HorizontalScroll.Visible = false;
+            Controls.Add(canvas);
 
             headerPanel = new Panel
             {
-                Dock = DockStyle.Top,
                 Height = 150,
                 BackColor = Background
             };
@@ -111,7 +127,11 @@ namespace EducationSystem
                 Font = new Font("Segoe UI", 10F),
                 Width = 200
             };
-            cboSchoolFilter.SelectedIndexChanged += (s, e) => LoadGrid();
+            cboSchoolFilter.SelectedIndexChanged += (s, e) =>
+            {
+                currentPage = 1;
+                LoadGrid();
+            };
             filterHost.Controls.Add(cboSchoolFilter);
 
             searchHost = new Panel
@@ -152,7 +172,11 @@ namespace EducationSystem
                     txtSearch.ForeColor = OnSurfaceVariant;
                 }
             };
-            txtSearch.TextChanged += (s, e) => LoadGrid();
+            txtSearch.TextChanged += (s, e) =>
+            {
+                currentPage = 1;
+                LoadGrid();
+            };
 
             btnFilter = new Button
             {
@@ -170,13 +194,9 @@ namespace EducationSystem
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSubTitle);
-            headerPanel.Controls.Add(filterHost);
-            headerPanel.Controls.Add(searchHost);
-            headerPanel.Controls.Add(btnFilter);
 
             statsPanel = new Panel
             {
-                Dock = DockStyle.Top,
                 Height = 190,
                 BackColor = Background
             };
@@ -191,9 +211,17 @@ namespace EducationSystem
             statsPanel.Controls.Add(cardPending);
             statsPanel.Controls.Add(cardHealth);
 
+            filterRow = new Panel
+            {
+                Height = 64,
+                BackColor = Background
+            };
+            filterRow.Controls.Add(filterHost);
+            filterRow.Controls.Add(searchHost);
+            filterRow.Controls.Add(btnFilter);
+
             tableCard = new Panel
             {
-                Dock = DockStyle.Fill,
                 BackColor = Background,
                 Padding = new Padding(34, 0, 34, 24)
             };
@@ -250,13 +278,13 @@ namespace EducationSystem
             dgvMembers.Columns.Add("Address", "ADDRESS");
             dgvMembers.Columns.Add("Status", "STATUS");
 
-            dgvMembers.Columns["Id"].FillWeight = 13;
-            dgvMembers.Columns["Name"].FillWeight = 18;
+            dgvMembers.Columns["Id"].FillWeight = 10;
+            dgvMembers.Columns["Name"].FillWeight = 20;
             dgvMembers.Columns["Email"].FillWeight = 18;
             dgvMembers.Columns["School"].FillWeight = 18;
             dgvMembers.Columns["Phone"].FillWeight = 14;
-            dgvMembers.Columns["Address"].FillWeight = 17;
-            dgvMembers.Columns["Status"].FillWeight = 12;
+            dgvMembers.Columns["Address"].FillWeight = 14;
+            dgvMembers.Columns["Status"].FillWeight = 10;
 
             foreach (DataGridViewColumn col in dgvMembers.Columns)
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
@@ -284,6 +312,24 @@ namespace EducationSystem
             btnPage3 = CreatePagerButton("3", false);
             btnNext = CreatePagerButton("›", false);
 
+            btnPrev.Click += (s, e) =>
+            {
+                if (currentPage <= 1) return;
+                currentPage--;
+                LoadGrid();
+            };
+
+            btnPage1.Click += (s, e) => GoToPage(btnPage1);
+            btnPage2.Click += (s, e) => GoToPage(btnPage2);
+            btnPage3.Click += (s, e) => GoToPage(btnPage3);
+
+            btnNext.Click += (s, e) =>
+            {
+                if (currentPage >= totalPages) return;
+                currentPage++;
+                LoadGrid();
+            };
+
             footerPanel.Controls.Add(lblFooter);
             footerPanel.Controls.Add(btnPrev);
             footerPanel.Controls.Add(btnPage1);
@@ -291,13 +337,14 @@ namespace EducationSystem
             footerPanel.Controls.Add(btnPage3);
             footerPanel.Controls.Add(btnNext);
 
-            tableShell.Controls.Add(dgvMembers);
             tableShell.Controls.Add(footerPanel);
+            tableShell.Controls.Add(dgvMembers);
             tableCard.Controls.Add(tableShell);
 
-            Controls.Add(tableCard);
-            Controls.Add(statsPanel);
-            Controls.Add(headerPanel);
+            canvas.Controls.Add(tableCard);
+            canvas.Controls.Add(filterRow);
+            canvas.Controls.Add(statsPanel);
+            canvas.Controls.Add(headerPanel);
 
             Resize += MemberViewForm_Resize;
             AdjustLayout();
@@ -373,15 +420,199 @@ namespace EducationSystem
             return btn;
         }
 
-        private void SeedData()
+
+        private string SafeText(object value, string fallback = "")
         {
-            allRows = new List<MemberItem>
+            if (value == null || value == DBNull.Value) return fallback;
+            string text = Convert.ToString(value) ?? "";
+            return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+        }
+
+        private string MaskEmail(string email)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return "";
+            int at = email.IndexOf('@');
+            if (at <= 1) return "****";
+            return email.Substring(0, 1) + "***" + email.Substring(at);
+        }
+
+        private string MaskPhone(string phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+                return "No phone";
+
+            string digits = new string(phone.Where(char.IsDigit).ToArray());
+
+            if (digits.Length == 0)
+                return "No phone";
+
+            if (digits.Length <= 4)
+                return "****";
+
+            return "****" + digits.Substring(digits.Length - 4);
+        }
+
+        private string MaskAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address))
+                return "No address";
+
+            string[] parts = address.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (parts.Length == 0)
+                return "No address";
+
+            string first = parts[0].Length <= 1
+                ? parts[0] + "***"
+                : parts[0].Substring(0, 1) + "***";
+
+            return parts.Length == 1 ? first : first + ", " + parts[^1];
+        }
+
+        private void LoadMembersFromDatabase()
+        {
+            allRows.Clear();
+
+            try
             {
-                new MemberItem("#MEM-8821", "IMG", "Elena Vance", "#F2D3C6", "", "evance@univ-central.edu", "+1 (555) 012-9932", "423 Academic Square, Apt 8B", "University of the Philippines", "Active", "#B7EBD7", "#1E4F41"),
-                new MemberItem("#MEM-8822", "IMG", "Julian Sol", "#D95C4E", "", "j.sol@univ-central.edu", "+1 (555) 231-0012", "89 Science Park Rd, Faculty Housing", "Ateneo de Manila University", "Active", "#B7EBD7", "#1E4F41"),
-                new MemberItem("#MEM-8823", "MK", "Mina Kinsley", "#B7EBD7", "#1E4F41", "mina.k@student.edu", "+1 (555) 441-2990", "North Dormitory, Room 102", "UST Manila", "Suspended", "#F7816D", "#6E1B0F"),
-                new MemberItem("#MEM-8824", "IMG", "Marcus Thorne", "#1E2A35", "", "m.thorne@inst-tech.org", "+1 (555) 998-1122", "International Guesthouse, Suite 12", "University of San Carlos", "Active", "#B7EBD7", "#1E4F41")
-            };
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureMemberViewSchema(conn);
+
+                const string query = @"
+SELECT
+    u.UserID,
+    u.ClientID,
+    u.FullName,
+    u.Email,
+    u.Phone,
+    u.Address,
+    u.Role,
+    u.Status,
+    u.CreatedAt,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown School') AS SchoolName
+FROM dbo.Users u
+LEFT JOIN dbo.ClientLibraries cl
+    ON cl.ClientID = u.ClientID
+WHERE UPPER(ISNULL(u.Role, '')) IN ('MEMBER', 'STUDENT', 'TEACHER')
+ORDER BY cl.LibraryName ASC, u.UserID DESC;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    string fullName = SafeText(reader["FullName"], "Unnamed User");
+                    string role = SafeText(reader["Role"], "Member");
+                    string status = SafeText(reader["Status"], "Active");
+                    int userId = Convert.ToInt32(reader["UserID"]);
+
+                    GetStatusColors(status, out string statusBack, out string statusFore);
+
+                    allRows.Add(new MemberItem(
+                        "MEM-" + userId.ToString("0000"),
+                        GetInitials(fullName),
+                        $"{fullName} ({role})",
+                        "#B7EBD7",
+                        "#1E4F41",
+                        MaskEmail(SafeText(reader["Email"])),
+                        MaskPhone(SafeText(reader["Phone"])),
+                        MaskAddress(SafeText(reader["Address"])),
+                        SafeText(reader["SchoolName"], "Unknown School"),
+                        status,
+                        statusBack,
+                        statusFore
+                    ));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Member directory could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                allRows.Clear();
+            }
+        }
+
+        private void EnsureMemberViewSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.ClientLibraries', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClientLibraries
+    (
+        ClientID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        LibraryCode NVARCHAR(50) NULL,
+        LibraryName NVARCHAR(200) NULL,
+        Email NVARCHAR(150) NULL,
+        PasswordText NVARCHAR(150) NULL,
+        UserCount INT NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Active',
+        ImagePath NVARCHAR(250) NULL
+    );
+END;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'LibraryName') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD LibraryName NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+    ALTER TABLE dbo.Users ADD ClientID INT NULL;
+
+IF COL_LENGTH('dbo.Users', 'Role') IS NULL
+    ALTER TABLE dbo.Users ADD Role NVARCHAR(50) NULL;
+
+IF COL_LENGTH('dbo.Users', 'Status') IS NULL
+    ALTER TABLE dbo.Users ADD Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Users_Status_MemberViewFixed DEFAULT 'Active';
+
+IF COL_LENGTH('dbo.Users', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.Users ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Users_CreatedAt_MemberViewFixed DEFAULT SYSUTCDATETIME();
+
+IF COL_LENGTH('dbo.Users', 'Phone') IS NULL
+    ALTER TABLE dbo.Users ADD Phone NVARCHAR(50) NULL;
+
+IF COL_LENGTH('dbo.Users', 'Address') IS NULL
+    ALTER TABLE dbo.Users ADD Address NVARCHAR(250) NULL;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private string GetInitials(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "U";
+
+            string[] parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 1)
+                return parts[0].Substring(0, 1).ToUpperInvariant();
+
+            return (parts[0].Substring(0, 1) + parts[^1].Substring(0, 1)).ToUpperInvariant();
+        }
+
+        private void GetStatusColors(string status, out string back, out string fore)
+        {
+            string normalized = status.Trim().ToUpperInvariant();
+
+            if (normalized == "SUSPENDED" || normalized == "INACTIVE")
+            {
+                back = "#F7816D";
+                fore = "#6E1B0F";
+            }
+            else if (normalized == "PENDING")
+            {
+                back = "#FFD6A5";
+                fore = "#7A3E00";
+            }
+            else
+            {
+                back = "#B7EBD7";
+                fore = "#1E4F41";
+            }
         }
 
         private void LoadSchoolFilter()
@@ -389,8 +620,14 @@ namespace EducationSystem
             cboSchoolFilter.Items.Clear();
             cboSchoolFilter.Items.Add("All Schools");
 
-            foreach (string school in allRows.Select(x => x.School).Distinct().OrderBy(x => x))
+            foreach (string school in allRows
+                .Select(x => x.School)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x))
+            {
                 cboSchoolFilter.Items.Add(school);
+            }
 
             cboSchoolFilter.SelectedIndex = 0;
         }
@@ -399,6 +636,9 @@ namespace EducationSystem
         {
             dgvMembers.Rows.Clear();
 
+            if (cboSchoolFilter.Items.Count == 0)
+                return;
+
             string selectedSchool = cboSchoolFilter.SelectedItem?.ToString() ?? "All Schools";
             string term = txtSearch.Text;
             bool useFilter = !string.IsNullOrWhiteSpace(term) && term != "Search by name or email...";
@@ -406,18 +646,34 @@ namespace EducationSystem
             IEnumerable<MemberItem> filtered = allRows;
 
             if (selectedSchool != "All Schools")
-                filtered = filtered.Where(x => x.School == selectedSchool);
+                filtered = filtered.Where(x => x.School.Equals(selectedSchool, StringComparison.OrdinalIgnoreCase));
 
             if (useFilter)
             {
                 filtered = filtered.Where(x =>
                     x.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                    x.Email.Contains(term, StringComparison.OrdinalIgnoreCase));
+                    x.Email.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    x.Phone.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    x.Address.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    x.School.Contains(term, StringComparison.OrdinalIgnoreCase));
             }
 
             List<MemberItem> results = filtered.ToList();
 
-            foreach (var row in results)
+            totalPages = Math.Max(1, (int)Math.Ceiling(results.Count / (double)PageSize));
+
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+
+            if (currentPage < 1)
+                currentPage = 1;
+
+            currentPageRows = results
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            foreach (var row in currentPageRows)
             {
                 dgvMembers.Rows.Add(
                     row.Id,
@@ -432,13 +688,85 @@ namespace EducationSystem
 
             dgvMembers.ClearSelection();
 
-            lblTotalValue.Text = "1,402";
-            lblActiveValue.Text = "28";
-            lblPendingValue.Text = "03";
-            lblHealthValue.Text = "98%";
+            lblTotalValue.Text = results.Count.ToString("N0");
+            lblActiveValue.Text = results.Count(x => x.Status.Equals("Active", StringComparison.OrdinalIgnoreCase)).ToString("N0");
+            lblPendingValue.Text = results.Count(x => x.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase)).ToString("N0");
+            lblHealthValue.Text = results.Count == 0 ? "0%" : "100%";
 
-            lblFooter.Text = $"Showing 1 to {results.Count} of {results.Count} members";
+            if (results.Count == 0)
+            {
+                lblFooter.Text = "Showing 0 of 0 members";
+            }
+            else
+            {
+                int start = ((currentPage - 1) * PageSize) + 1;
+                int end = Math.Min(start + currentPageRows.Count - 1, results.Count);
+                lblFooter.Text = $"Showing {start} to {end} of {results.Count} members";
+            }
+
+            UpdatePager();
         }
+
+        private void GoToPage(Button button)
+        {
+            if (button.Tag == null) return;
+
+            if (int.TryParse(button.Tag.ToString(), out int page))
+            {
+                currentPage = page;
+                LoadGrid();
+            }
+        }
+
+        private void UpdatePager()
+        {
+            if (btnPrev == null || btnNext == null || btnPage1 == null || btnPage2 == null || btnPage3 == null)
+                return;
+
+            totalPages = Math.Max(1, totalPages);
+
+            btnPrev.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+
+            StylePagerButton(btnPrev, false);
+            StylePagerButton(btnNext, false);
+
+            int page1 = Math.Max(1, currentPage - 1);
+
+            if (currentPage >= totalPages && totalPages >= 3)
+                page1 = totalPages - 2;
+
+            int page2 = page1 + 1;
+            int page3 = page1 + 2;
+
+            SetPageButton(btnPage1, page1, page1 <= totalPages);
+            SetPageButton(btnPage2, page2, page2 <= totalPages);
+            SetPageButton(btnPage3, page3, page3 <= totalPages);
+        }
+
+        private void SetPageButton(Button button, int pageNumber, bool visible)
+        {
+            button.Visible = visible;
+            button.Text = pageNumber.ToString();
+            button.Tag = pageNumber;
+            StylePagerButton(button, currentPage == pageNumber);
+        }
+
+        private void StylePagerButton(Button button, bool active)
+        {
+            if (active)
+            {
+                button.BackColor = PrimaryContainer;
+                button.ForeColor = Color.White;
+            }
+            else
+            {
+                button.BackColor = SurfaceContainer;
+                button.ForeColor = button.Enabled ? OnSurface : Color.FromArgb(150, 165, 170);
+            }
+        }
+
+
 
         private void dgvMembers_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
         {
@@ -508,7 +836,7 @@ namespace EducationSystem
 
                 e.Handled = true;
             }
-            else if (column == "School")
+            else if (column == "Email" || column == "School" || column == "Phone" || column == "Address")
             {
                 e.PaintBackground(e.CellBounds, true);
 
@@ -568,19 +896,39 @@ namespace EducationSystem
 
         private void AdjustLayout()
         {
+            if (canvas == null) return;
+
             int margin = 34;
             int gap = 22;
-            int width = ClientSize.Width - (margin * 2);
+            int clientWidth = canvas.ClientSize.Width;
+            int width = Math.Max(960, clientWidth - (margin * 2));
 
-            lblTitle.Location = new Point(margin, 26);
-            lblSubTitle.Location = new Point(margin, 64);
+            int y = 0;
 
-            btnFilter.Location = new Point(ClientSize.Width - 50, 34);
+            headerPanel.Bounds = new Rectangle(0, y, clientWidth, 140);
+            lblTitle.Location = new Point(margin, 28);
+            lblSubTitle.Location = new Point(margin, 72);
+            y += headerPanel.Height;
 
-            searchHost.Location = new Point(btnFilter.Left - 290, 34);
+            statsPanel.Bounds = new Rectangle(0, y, clientWidth, 175);
+
+            int statWidth = (width - (gap * 3)) / 4;
+            int statHeight = 120;
+
+            cardTotal.Bounds = new Rectangle(margin, 18, statWidth, statHeight);
+            cardActive.Bounds = new Rectangle(cardTotal.Right + gap, 18, statWidth, statHeight);
+            cardPending.Bounds = new Rectangle(cardActive.Right + gap, 18, statWidth, statHeight);
+            cardHealth.Bounds = new Rectangle(cardPending.Right + gap, 18, statWidth, statHeight);
+            y += statsPanel.Height;
+
+            filterRow.Bounds = new Rectangle(0, y, clientWidth, 64);
+
+            btnFilter.Location = new Point(clientWidth - btnFilter.Width - margin, 12);
+
+            searchHost.Location = new Point(btnFilter.Left - searchHost.Width - 10, 12);
             searchHost.Size = new Size(280, 38);
 
-            filterHost.Location = new Point(searchHost.Left - 230, 34);
+            filterHost.Location = new Point(searchHost.Left - filterHost.Width - 10, 12);
             filterHost.Size = new Size(220, 38);
 
             cboSchoolFilter.Location = new Point(10, 6);
@@ -588,15 +936,13 @@ namespace EducationSystem
 
             lblSearchIcon.Location = new Point(10, 8);
             txtSearch.Location = new Point(42, 11);
-            txtSearch.Width = 220;
+            txtSearch.Width = searchHost.Width - 54;
 
-            int statWidth = (width - (gap * 3)) / 4;
-            int statHeight = 132;
+            y += filterRow.Height;
 
-            cardTotal.Bounds = new Rectangle(margin, 18, statWidth, statHeight);
-            cardActive.Bounds = new Rectangle(cardTotal.Right + gap, 18, statWidth, statHeight);
-            cardPending.Bounds = new Rectangle(cardActive.Right + gap, 18, statWidth, statHeight);
-            cardHealth.Bounds = new Rectangle(cardPending.Right + gap, 18, statWidth, statHeight);
+            int tableHeight = 460;
+            tableCard.Bounds = new Rectangle(0, y, clientWidth, tableHeight);
+            tableCard.Padding = new Padding(margin, 0, margin, 24);
 
             lblFooter.Location = new Point(24, 20);
 
@@ -605,6 +951,8 @@ namespace EducationSystem
             btnPage2.Location = new Point(btnPage3.Left - 42, 13);
             btnPage1.Location = new Point(btnPage2.Left - 42, 13);
             btnPrev.Location = new Point(btnPage1.Left - 42, 13);
+
+            canvas.AutoScrollMinSize = new Size(0, tableCard.Bottom + 40);
         }
     }
 

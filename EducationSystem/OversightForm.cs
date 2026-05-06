@@ -1,73 +1,42 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
     public partial class OversightForm : Form
     {
         private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
-        private readonly Color SurfaceLowest = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color Surface = ColorTranslator.FromHtml("#FFFFFF");
         private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
-        private readonly Color SurfaceHigh = ColorTranslator.FromHtml("#E2E9EC");
-        private readonly Color SurfaceHighest = ColorTranslator.FromHtml("#DDE4E6");
-        private readonly Color OutlineVariant = ColorTranslator.FromHtml("#BBCAC3");
-
+        private readonly Color SurfaceHigh = ColorTranslator.FromHtml("#DDE4E6");
         private readonly Color Primary = ColorTranslator.FromHtml("#006B55");
         private readonly Color PrimaryContainer = ColorTranslator.FromHtml("#00B894");
         private readonly Color SecondaryContainer = ColorTranslator.FromHtml("#B7EBD7");
-        private readonly Color OnPrimaryContainer = ColorTranslator.FromHtml("#004233");
         private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
         private readonly Color OnSurfaceVariant = ColorTranslator.FromHtml("#3C4A44");
+        private readonly Color Danger = ColorTranslator.FromHtml("#A03F30");
+        private readonly Color Muted = ColorTranslator.FromHtml("#8A9A9D");
+        private readonly Color InverseSurface = ColorTranslator.FromHtml("#243033");
 
-        private Panel contentPanel = null!;
+        private Panel canvas = null!;
         private Label lblTitle = null!;
         private Label lblSubtitle = null!;
+        private Label lblFooterNote = null!;
 
-        private Panel userAccessPanel = null!;
-        private Panel softwarePanel = null!;
-        private Panel hardwarePanel = null!;
-        private Panel architecturePanel = null!;
-        private Panel feesPanel = null!;
-        private Panel policyPanel = null!;
-        private Panel maintenancePanel = null!;
-        private Panel footerActionsPanel = null!;
+        private readonly List<ModuleSetting> modules = new List<ModuleSetting>();
+        private readonly Dictionary<string, Panel> moduleCards = new Dictionary<string, Panel>();
+        private readonly Dictionary<string, Panel> iconBoxes = new Dictionary<string, Panel>();
+        private readonly Dictionary<string, Label> iconLabels = new Dictionary<string, Label>();
+        private readonly Dictionary<string, Panel> toggleTracks = new Dictionary<string, Panel>();
+        private readonly Dictionary<string, Panel> toggleKnobs = new Dictionary<string, Panel>();
+        private readonly Dictionary<string, Label> statusLabels = new Dictionary<string, Label>();
 
-        private CheckBox chkAdminFull = null!;
-        private CheckBox chkStaffRules = null!;
-        private CheckBox chkStudentFaculty = null!;
-        private CheckBox chkGuestRead = null!;
-
-        private NumericUpDown nudDailyFee = null!;
-        private NumericUpDown nudMaxFee = null!;
-        private NumericUpDown nudLostBookFee = null!;
-
-        private CheckBox chkAutoRenew = null!;
-        private CheckBox chkBlockOutstanding = null!;
-        private CheckBox chkCrossCampus = null!;
-
-        private Button btnAdjustFee = null!;
-        private Button btnExportConfig = null!;
-        private Button btnRestoreBackup = null!;
-        private Button btnRunUpdates = null!;
-        private Button btnDiscard = null!;
-        private Button btnApply = null!;
-
-        private Panel swBox1 = null!;
-        private Panel swBox2 = null!;
-        private Panel swBox3 = null!;
-        private Panel swBox4 = null!;
-
-        private Panel module1 = null!;
-        private Panel module2 = null!;
-        private Panel module3 = null!;
-        private Panel module4 = null!;
-
-        private Label archChip1 = null!;
-        private Label archChip2 = null!;
-        private Label archChip3 = null!;
-        private Label rolesText = null!;
+        private bool isLoading;
 
         public OversightForm()
         {
@@ -76,20 +45,22 @@ namespace EducationSystem
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
             {
                 BuildUI();
-                Resize += OversightForm_Resize;
+                LoadModulesFromDatabase();
+                Resize += (s, e) => AdjustLayout();
                 AdjustLayout();
             }
         }
 
         private void BuildUI()
         {
+            Controls.Clear();
+
             BackColor = Background;
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
-            AutoScroll = true;
 
-            contentPanel = new Panel
+            canvas = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Background,
@@ -99,688 +70,652 @@ namespace EducationSystem
             lblTitle = new Label
             {
                 Text = "System Configuration",
-                Font = new Font("Segoe UI", 24F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 26F, FontStyle.Bold),
                 ForeColor = OnSurface,
                 AutoSize = true
             };
 
             lblSubtitle = new Label
             {
-                Text = "Manage core institutional rules and LibraFlow LMS technical protocols.",
-                Font = new Font("Segoe UI", 11F),
+                Text = "Super Admin controls for platform-wide permissions, monitoring, reports, archive, and maintenance.",
+                Font = new Font("Segoe UI", 11.5F),
                 ForeColor = OnSurfaceVariant,
                 AutoSize = true
             };
 
-            userAccessPanel = CreateCardPanel();
-            softwarePanel = CreateCardPanel();
-            hardwarePanel = CreateCardPanel();
-            architecturePanel = CreateCardPanel();
-            feesPanel = CreateCardPanel();
-            policyPanel = CreateCardPanel();
-            maintenancePanel = CreateCardPanel();
-
-            footerActionsPanel = new Panel
+            lblFooterNote = new Label
             {
-                BackColor = Background
+                Text = "Changes are saved immediately to the database.",
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                ForeColor = Primary,
+                AutoSize = true
             };
 
-            BuildUserAccessPanel();
-            BuildSoftwarePanel();
-            BuildHardwarePanel();
-            BuildArchitecturePanel();
-            BuildFeesPanel();
-            BuildPolicyPanel();
-            BuildMaintenancePanel();
-            BuildFooterActionsPanel();
-
-            contentPanel.Controls.Add(lblTitle);
-            contentPanel.Controls.Add(lblSubtitle);
-            contentPanel.Controls.Add(userAccessPanel);
-            contentPanel.Controls.Add(softwarePanel);
-            contentPanel.Controls.Add(hardwarePanel);
-            contentPanel.Controls.Add(architecturePanel);
-            contentPanel.Controls.Add(feesPanel);
-            contentPanel.Controls.Add(policyPanel);
-            contentPanel.Controls.Add(maintenancePanel);
-            contentPanel.Controls.Add(footerActionsPanel);
-
-            Controls.Add(contentPanel);
+            canvas.Controls.Add(lblTitle);
+            canvas.Controls.Add(lblSubtitle);
+            canvas.Controls.Add(lblFooterNote);
+            Controls.Add(canvas);
         }
 
-        private Panel CreateCardPanel()
+        private void LoadModulesFromDatabase()
         {
-            Panel panel = new Panel
+            modules.Clear();
+
+            try
             {
-                BackColor = SurfaceLowest,
-                BorderStyle = BorderStyle.None
-            };
+                isLoading = true;
 
-            panel.Paint += (s, e) =>
-            {
-                using Pen pen = new Pen(Color.FromArgb(38, OutlineVariant), 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
-            };
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
 
-            return panel;
-        }
+                EnsureSystemModulesSchema(conn);
+                InsertDefaultModulesIfMissing(conn);
 
-        private Panel CreateModulePanel()
-        {
-            Panel panel = new Panel
-            {
-                BackColor = SurfaceLowest,
-                BorderStyle = BorderStyle.None
-            };
+                const string query = @"
+SELECT
+    ModuleKey,
+    ModuleName,
+    Description,
+    IconText,
+    IsEnabled,
+    StatusText,
+    DisplayOrder
+FROM dbo.SystemModules
+WHERE ISNULL(IsDeleted, 0) = 0
+ORDER BY DisplayOrder, ModuleName;";
 
-            panel.Paint += (s, e) =>
-            {
-                using Pen pen = new Pen(Color.FromArgb(55, OutlineVariant), 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
-            };
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
 
-            return panel;
-        }
-
-        private Panel CreateSoftInfoBox(string title, string value, bool addLeftAccent = false)
-        {
-            Panel box = new Panel
-            {
-                BackColor = SurfaceLow,
-                BorderStyle = BorderStyle.None
-            };
-
-            box.Paint += (s, e) =>
-            {
-                using Pen pen = new Pen(Color.FromArgb(28, OutlineVariant), 1);
-                e.Graphics.DrawRectangle(pen, 0, 0, box.Width - 1, box.Height - 1);
-
-                if (addLeftAccent)
+                while (reader.Read())
                 {
-                    using SolidBrush brush = new SolidBrush(Color.FromArgb(40, Primary));
-                    e.Graphics.FillRectangle(brush, 0, 0, 4, box.Height);
+                    string key = Convert.ToString(reader["ModuleKey"]) ?? "";
+
+                    modules.Add(new ModuleSetting
+                    {
+                        ModuleKey = key,
+                        ModuleName = Convert.ToString(reader["ModuleName"]) ?? "",
+                        Description = Convert.ToString(reader["Description"]) ?? "",
+                        IconText = GetSafeIconText(key, Convert.ToString(reader["IconText"]) ?? ""),
+                        IsEnabled = reader["IsEnabled"] != DBNull.Value && Convert.ToBoolean(reader["IsEnabled"]),
+                        StatusText = Convert.ToString(reader["StatusText"]) ?? "ACTIVE",
+                        DisplayOrder = reader["DisplayOrder"] == DBNull.Value ? 0 : Convert.ToInt32(reader["DisplayOrder"])
+                    });
                 }
-            };
 
-            Label lblBoxTitle = new Label
+                RebuildModuleCards();
+            }
+            catch (Exception ex)
             {
-                Text = title.ToUpper(),
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = Primary,
-                AutoSize = true,
-                Location = new Point(16, 14)
-            };
-
-            Label lblValue = new Label
+                MessageBox.Show(
+                    "System modules could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
             {
-                Text = value,
-                Font = new Font("Segoe UI", 11F, addLeftAccent ? FontStyle.Bold : FontStyle.Regular),
-                ForeColor = OnSurface,
-                AutoSize = true,
-                Location = new Point(16, 42)
-            };
-
-            box.Controls.Add(lblBoxTitle);
-            box.Controls.Add(lblValue);
-            return box;
+                isLoading = false;
+            }
         }
 
-        private Label CreateSectionTitle(string text, string icon)
+        private void RebuildModuleCards()
         {
-            return new Label
+            foreach (Panel card in moduleCards.Values)
+                canvas.Controls.Remove(card);
+
+            moduleCards.Clear();
+            iconBoxes.Clear();
+            iconLabels.Clear();
+            toggleTracks.Clear();
+            toggleKnobs.Clear();
+            statusLabels.Clear();
+
+            foreach (ModuleSetting module in modules)
             {
-                Text = $"{icon}  {text}",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
-                ForeColor = OnSurface,
-                AutoSize = true
-            };
+                Panel card = BuildModuleCard(module);
+                moduleCards[module.ModuleKey] = card;
+                canvas.Controls.Add(card);
+            }
+
+            AdjustLayout();
         }
 
-        private Label CreateMiniTitle(string text)
+        private Panel BuildModuleCard(ModuleSetting module)
         {
-            return new Label
+            Panel card = new Panel
             {
-                Text = text,
-                Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true
-            };
-        }
-
-        private Label CreateChip(string text)
-        {
-            return new Label
-            {
-                Text = text,
-                AutoSize = true,
-                Padding = new Padding(8, 4, 8, 4),
-                BackColor = SecondaryContainer,
-                ForeColor = ColorTranslator.FromHtml("#3B6B5C"),
-                Font = new Font("Segoe UI", 8F, FontStyle.Bold)
-            };
-        }
-
-        private CheckBox CreateConfigCheckBox(string text, bool isChecked)
-        {
-            return new CheckBox
-            {
-                Text = text,
-                Checked = isChecked,
-                AutoSize = true,
-                Font = new Font("Segoe UI", 10.5F),
-                ForeColor = OnSurfaceVariant,
-                BackColor = SurfaceLowest
-            };
-        }
-
-        private CheckBox CreatePolicyCheckBox(string text, bool isChecked)
-        {
-            return new CheckBox
-            {
-                Text = text,
-                Checked = isChecked,
-                AutoSize = true,
-                Font = new Font("Segoe UI", 10.5F),
-                ForeColor = OnSurfaceVariant,
-                BackColor = SurfaceLowest
-            };
-        }
-
-        private NumericUpDown CreateStyledNumeric(decimal value, decimal increment, int decimals)
-        {
-            return new NumericUpDown
-            {
-                DecimalPlaces = decimals,
-                Increment = increment,
-                Value = value,
-                Minimum = 0,
-                Maximum = 1000,
-                Size = new Size(230, 40),
-                Font = new Font("Segoe UI", 11F),
-                BackColor = SurfaceHigh,
+                BackColor = Surface,
                 BorderStyle = BorderStyle.FixedSingle,
-                ForeColor = OnSurface
+                Tag = module.ModuleKey,
+                Cursor = Cursors.Hand
             };
-        }
 
-        private void StyleFlatButton(Button btn, Color back, Color fore)
-        {
-            btn.FlatStyle = FlatStyle.Flat;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.BackColor = back;
-            btn.ForeColor = fore;
-            btn.Cursor = Cursors.Hand;
-            btn.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-        }
-
-        private void BuildUserAccessPanel()
-        {
-            Label title = CreateSectionTitle("User Access", "🛡");
-
-            chkAdminFull = CreateConfigCheckBox("Admin Full Access", true);
-            chkStaffRules = CreateConfigCheckBox("Staff can change rules", true);
-            chkStudentFaculty = CreateConfigCheckBox("Student/Faculty Access", false);
-            chkGuestRead = CreateConfigCheckBox("Guest Access (Read)", false);
-
-            userAccessPanel.Controls.Add(title);
-            userAccessPanel.Controls.Add(chkAdminFull);
-            userAccessPanel.Controls.Add(chkStaffRules);
-            userAccessPanel.Controls.Add(chkStudentFaculty);
-            userAccessPanel.Controls.Add(chkGuestRead);
-
-            title.Location = new Point(22, 20);
-            chkAdminFull.Location = new Point(22, 70);
-            chkStaffRules.Location = new Point(22, 105);
-            chkStudentFaculty.Location = new Point(22, 140);
-            chkGuestRead.Location = new Point(22, 175);
-        }
-
-        private void BuildSoftwarePanel()
-        {
-            Label title = CreateSectionTitle("Software Requirements", "💻");
-
-            swBox1 = CreateSoftInfoBox("Operating Systems", "Windows, macOS, Linux");
-            swBox2 = CreateSoftInfoBox("Browsers", "Chrome, Firefox, Edge, Safari");
-            swBox3 = CreateSoftInfoBox("Backend Environment", "C# / ASP.NET Core", true);
-            swBox4 = CreateSoftInfoBox("Database Engine", "MonsterASP SQL Database", true);
-
-            softwarePanel.Controls.Add(title);
-            softwarePanel.Controls.Add(swBox1);
-            softwarePanel.Controls.Add(swBox2);
-            softwarePanel.Controls.Add(swBox3);
-            softwarePanel.Controls.Add(swBox4);
-
-            title.Location = new Point(22, 20);
-        }
-
-        private void BuildHardwarePanel()
-        {
-            Label title = CreateSectionTitle("Hardware Specs (Min)", "🧠");
-
-            hardwarePanel.Controls.Add(title);
-            title.Location = new Point(22, 20);
-
-            AddSpecRow(hardwarePanel, "Processor", "Intel Core i3+", 72);
-            AddSpecRow(hardwarePanel, "RAM", "2 GB or more", 112);
-            AddSpecRow(hardwarePanel, "Storage", "10 GB or more", 152);
-        }
-
-        private void AddSpecRow(Panel parent, string label, string value, int top)
-        {
-            Label lblLeft = new Label
+            Panel iconBox = new Panel
             {
-                Text = label,
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true,
-                Location = new Point(22, top)
+                Name = "IconBox",
+                Size = new Size(54, 54),
+                Location = new Point(30, 28),
+                BackColor = GetIconBack(module)
             };
 
-            Label lblRight = new Label
-            {
-                Text = value,
-                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                ForeColor = OnSurface,
-                AutoSize = true,
-                Location = new Point(175, top)
-            };
-
-            Panel line = new Panel
-            {
-                BackColor = Color.FromArgb(22, OutlineVariant),
-                Size = new Size(240, 1),
-                Location = new Point(22, top + 28)
-            };
-
-            parent.Controls.Add(lblLeft);
-            parent.Controls.Add(lblRight);
-            parent.Controls.Add(line);
-        }
-
-        private void BuildArchitecturePanel()
-        {
-            Label title = CreateSectionTitle("Architecture & Core Modules", "✳");
-            Label lblArch = CreateMiniTitle("SYSTEM ARCHITECTURE");
-            Label lblRoles = CreateMiniTitle("USER ROLES");
-            Label lblModules = CreateMiniTitle("KEY LIBRAFLOW MODULES");
-
-            archChip1 = CreateChip("CLIENT-SERVER");
-            archChip2 = CreateChip("ERP SAAS ARCHITECTURE");
-            archChip3 = CreateChip("CLOUD");
-
-            rolesText = new Label
-            {
-                Text = "Admin, Librarian, Student/Faculty",
-                Font = new Font("Segoe UI", 10F),
-                ForeColor = OnSurface,
-                AutoSize = true
-            };
-
-            module1 = CreateModuleBox("OPAC", "CATALOG");
-            module2 = CreateModuleBox("Circulation", "LENDING");
-            module3 = CreateModuleBox("Members", "MANAGEMENT");
-            module4 = CreateModuleBox("Reporting", "MIS/ANALYTICS");
-
-            architecturePanel.Controls.Add(title);
-            architecturePanel.Controls.Add(lblArch);
-            architecturePanel.Controls.Add(lblRoles);
-            architecturePanel.Controls.Add(lblModules);
-            architecturePanel.Controls.Add(archChip1);
-            architecturePanel.Controls.Add(archChip2);
-            architecturePanel.Controls.Add(archChip3);
-            architecturePanel.Controls.Add(rolesText);
-            architecturePanel.Controls.Add(module1);
-            architecturePanel.Controls.Add(module2);
-            architecturePanel.Controls.Add(module3);
-            architecturePanel.Controls.Add(module4);
-
-            title.Location = new Point(22, 20);
-            lblArch.Location = new Point(22, 72);
-            lblRoles.Location = new Point(312, 72);
-            rolesText.Location = new Point(312, 98);
-            lblModules.Location = new Point(22, 164);
-        }
-
-        private Panel CreateModuleBox(string title, string subtitle)
-        {
-            Panel box = CreateModulePanel();
-
-            Label lbl1 = new Label
-            {
-                Text = title,
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = Primary,
-                AutoSize = true,
-                Location = new Point(14, 10)
-            };
-
-            Label lbl2 = new Label
-            {
-                Text = subtitle,
-                Font = new Font("Segoe UI", 8F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true,
-                Location = new Point(14, 30)
-            };
-
-            box.Controls.Add(lbl1);
-            box.Controls.Add(lbl2);
-            return box;
-        }
-
-        private void BuildFeesPanel()
-        {
-            Label title = CreateSectionTitle("Circulation Fees", "💵");
-
-            Label lblDaily = new Label
-            {
-                Text = "Daily late fee ($)",
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true
-            };
-
-            Label lblMax = new Label
-            {
-                Text = "Maximum total fee ($)",
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true
-            };
-
-            Label lblLost = new Label
-            {
-                Text = "Fee for lost books ($)",
-                Font = new Font("Segoe UI", 9F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true
-            };
-
-            nudDailyFee = CreateStyledNumeric(1.50m, 0.25m, 2);
-            nudMaxFee = CreateStyledNumeric(25.00m, 1.00m, 2);
-            nudLostBookFee = CreateStyledNumeric(10.00m, 1.00m, 2);
-
-            btnAdjustFee = new Button
-            {
-                Text = "✎  Adjust fee levels",
-                AutoSize = true
-            };
-            StyleFlatButton(btnAdjustFee, SurfaceLowest, Primary);
-
-            feesPanel.Controls.Add(title);
-            feesPanel.Controls.Add(lblDaily);
-            feesPanel.Controls.Add(lblMax);
-            feesPanel.Controls.Add(lblLost);
-            feesPanel.Controls.Add(nudDailyFee);
-            feesPanel.Controls.Add(nudMaxFee);
-            feesPanel.Controls.Add(nudLostBookFee);
-            feesPanel.Controls.Add(btnAdjustFee);
-
-            title.Location = new Point(22, 20);
-
-            lblDaily.Location = new Point(22, 74);
-            nudDailyFee.Location = new Point(22, 96);
-
-            lblMax.Location = new Point(300, 74);
-            nudMaxFee.Location = new Point(300, 96);
-
-            lblLost.Location = new Point(22, 160);
-            nudLostBookFee.Location = new Point(22, 182);
-
-            btnAdjustFee.Location = new Point(300, 180);
-        }
-
-        private void BuildPolicyPanel()
-        {
-            Label title = CreateSectionTitle("System Policy", "⇄");
-
-            chkAutoRenew = CreatePolicyCheckBox("Allow automatic renewals", true);
-            chkBlockOutstanding = CreatePolicyCheckBox("Block accounts with outstanding fees", false);
-            chkCrossCampus = CreatePolicyCheckBox("Cross-campus borrowing enabled", true);
-
-            policyPanel.Controls.Add(title);
-            policyPanel.Controls.Add(chkAutoRenew);
-            policyPanel.Controls.Add(chkBlockOutstanding);
-            policyPanel.Controls.Add(chkCrossCampus);
-
-            title.Location = new Point(22, 20);
-            chkAutoRenew.Location = new Point(22, 72);
-            chkBlockOutstanding.Location = new Point(22, 116);
-            chkCrossCampus.Location = new Point(22, 160);
-        }
-
-        private void BuildMaintenancePanel()
-        {
             Label icon = new Label
             {
-                Text = "🗄",
-                Font = new Font("Segoe UI Emoji", 16F),
-                ForeColor = Primary,
-                AutoSize = true,
-                Location = new Point(22, 22)
+                Text = module.IconText,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
+                ForeColor = GetIconFore(module),
+                BackColor = Color.Transparent
             };
+
+            iconBox.Controls.Add(icon);
 
             Label title = new Label
             {
-                Text = "System Maintenance",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                Name = "ModuleTitle",
+                Text = module.ModuleName,
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
                 ForeColor = OnSurface,
                 AutoSize = true,
-                Location = new Point(56, 20)
+                Location = new Point(30, 108)
             };
 
-            Label subtitle = new Label
+            Label description = new Label
             {
-                Text = "Configure automated backup and LibraFlow system synchronization cycles.",
-                Font = new Font("Segoe UI", 9F),
+                Name = "ModuleDescription",
+                Text = module.Description,
+                Font = new Font("Segoe UI", 10.5F),
                 ForeColor = OnSurfaceVariant,
+                AutoSize = false,
+                Location = new Point(30, 148),
+                Size = new Size(350, 48)
+            };
+
+            Panel track = new Panel
+            {
+                Name = "ToggleTrack",
+                Size = new Size(58, 28),
+                BackColor = module.IsEnabled ? PrimaryContainer : SurfaceHigh,
+                Cursor = Cursors.Hand
+            };
+
+            Panel knob = new Panel
+            {
+                Name = "ToggleKnob",
+                Size = new Size(24, 24),
+                BackColor = Color.White,
+                Cursor = Cursors.Hand
+            };
+
+            track.Controls.Add(knob);
+            track.Paint += ToggleTrack_Paint;
+            knob.Paint += ToggleKnob_Paint;
+
+            Label bullet = new Label
+            {
+                Name = "StatusBullet",
+                Text = "■",
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = module.IsEnabled ? PrimaryContainer : Muted,
                 AutoSize = true,
-                Location = new Point(56, 46)
+                Location = new Point(30, 216)
             };
 
-            btnExportConfig = new Button { Text = "↓  Export Config", Size = new Size(130, 56) };
-            btnRestoreBackup = new Button { Text = "☁  Restore Backup", Size = new Size(142, 56) };
-            btnRunUpdates = new Button { Text = "⟳  Run Updates", Size = new Size(150, 56) };
+            Label status = new Label
+            {
+                Name = "StatusLabel",
+                Text = GetStatusText(module),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
+                ForeColor = module.IsEnabled ? PrimaryContainer : Muted,
+                AutoSize = true,
+                Location = new Point(54, 216)
+            };
 
-            StyleFlatButton(btnExportConfig, SurfaceLow, OnSurface);
-            StyleFlatButton(btnRestoreBackup, SurfaceLow, OnSurface);
-            StyleFlatButton(btnRunUpdates, Primary, Color.White);
+            card.Controls.Add(iconBox);
+            card.Controls.Add(title);
+            card.Controls.Add(description);
+            card.Controls.Add(track);
+            card.Controls.Add(bullet);
+            card.Controls.Add(status);
 
-            maintenancePanel.Controls.Add(icon);
-            maintenancePanel.Controls.Add(title);
-            maintenancePanel.Controls.Add(subtitle);
-            maintenancePanel.Controls.Add(btnExportConfig);
-            maintenancePanel.Controls.Add(btnRestoreBackup);
-            maintenancePanel.Controls.Add(btnRunUpdates);
+            iconBoxes[module.ModuleKey] = iconBox;
+            iconLabels[module.ModuleKey] = icon;
+            toggleTracks[module.ModuleKey] = track;
+            toggleKnobs[module.ModuleKey] = knob;
+            statusLabels[module.ModuleKey] = status;
+
+            card.Click += (s, e) => ToggleModule(module.ModuleKey);
+            iconBox.Click += (s, e) => ToggleModule(module.ModuleKey);
+            icon.Click += (s, e) => ToggleModule(module.ModuleKey);
+            title.Click += (s, e) => ToggleModule(module.ModuleKey);
+            description.Click += (s, e) => ToggleModule(module.ModuleKey);
+            track.Click += (s, e) => ToggleModule(module.ModuleKey);
+            knob.Click += (s, e) => ToggleModule(module.ModuleKey);
+
+            RefreshModuleCard(module);
+
+            return card;
         }
 
-        private void BuildFooterActionsPanel()
+        private void ToggleModule(string moduleKey)
         {
-            Panel line = new Panel
-            {
-                BackColor = Color.FromArgb(24, OutlineVariant),
-                Dock = DockStyle.Top,
-                Height = 1
-            };
+            if (isLoading)
+                return;
 
-            btnDiscard = new Button
-            {
-                Text = "Discard Changes",
-                Size = new Size(170, 48)
-            };
-            StyleFlatButton(btnDiscard, Background, OnSurfaceVariant);
+            ModuleSetting? module = modules.FirstOrDefault(x => x.ModuleKey == moduleKey);
 
-            btnApply = new Button
-            {
-                Text = "💾  Apply Configuration",
-                Size = new Size(250, 48)
-            };
-            StyleFlatButton(btnApply, PrimaryContainer, OnPrimaryContainer);
+            if (module == null)
+                return;
 
-            footerActionsPanel.Controls.Add(line);
-            footerActionsPanel.Controls.Add(btnDiscard);
-            footerActionsPanel.Controls.Add(btnApply);
+            bool oldValue = module.IsEnabled;
+            string oldStatus = module.StatusText;
+
+            module.IsEnabled = !module.IsEnabled;
+            module.StatusText = module.IsEnabled ? "ACTIVE" : "DISABLED";
+
+            bool saved = SaveModuleStatus(module);
+
+            if (!saved)
+            {
+                module.IsEnabled = oldValue;
+                module.StatusText = oldStatus;
+            }
+
+            RefreshModuleCard(module);
         }
 
-        private void OversightForm_Resize(object? sender, EventArgs e)
+        private bool SaveModuleStatus(ModuleSetting module)
         {
-            AdjustLayout();
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                const string query = @"
+UPDATE dbo.SystemModules
+SET IsEnabled = @IsEnabled,
+    StatusText = @StatusText,
+    UpdatedAt = SYSUTCDATETIME(),
+    UpdatedBy = @UpdatedBy
+WHERE ModuleKey = @ModuleKey;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@ModuleKey", module.ModuleKey);
+                cmd.Parameters.AddWithValue("@IsEnabled", module.IsEnabled);
+                cmd.Parameters.AddWithValue("@StatusText", module.StatusText);
+                cmd.Parameters.AddWithValue("@UpdatedBy", GetCurrentAdminName());
+
+                int affected = cmd.ExecuteNonQuery();
+
+                if (affected == 0)
+                    throw new InvalidOperationException("No module row was updated. ModuleKey: " + module.ModuleKey);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Module status could not be saved.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                return false;
+            }
+        }
+
+        private void RefreshModuleCard(ModuleSetting module)
+        {
+            if (!moduleCards.ContainsKey(module.ModuleKey))
+                return;
+
+            Panel card = moduleCards[module.ModuleKey];
+            Panel track = toggleTracks[module.ModuleKey];
+            Panel knob = toggleKnobs[module.ModuleKey];
+            Label status = statusLabels[module.ModuleKey];
+            Panel iconBox = iconBoxes[module.ModuleKey];
+            Label icon = iconLabels[module.ModuleKey];
+
+            card.BackColor = module.IsEnabled ? Surface : SurfaceLow;
+            track.BackColor = module.IsEnabled ? PrimaryContainer : SurfaceHigh;
+            knob.BackColor = Color.White;
+            knob.Location = new Point(module.IsEnabled ? track.Width - knob.Width - 2 : 2, 2);
+
+            iconBox.BackColor = GetIconBack(module);
+            icon.ForeColor = GetIconFore(module);
+            icon.Text = GetSafeIconText(module.ModuleKey, module.IconText);
+
+            status.Text = GetStatusText(module);
+            status.ForeColor = module.IsEnabled ? PrimaryContainer : Muted;
+
+            Label? bullet = card.Controls.Find("StatusBullet", false).FirstOrDefault() as Label;
+            if (bullet != null)
+                bullet.ForeColor = module.IsEnabled ? PrimaryContainer : Muted;
+
+            Label? title = card.Controls.Find("ModuleTitle", false).FirstOrDefault() as Label;
+            if (title != null)
+                title.ForeColor = module.IsEnabled ? OnSurface : Muted;
+
+            Label? description = card.Controls.Find("ModuleDescription", false).FirstOrDefault() as Label;
+            if (description != null)
+                description.ForeColor = module.IsEnabled ? OnSurfaceVariant : Muted;
+
+            track.Invalidate();
+            knob.Invalidate();
+            card.Invalidate();
+        }
+
+        private string GetSafeIconText(string moduleKey, string currentIcon)
+        {
+            return moduleKey switch
+            {
+                "client_management" => "CL",
+                "access_control" => "AC",
+                "circulation_oversight" => "CO",
+                "reports_exports" => "RP",
+                "archive_recovery" => "AR",
+                "maintenance_mode" => "MT",
+                _ => string.IsNullOrWhiteSpace(currentIcon) ? "MD" : currentIcon
+            };
+        }
+
+        private string GetStatusText(ModuleSetting module)
+        {
+            return module.IsEnabled ? "STATUS: ENABLED" : "STATUS: DISABLED";
+        }
+
+        private Color GetIconBack(ModuleSetting module)
+        {
+            return module.ModuleKey switch
+            {
+                "client_management" => SecondaryContainer,
+                "access_control" => ColorTranslator.FromHtml("#E1F6EE"),
+                "circulation_oversight" => SurfaceHigh,
+                "reports_exports" => ColorTranslator.FromHtml("#D9F4EC"),
+                "archive_recovery" => ColorTranslator.FromHtml("#E1F6EE"),
+                "maintenance_mode" => ColorTranslator.FromHtml("#FDE7E2"),
+                _ => SurfaceHigh
+            };
+        }
+
+        private Color GetIconFore(ModuleSetting module)
+        {
+            return module.ModuleKey switch
+            {
+                "maintenance_mode" => Danger,
+                _ => Primary
+            };
+        }
+
+        private void ToggleTrack_Paint(object? sender, PaintEventArgs e)
+        {
+            if (sender is not Panel panel)
+                return;
+
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            using SolidBrush brush = new SolidBrush(panel.BackColor);
+            using System.Drawing.Drawing2D.GraphicsPath path = GetRoundedRectPath(new Rectangle(0, 0, panel.Width - 1, panel.Height - 1), panel.Height / 2);
+            e.Graphics.FillPath(brush, path);
+        }
+
+        private void ToggleKnob_Paint(object? sender, PaintEventArgs e)
+        {
+            if (sender is not Panel panel)
+                return;
+
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+            using SolidBrush brush = new SolidBrush(panel.BackColor);
+            e.Graphics.FillEllipse(brush, 0, 0, panel.Width - 1, panel.Height - 1);
+        }
+
+        private System.Drawing.Drawing2D.GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
+        {
+            int diameter = radius * 2;
+            System.Drawing.Drawing2D.GraphicsPath path = new System.Drawing.Drawing2D.GraphicsPath();
+
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+
+            return path;
+        }
+
+        private string GetCurrentAdminName()
+        {
+            if (!string.IsNullOrWhiteSpace(UserSession.Username))
+                return UserSession.Username!;
+
+            if (!string.IsNullOrWhiteSpace(ClientSession.Username))
+                return ClientSession.Username!;
+
+            return "Super Admin";
+        }
+
+        private void EnsureSystemModulesSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.SystemModules', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.SystemModules
+    (
+        ModuleID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ModuleKey NVARCHAR(80) NOT NULL UNIQUE,
+        ModuleName NVARCHAR(150) NOT NULL,
+        Description NVARCHAR(300) NULL,
+        IconText NVARCHAR(20) NULL,
+        IsEnabled BIT NOT NULL DEFAULT 1,
+        StatusText NVARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+        DisplayOrder INT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedBy NVARCHAR(150) NULL,
+        IsDeleted BIT NOT NULL DEFAULT 0
+    );
+END;
+
+IF COL_LENGTH('dbo.SystemModules', 'ModuleKey') IS NULL
+    ALTER TABLE dbo.SystemModules ADD ModuleKey NVARCHAR(80) NULL;
+
+IF COL_LENGTH('dbo.SystemModules', 'ModuleName') IS NULL
+    ALTER TABLE dbo.SystemModules ADD ModuleName NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.SystemModules', 'Description') IS NULL
+    ALTER TABLE dbo.SystemModules ADD Description NVARCHAR(300) NULL;
+
+IF COL_LENGTH('dbo.SystemModules', 'IconText') IS NULL
+    ALTER TABLE dbo.SystemModules ADD IconText NVARCHAR(20) NULL;
+
+IF COL_LENGTH('dbo.SystemModules', 'IsEnabled') IS NULL
+    ALTER TABLE dbo.SystemModules ADD IsEnabled BIT NOT NULL CONSTRAINT DF_SystemModules_IsEnabled DEFAULT 1;
+
+IF COL_LENGTH('dbo.SystemModules', 'StatusText') IS NULL
+    ALTER TABLE dbo.SystemModules ADD StatusText NVARCHAR(50) NOT NULL CONSTRAINT DF_SystemModules_StatusText DEFAULT 'ACTIVE';
+
+IF COL_LENGTH('dbo.SystemModules', 'DisplayOrder') IS NULL
+    ALTER TABLE dbo.SystemModules ADD DisplayOrder INT NOT NULL CONSTRAINT DF_SystemModules_DisplayOrder DEFAULT 0;
+
+IF COL_LENGTH('dbo.SystemModules', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.SystemModules ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_SystemModules_CreatedAt DEFAULT SYSUTCDATETIME();
+
+IF COL_LENGTH('dbo.SystemModules', 'UpdatedAt') IS NULL
+    ALTER TABLE dbo.SystemModules ADD UpdatedAt DATETIME2 NOT NULL CONSTRAINT DF_SystemModules_UpdatedAt DEFAULT SYSUTCDATETIME();
+
+IF COL_LENGTH('dbo.SystemModules', 'UpdatedBy') IS NULL
+    ALTER TABLE dbo.SystemModules ADD UpdatedBy NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.SystemModules', 'IsDeleted') IS NULL
+    ALTER TABLE dbo.SystemModules ADD IsDeleted BIT NOT NULL CONSTRAINT DF_SystemModules_IsDeleted DEFAULT 0;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private void InsertDefaultModulesIfMissing(SqlConnection conn)
+        {
+            const string deleteOldDefaults = @"
+UPDATE dbo.SystemModules
+SET IsDeleted = 1,
+    UpdatedAt = SYSUTCDATETIME(),
+    UpdatedBy = 'System Migration'
+WHERE ModuleKey IN
+(
+    'dark_mode',
+    'email_alerts',
+    'advanced_search',
+    'member_ratings',
+    'digital_archive'
+);";
+
+            using (SqlCommand cleanupCmd = new SqlCommand(deleteOldDefaults, conn))
+                cleanupCmd.ExecuteNonQuery();
+
+            const string query = @"
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'client_management')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('client_management', 'Client Management', 'Manage registered school libraries, client access, subscriptions, and status controls.', 'CL', 1, 'ACTIVE', 1);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'access_control')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('access_control', 'Access Control', 'Configure admin, librarian, member, teacher, student, and guest permission rules.', 'AC', 1, 'ACTIVE', 2);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'circulation_oversight')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('circulation_oversight', 'Circulation Oversight', 'Allow Super Admin monitoring of borrowing, returns, and fines across all institutions.', 'CO', 1, 'ACTIVE', 3);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'reports_exports')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('reports_exports', 'Reports & Exports', 'Enable system-wide reports, analytics summaries, and PDF export generation.', 'RP', 1, 'ACTIVE', 4);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'archive_recovery')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('archive_recovery', 'Archive Recovery', 'Allow restore and permanent delete actions for archived records.', 'AR', 1, 'ACTIVE', 5);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.SystemModules WHERE ModuleKey = 'maintenance_mode')
+INSERT INTO dbo.SystemModules (ModuleKey, ModuleName, Description, IconText, IsEnabled, StatusText, DisplayOrder)
+VALUES ('maintenance_mode', 'Maintenance Mode', 'Temporarily pause client access while system updates or migrations are running.', 'MT', 0, 'DISABLED', 6);
+
+UPDATE dbo.SystemModules
+SET ModuleName = CASE ModuleKey
+        WHEN 'client_management' THEN 'Client Management'
+        WHEN 'access_control' THEN 'Access Control'
+        WHEN 'circulation_oversight' THEN 'Circulation Oversight'
+        WHEN 'reports_exports' THEN 'Reports & Exports'
+        WHEN 'archive_recovery' THEN 'Archive Recovery'
+        WHEN 'maintenance_mode' THEN 'Maintenance Mode'
+        ELSE ModuleName
+    END,
+    Description = CASE ModuleKey
+        WHEN 'client_management' THEN 'Manage registered school libraries, client access, subscriptions, and status controls.'
+        WHEN 'access_control' THEN 'Configure admin, librarian, member, teacher, student, and guest permission rules.'
+        WHEN 'circulation_oversight' THEN 'Allow Super Admin monitoring of borrowing, returns, and fines across all institutions.'
+        WHEN 'reports_exports' THEN 'Enable system-wide reports, analytics summaries, and PDF export generation.'
+        WHEN 'archive_recovery' THEN 'Allow restore and permanent delete actions for archived records.'
+        WHEN 'maintenance_mode' THEN 'Temporarily pause client access while system updates or migrations are running.'
+        ELSE Description
+    END,
+    IconText = CASE ModuleKey
+        WHEN 'client_management' THEN 'CL'
+        WHEN 'access_control' THEN 'AC'
+        WHEN 'circulation_oversight' THEN 'CO'
+        WHEN 'reports_exports' THEN 'RP'
+        WHEN 'archive_recovery' THEN 'AR'
+        WHEN 'maintenance_mode' THEN 'MT'
+        ELSE IconText
+    END,
+    DisplayOrder = CASE ModuleKey
+        WHEN 'client_management' THEN 1
+        WHEN 'access_control' THEN 2
+        WHEN 'circulation_oversight' THEN 3
+        WHEN 'reports_exports' THEN 4
+        WHEN 'archive_recovery' THEN 5
+        WHEN 'maintenance_mode' THEN 6
+        ELSE DisplayOrder
+    END,
+    IsDeleted = 0
+WHERE ModuleKey IN
+(
+    'client_management',
+    'access_control',
+    'circulation_oversight',
+    'reports_exports',
+    'archive_recovery',
+    'maintenance_mode'
+);";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private void AdjustLayout()
         {
+            if (canvas == null)
+                return;
+
             int margin = 34;
-            int gap = 22;
-            int contentWidth = ClientSize.Width - (margin * 2);
-            int y = 108;
+            int availableWidth = Math.Max(960, ClientSize.Width - (margin * 2));
 
-            lblTitle.Location = new Point(margin, 24);
-            lblSubtitle.Location = new Point(margin + 2, 66);
+            lblTitle.Location = new Point(margin, 28);
+            lblSubtitle.Location = new Point(margin + 2, 74);
 
-            if (contentWidth >= 1150)
+            int top = 126;
+            int gap = 28;
+            int cardHeight = 248;
+            int cardWidth = (availableWidth - (gap * 2)) / 3;
+
+            for (int i = 0; i < modules.Count; i++)
             {
-                int leftW = (contentWidth - gap) * 4 / 12;
-                int rightW = contentWidth - gap - leftW;
+                ModuleSetting module = modules[i];
 
-                userAccessPanel.Bounds = new Rectangle(margin, y, leftW, 230);
-                softwarePanel.Bounds = new Rectangle(userAccessPanel.Right + gap, y, rightW, 230);
+                if (!moduleCards.TryGetValue(module.ModuleKey, out Panel? card))
+                    continue;
 
-                LayoutSoftwarePanelWide();
+                int col = i % 3;
+                int row = i / 3;
 
-                int y2 = userAccessPanel.Bottom + gap;
-                hardwarePanel.Bounds = new Rectangle(margin, y2, leftW, 250);
-                architecturePanel.Bounds = new Rectangle(hardwarePanel.Right + gap, y2, rightW, 250);
+                card.Bounds = new Rectangle(
+                    margin + (col * (cardWidth + gap)),
+                    top + (row * (cardHeight + 30)),
+                    cardWidth,
+                    cardHeight);
 
-                LayoutArchitectureWide();
+                if (toggleTracks.TryGetValue(module.ModuleKey, out Panel? track))
+                {
+                    track.Location = new Point(card.Width - 86, 28);
 
-                int y3 = hardwarePanel.Bottom + gap;
-                int feesW = (contentWidth - gap) * 7 / 12;
-                int policyW = contentWidth - gap - feesW;
+                    if (toggleKnobs.TryGetValue(module.ModuleKey, out Panel? knob))
+                        knob.Location = new Point(module.IsEnabled ? track.Width - knob.Width - 2 : 2, 2);
+                }
 
-                feesPanel.Bounds = new Rectangle(margin, y3, feesW, 242);
-                policyPanel.Bounds = new Rectangle(feesPanel.Right + gap, y3, policyW, 242);
+                Label? title = card.Controls.Find("ModuleTitle", false).FirstOrDefault() as Label;
+                if (title != null)
+                    title.MaximumSize = new Size(card.Width - 68, 0);
 
-                LayoutFeesWide();
-
-                int y4 = feesPanel.Bottom + gap;
-                maintenancePanel.Bounds = new Rectangle(margin, y4, contentWidth, 102);
-
-                btnExportConfig.Location = new Point(maintenancePanel.Width - 448, 22);
-                btnRestoreBackup.Location = new Point(btnExportConfig.Right + 16, 22);
-                btnRunUpdates.Location = new Point(btnRestoreBackup.Right + 16, 22);
-
-                int y5 = maintenancePanel.Bottom + 18;
-                footerActionsPanel.Bounds = new Rectangle(margin, y5, contentWidth, 92);
-
-                btnApply.Location = new Point(footerActionsPanel.Width - btnApply.Width - 10, 22);
-                btnDiscard.Location = new Point(btnApply.Left - btnDiscard.Width - 20, 22);
-            }
-            else
-            {
-                int fullW = contentWidth;
-
-                userAccessPanel.Bounds = new Rectangle(margin, y, fullW, 230);
-
-                int y2 = userAccessPanel.Bottom + gap;
-                softwarePanel.Bounds = new Rectangle(margin, y2, fullW, 250);
-                LayoutSoftwarePanelNarrow();
-
-                int y3 = softwarePanel.Bottom + gap;
-                hardwarePanel.Bounds = new Rectangle(margin, y3, fullW, 250);
-
-                int y4 = hardwarePanel.Bottom + gap;
-                architecturePanel.Bounds = new Rectangle(margin, y4, fullW, 300);
-                LayoutArchitectureNarrow();
-
-                int y5 = architecturePanel.Bottom + gap;
-                feesPanel.Bounds = new Rectangle(margin, y5, fullW, 242);
-                LayoutFeesNarrow();
-
-                int y6 = feesPanel.Bottom + gap;
-                policyPanel.Bounds = new Rectangle(margin, y6, fullW, 242);
-
-                int y7 = policyPanel.Bottom + gap;
-                maintenancePanel.Bounds = new Rectangle(margin, y7, fullW, 152);
-
-                btnExportConfig.Location = new Point(22, 78);
-                btnRestoreBackup.Location = new Point(btnExportConfig.Right + 16, 78);
-                btnRunUpdates.Location = new Point(btnRestoreBackup.Right + 16, 78);
-
-                int y8 = maintenancePanel.Bottom + 18;
-                footerActionsPanel.Bounds = new Rectangle(margin, y8, fullW, 92);
-
-                btnApply.Location = new Point(footerActionsPanel.Width - btnApply.Width - 10, 22);
-                btnDiscard.Location = new Point(btnApply.Left - btnDiscard.Width - 20, 22);
+                Label? description = card.Controls.Find("ModuleDescription", false).FirstOrDefault() as Label;
+                if (description != null)
+                    description.Size = new Size(card.Width - 68, 52);
             }
 
-            contentPanel.AutoScrollMinSize = new Size(0, footerActionsPanel.Bottom + 32);
+            int rows = Math.Max(1, (int)Math.Ceiling(modules.Count / 3.0));
+            int footerY = top + (rows * (cardHeight + 30)) + 4;
+            lblFooterNote.Location = new Point(margin, footerY);
+
+            canvas.AutoScrollMinSize = new Size(0, footerY + 70);
         }
+    }
 
-        private void LayoutSoftwarePanelWide()
-        {
-            swBox1.Bounds = new Rectangle(22, 64, 252, 76);
-            swBox2.Bounds = new Rectangle(300, 64, 252, 76);
-            swBox3.Bounds = new Rectangle(22, 160, 252, 76);
-            swBox4.Bounds = new Rectangle(300, 160, 252, 76);
-        }
-
-        private void LayoutSoftwarePanelNarrow()
-        {
-            int gap = 18;
-            int boxW = (softwarePanel.Width - 22 - 22 - gap) / 2;
-
-            swBox1.Bounds = new Rectangle(22, 64, boxW, 76);
-            swBox2.Bounds = new Rectangle(swBox1.Right + gap, 64, boxW, 76);
-            swBox3.Bounds = new Rectangle(22, 160, boxW, 76);
-            swBox4.Bounds = new Rectangle(swBox3.Right + gap, 160, boxW, 76);
-        }
-
-        private void LayoutArchitectureWide()
-        {
-            archChip1.Location = new Point(22, 98);
-            archChip2.Location = new Point(128, 98);
-            archChip3.Location = new Point(22, 128);
-
-            rolesText.Location = new Point(312, 98);
-
-            module1.Bounds = new Rectangle(22, 192, 124, 56);
-            module2.Bounds = new Rectangle(160, 192, 124, 56);
-            module3.Bounds = new Rectangle(298, 192, 124, 56);
-            module4.Bounds = new Rectangle(436, 192, 124, 56);
-        }
-
-        private void LayoutArchitectureNarrow()
-        {
-            archChip1.Location = new Point(22, 98);
-            archChip2.Location = new Point(128, 98);
-            archChip3.Location = new Point(22, 128);
-
-            rolesText.Location = new Point(22, 170);
-
-            int gap = 14;
-            int moduleY = 220;
-            int moduleW = (architecturePanel.Width - 22 - 22 - (gap * 3)) / 4;
-
-            module1.Bounds = new Rectangle(22, moduleY, moduleW, 56);
-            module2.Bounds = new Rectangle(module1.Right + gap, moduleY, moduleW, 56);
-            module3.Bounds = new Rectangle(module2.Right + gap, moduleY, moduleW, 56);
-            module4.Bounds = new Rectangle(module3.Right + gap, moduleY, moduleW, 56);
-        }
-
-        private void LayoutFeesWide()
-        {
-            nudDailyFee.Location = new Point(22, 96);
-            nudMaxFee.Location = new Point(300, 96);
-            nudLostBookFee.Location = new Point(22, 182);
-            btnAdjustFee.Location = new Point(300, 180);
-        }
-
-        private void LayoutFeesNarrow()
-        {
-            nudDailyFee.Location = new Point(22, 96);
-            nudMaxFee.Location = new Point(300, 96);
-            nudLostBookFee.Location = new Point(22, 182);
-            btnAdjustFee.Location = new Point(300, 180);
-        }
+    public class ModuleSetting
+    {
+        public string ModuleKey { get; set; } = "";
+        public string ModuleName { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string IconText { get; set; } = "";
+        public bool IsEnabled { get; set; }
+        public string StatusText { get; set; } = "";
+        public int DisplayOrder { get; set; }
     }
 }

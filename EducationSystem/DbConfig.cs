@@ -9,6 +9,8 @@
             "Password=Y?g82S_e%7yB;" +
             "Encrypt=True;" +
             "TrustServerCertificate=True;" +
-            "MultipleActiveResultSets=True;";
+            "MultipleActiveResultSets=True;" +
+            "Connect Timeout=60;" +
+            "Pooling=False;";
     }
 }

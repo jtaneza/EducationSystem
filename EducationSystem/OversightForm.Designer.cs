@@ -10,20 +10,19 @@
             {
                 components.Dispose();
             }
+
             base.Dispose(disposing);
         }
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-            // 
-            // OversightForm
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Name = "OversightForm";
-            this.Text = "OversightForm";
-            this.ResumeLayout(false);
+            components = new System.ComponentModel.Container();
+            SuspendLayout();
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            ClientSize = new System.Drawing.Size(1200, 800);
+            Name = "OversightForm";
+            Text = "OversightForm";
+            ResumeLayout(false);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -233,22 +234,15 @@ namespace EducationSystem
             navLibrarySetup = CreateSidebarNavButton("⚙", "Library Setup");
             navCategoryManagement = CreateSidebarNavButton("◫", "Category Management");
             navBookManagement = CreateSidebarNavButton("📖", "Book Management");
-            navUserManagement = CreateSidebarNavButton("👥", "User Management", true);
+            navUserManagement = CreateSidebarNavButton("👥", "User Management");
             navCirculation = CreateSidebarNavButton("⇄", "Circulation", true);
             navGenerateReports = CreateSidebarNavButton("〽", "Generate Reports");
             navArchive = CreateSidebarNavButton("🗂", "Archive");
             navSignOut = CreateSidebarNavButton("⏻", "Sign Out");
 
-            navLibrarian = CreateSidebarSubButton("Librarian");
-            navMember = CreateSidebarSubButton("Member");
-
             navBorrow = CreateSidebarSubButton("Borrow");
             navReturn = CreateSidebarSubButton("Return");
             navFine = CreateSidebarSubButton("Fine");
-
-            userSubMenuPanel = CreateSubMenuPanel();
-            userSubMenuPanel.Controls.Add(navLibrarian);
-            userSubMenuPanel.Controls.Add(navMember);
 
             circulationSubMenuPanel = CreateSubMenuPanel();
             circulationSubMenuPanel.Controls.Add(navBorrow);
@@ -262,7 +256,6 @@ namespace EducationSystem
             clientMenuHost.Controls.Add(navCategoryManagement);
             clientMenuHost.Controls.Add(navBookManagement);
             clientMenuHost.Controls.Add(navUserManagement);
-            clientMenuHost.Controls.Add(userSubMenuPanel);
             clientMenuHost.Controls.Add(navCirculation);
             clientMenuHost.Controls.Add(circulationSubMenuPanel);
             clientMenuHost.Controls.Add(navGenerateReports);
@@ -315,25 +308,14 @@ namespace EducationSystem
 
                 LoadContentForm(new BookManagementForm());
             };
-
             navUserManagement.Click += (s, e) =>
             {
-                userMenuExpanded = !userMenuExpanded;
-                userSubMenuPanel.Visible = userMenuExpanded;
-                UpdateParentArrow(navUserManagement, userMenuExpanded);
-                LayoutSidebar();
-            };
+                SetActiveNavButton(navUserManagement);
 
-            navLibrarian.Click += (s, e) =>
-            {
-                SetActiveNavButton(navLibrarian);
-                MessageBox.Show("Librarian module");
-            };
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
 
-            navMember.Click += (s, e) =>
-            {
-                SetActiveNavButton(navMember);
-                MessageBox.Show("Member module");
+                LoadContentForm(new UserManagementForm());
             };
 
             navCirculation.Click += (s, e) =>
@@ -347,31 +329,51 @@ namespace EducationSystem
             navBorrow.Click += (s, e) =>
             {
                 SetActiveNavButton(navBorrow);
-                MessageBox.Show("Borrow module");
+
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
+
+                LoadContentForm(new BorrowingForm());
             };
 
             navReturn.Click += (s, e) =>
             {
                 SetActiveNavButton(navReturn);
-                MessageBox.Show("Return module");
+
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
+
+                LoadContentForm(new ReturnsForm());
             };
 
             navFine.Click += (s, e) =>
             {
                 SetActiveNavButton(navFine);
-                MessageBox.Show("Fine module");
+
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
+
+                LoadContentForm(new FinesForm());
             };
 
             navGenerateReports.Click += (s, e) =>
             {
                 SetActiveNavButton(navGenerateReports);
-                MessageBox.Show("Reports module");
+
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
+
+                LoadContentForm(new ReportsForm());
             };
 
             navArchive.Click += (s, e) =>
             {
                 SetActiveNavButton(navArchive);
-                MessageBox.Show("Archive module");
+
+                if (topSearchHost != null)
+                    topSearchHost.Visible = false;
+
+                LoadContentForm(new ClientArchiveForm());
             };
 
             navSignOut.Click += (s, e) => DoClientSignOut();
@@ -542,10 +544,10 @@ namespace EducationSystem
                 AutoSize = true
             };
 
-            card1 = CreateDashboardCard("24,812", "TOTAL COLLECTION", "+12%", AccentDeep, false, false, "📚");
-            card2 = CreateDashboardCard("3,205", "ACTIVE MEMBERS", "Steady", AccentDeep, true, false, "👥");
-            card3 = CreateDashboardCard("148", "BOOKS BORROWED", "-4%", AccentDanger, false, false, "⇄");
-            card4 = CreateDashboardCard("24", "OVERDUE RETURNS", "Action Needed", AccentDanger, false, true, "!");
+            card1 = CreateDashboardCard("0", "TOTAL COLLECTION", "Live Data", AccentDeep, false, false, "📚");
+            card2 = CreateDashboardCard("0", "ACTIVE MEMBERS", "Current Client", AccentDeep, true, false, "👥");
+            card3 = CreateDashboardCard("0", "BOOKS BORROWED", "Active", AccentDeep, false, false, "⇄");
+            card4 = CreateDashboardCard("0", "OVERDUE RETURNS", "Action Needed", AccentDanger, false, true, "!");
 
             tableCard = new Panel
             {
@@ -621,10 +623,7 @@ namespace EducationSystem
             dgvRecent.Columns["Date"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgvRecent.Columns["Status"].DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
 
-            dgvRecent.Rows.Add("TRX-9821", "The Great Gatsby\r\nF. Scott Fitzgerald", "John Smith", "Oct 24, 2023", "Returned");
-            dgvRecent.Rows.Add("TRX-9822", "Principles of Physics\r\nWalker, Resnick", "Sara Connor", "Oct 25, 2023", "Borrowed");
-            dgvRecent.Rows.Add("TRX-9823", "1984\r\nGeorge Orwell", "Mike Wazowski", "Oct 20, 2023", "Overdue");
-            dgvRecent.Rows.Add("TRX-9824", "Digital Electronics\r\nMorris Mano", "Elena Gilbert", "Oct 26, 2023", "Borrowed");
+            LoadDashboardDataFromDatabase();
 
             dgvRecent.CellPainting += DgvRecent_CellPainting;
 
@@ -678,6 +677,7 @@ namespace EducationSystem
 
             Label badge = new Label
             {
+                Name = "BadgeLabel",
                 Text = badgeText,
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = badgeColor,
@@ -688,6 +688,7 @@ namespace EducationSystem
 
             Label valueLabel = new Label
             {
+                Name = "ValueLabel",
                 Text = value,
                 Font = new Font("Segoe UI", 28F, FontStyle.Bold),
                 ForeColor = dangerValue ? AccentDanger : PrimaryText,
@@ -697,6 +698,7 @@ namespace EducationSystem
 
             Label captionLabel = new Label
             {
+                Name = "CaptionLabel",
                 Text = caption,
                 Font = new Font("Segoe UI", 11F),
                 ForeColor = SecondaryText,
@@ -749,6 +751,262 @@ namespace EducationSystem
 
             dgvRecent.Location = new Point(0, 74);
             dgvRecent.Size = new Size(tableCard.Width, tableCard.Height - 74);
+        }
+
+
+        private void LoadDashboardDataFromDatabase()
+        {
+            if (card1 == null || dgvRecent == null)
+                return;
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureDashboardSchema(conn);
+
+                int clientId = ClientSession.ClientId;
+
+                int totalCollection = ExecuteClientCount(conn, @"
+SELECT COUNT(*)
+FROM dbo.Books
+WHERE ClientID = @ClientID
+  AND ISNULL(IsArchived, 0) = 0;");
+
+                int activeMembers = ExecuteClientCount(conn, @"
+SELECT COUNT(*)
+FROM dbo.Users
+WHERE ClientID = @ClientID
+  AND ISNULL(IsArchived, 0) = 0
+  AND UPPER(ISNULL(Role, '')) IN ('MEMBER', 'STUDENT', 'TEACHER');");
+
+                int borrowedBooks = ExecuteClientCount(conn, @"
+SELECT COUNT(*)
+FROM dbo.BorrowingRecords
+WHERE ClientID = @ClientID
+  AND ISNULL(IsArchived, 0) = 0
+  AND UPPER(ISNULL(Status, '')) IN ('ACTIVE', 'BORROWED');");
+
+                int overdueReturns = ExecuteClientCount(conn, @"
+SELECT COUNT(*)
+FROM dbo.BorrowingRecords
+WHERE ClientID = @ClientID
+  AND ISNULL(IsArchived, 0) = 0
+  AND UPPER(ISNULL(Status, '')) IN ('ACTIVE', 'BORROWED', 'OVERDUE')
+  AND DueDate < CAST(GETDATE() AS DATE);");
+
+                SetDashboardCardValue(card1, totalCollection.ToString("N0"), "Live Data");
+                SetDashboardCardValue(card2, activeMembers.ToString("N0"), "Current Client");
+                SetDashboardCardValue(card3, borrowedBooks.ToString("N0"), "Active");
+                SetDashboardCardValue(card4, overdueReturns.ToString("N0"), overdueReturns > 0 ? "Action Needed" : "Clear");
+
+                LoadRecentActivity(conn, clientId);
+            }
+            catch (Exception ex)
+            {
+                dgvRecent.Rows.Clear();
+                MessageBox.Show(
+                    "Dashboard data could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private int ExecuteClientCount(SqlConnection conn, string query)
+        {
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@ClientID", ClientSession.ClientId);
+
+            object? result = cmd.ExecuteScalar();
+            return result == null || result == DBNull.Value ? 0 : Convert.ToInt32(result);
+        }
+
+        private void LoadRecentActivity(SqlConnection conn, int clientId)
+        {
+            dgvRecent.Rows.Clear();
+
+            const string query = @"
+SELECT TOP 10
+    TransactionID,
+    BookTitle,
+    BookSubText,
+    MemberName,
+    ActivityDate,
+    Status
+FROM
+(
+    SELECT
+        'BR-' + RIGHT('0000' + CAST(br.BorrowID AS NVARCHAR(20)), 4) AS TransactionID,
+        ISNULL(NULLIF(br.BookTitle, ''), 'Unknown Book') AS BookTitle,
+        'Borrowing Record' AS BookSubText,
+        ISNULL(NULLIF(u.FullName, ''), 'Unknown Member') AS MemberName,
+        COALESCE(br.CreatedAt, CAST(br.IssueDate AS DATETIME2), SYSUTCDATETIME()) AS ActivityDate,
+        CASE
+            WHEN br.DueDate < CAST(GETDATE() AS DATE)
+                 AND UPPER(ISNULL(br.Status, '')) IN ('ACTIVE', 'BORROWED', 'OVERDUE')
+                THEN 'Overdue'
+            ELSE 'Borrowed'
+        END AS Status
+    FROM dbo.BorrowingRecords br
+    LEFT JOIN dbo.Users u
+        ON u.UserID = br.MemberID
+       AND u.ClientID = @ClientID
+    WHERE br.ClientID = @ClientID
+      AND ISNULL(br.IsArchived, 0) = 0
+
+    UNION ALL
+
+    SELECT
+        'RT-' + RIGHT('0000' + CAST(rr.ReturnID AS NVARCHAR(20)), 4) AS TransactionID,
+        ISNULL(NULLIF(rr.BookTitle, ''), 'Unknown Book') AS BookTitle,
+        'Return Record' AS BookSubText,
+        ISNULL(NULLIF(rr.MemberName, ''), 'Unknown Member') AS MemberName,
+        COALESCE(rr.CreatedAt, CAST(rr.ReturnDate AS DATETIME2), SYSUTCDATETIME()) AS ActivityDate,
+        CASE
+            WHEN UPPER(ISNULL(rr.ReturnStatus, '')) LIKE '%LATE%'
+              OR ISNULL(rr.DaysOverdue, 0) > 0
+                THEN 'Overdue'
+            ELSE 'Returned'
+        END AS Status
+    FROM dbo.ReturnRecords rr
+    WHERE rr.ClientID = @ClientID
+      AND ISNULL(rr.IsArchived, 0) = 0
+
+    UNION ALL
+
+    SELECT
+        'FN-' + RIGHT('0000' + CAST(fr.FineID AS NVARCHAR(20)), 4) AS TransactionID,
+        ISNULL(NULLIF(fr.BookTitle, ''), 'Unknown Book') AS BookTitle,
+        'Fine Record' AS BookSubText,
+        ISNULL(NULLIF(fr.MemberName, ''), 'Unknown Member') AS MemberName,
+        COALESCE(fr.CreatedAt, SYSUTCDATETIME()) AS ActivityDate,
+        CASE
+            WHEN UPPER(ISNULL(fr.Status, '')) = 'PAID'
+                THEN 'Returned'
+            ELSE 'Overdue'
+        END AS Status
+    FROM dbo.FineRecords fr
+    WHERE fr.ClientID = @ClientID
+      AND ISNULL(fr.IsArchived, 0) = 0
+) x
+ORDER BY ActivityDate DESC;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                string transactionId = Convert.ToString(reader["TransactionID"]) ?? "";
+                string bookTitle = Convert.ToString(reader["BookTitle"]) ?? "Unknown Book";
+                string bookSubText = Convert.ToString(reader["BookSubText"]) ?? "";
+                string memberName = Convert.ToString(reader["MemberName"]) ?? "Unknown Member";
+                DateTime date = reader["ActivityDate"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ActivityDate"]);
+                string status = Convert.ToString(reader["Status"]) ?? "";
+
+                dgvRecent.Rows.Add(
+                    transactionId,
+                    bookTitle + "\r\n" + bookSubText,
+                    memberName,
+                    date.ToString("MMM dd, yyyy"),
+                    status
+                );
+            }
+
+            if (dgvRecent.Rows.Count == 0)
+            {
+                dgvRecent.Rows.Add(
+                    "—",
+                    "No recent activity\r\nThis client has no transactions yet",
+                    "—",
+                    DateTime.Now.ToString("MMM dd, yyyy"),
+                    "Borrowed"
+                );
+            }
+
+            dgvRecent.ClearSelection();
+        }
+
+        private void SetDashboardCardValue(Panel card, string value, string badge)
+        {
+            Label? valueLabel = card.Controls.Find("ValueLabel", true).FirstOrDefault() as Label;
+            Label? badgeLabel = card.Controls.Find("BadgeLabel", true).FirstOrDefault() as Label;
+
+            if (valueLabel != null)
+                valueLabel.Text = value;
+
+            if (badgeLabel != null)
+            {
+                badgeLabel.Text = badge;
+                badgeLabel.Location = new Point(card.Width - badgeLabel.Width - 24, 26);
+            }
+        }
+
+        private void EnsureDashboardSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.Books', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Books', 'ClientID') IS NULL
+        ALTER TABLE dbo.Books ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Books', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.Books ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Books_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+        ALTER TABLE dbo.Users ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Users', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Users ADD IsArchived BIT NOT NULL CONSTRAINT DF_Users_Dashboard_IsArchived DEFAULT 0;
+END;
+
+IF OBJECT_ID('dbo.BorrowingRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_BorrowingRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_BorrowingRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.ReturnRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.ReturnRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_ReturnRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_ReturnRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.FineRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.FineRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.FineRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.FineRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.FineRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_FineRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.FineRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.FineRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_FineRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private void SetupFooter()
@@ -818,18 +1076,14 @@ namespace EducationSystem
                 navGenerateReports.Width = navWidth;
                 navArchive.Width = navWidth;
 
-                userSubMenuPanel.Width = navWidth;
                 circulationSubMenuPanel.Width = navWidth;
 
-                navLibrarian.Width = navWidth - 18;
-                navMember.Width = navWidth - 18;
                 navBorrow.Width = navWidth - 18;
                 navReturn.Width = navWidth - 18;
                 navFine.Width = navWidth - 18;
 
                 LayoutSubMenuButtons();
 
-                userSubMenuPanel.Height = userMenuExpanded ? 72 : 0;
                 circulationSubMenuPanel.Height = circulationMenuExpanded ? 110 : 0;
             }
 
@@ -846,14 +1100,6 @@ namespace EducationSystem
         {
             int top = 0;
 
-            navLibrarian.Location = new Point(18, top);
-            navLibrarian.Width = userSubMenuPanel.Width - 18;
-
-            top += navLibrarian.Height + 4;
-            navMember.Location = new Point(18, top);
-            navMember.Width = userSubMenuPanel.Width - 18;
-
-            top = 0;
             navBorrow.Location = new Point(18, top);
             navBorrow.Width = circulationSubMenuPanel.Width - 18;
 

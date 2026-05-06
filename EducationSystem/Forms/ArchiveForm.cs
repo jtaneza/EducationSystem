@@ -2,6 +2,8 @@
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
 
 namespace EducationSystem
 {
@@ -34,7 +36,7 @@ namespace EducationSystem
         private Label lblTableTitle = null!;
         private Label badgeEntities = null!;
         private Label badgeDays = null!;
-        
+
         private Panel filterHost = null!;
         private ComboBox cboInstitution = null!;
         private Panel searchHost = null!;
@@ -52,11 +54,18 @@ namespace EducationSystem
         private Button btnPageLast = null!;
         private Button btnNext = null!;
 
+        private List<SuperArchiveItem> archiveItems = new List<SuperArchiveItem>();
+
+        private int currentPage = 1;
+        private const int PageSize = 10;
+        private int totalPages = 1;
+        private List<SuperArchiveItem> currentFilteredItems = new List<SuperArchiveItem>();
+
         public ArchiveForm()
         {
             InitializeComponent();
             BuildUI();
-            SeedArchiveIfEmpty();
+            LoadArchiveFromDatabase();
             LoadInstitutionFilter();
             LoadArchiveItems();
         }
@@ -157,7 +166,11 @@ namespace EducationSystem
                 BackColor = filterHost.BackColor,
                 ForeColor = OnSurfaceVariant
             };
-            cboInstitution.SelectedIndexChanged += (s, e) => LoadArchiveItems();
+            cboInstitution.SelectedIndexChanged += (s, e) =>
+            {
+                currentPage = 1;
+                LoadArchiveItems();
+            };
 
             filterHost.Controls.Add(cboInstitution);
 
@@ -199,7 +212,11 @@ namespace EducationSystem
                     txtSearch.ForeColor = OnSurfaceVariant;
                 }
             };
-            txtSearch.TextChanged += (s, e) => LoadArchiveItems();
+            txtSearch.TextChanged += (s, e) =>
+            {
+                currentPage = 1;
+                LoadArchiveItems();
+            };
 
             searchHost.Controls.Add(lblSearchIcon);
             searchHost.Controls.Add(txtSearch);
@@ -303,6 +320,17 @@ namespace EducationSystem
             btnPage2 = CreatePagerButton("2", false, true);
             btnPage3 = CreatePagerButton("3", false, true);
 
+            btnPrev.Click += (s, e) =>
+            {
+                if (currentPage <= 1) return;
+                currentPage--;
+                LoadArchiveItems();
+            };
+
+            btnPage1.Click += (s, e) => GoToArchivePage(btnPage1);
+            btnPage2.Click += (s, e) => GoToArchivePage(btnPage2);
+            btnPage3.Click += (s, e) => GoToArchivePage(btnPage3);
+
             lblEllipsis = new Label
             {
                 Text = "...",
@@ -311,8 +339,21 @@ namespace EducationSystem
                 ForeColor = OnSurfaceVariant
             };
 
-            btnPageLast = CreatePagerButton("2496", false, true);
+            btnPageLast = CreatePagerButton("1", false, true);
             btnNext = CreatePagerButton("›", false, false);
+
+            btnPageLast.Click += (s, e) =>
+            {
+                currentPage = totalPages;
+                LoadArchiveItems();
+            };
+
+            btnNext.Click += (s, e) =>
+            {
+                if (currentPage >= totalPages) return;
+                currentPage++;
+                LoadArchiveItems();
+            };
 
             footerPanel.Controls.Add(lblFooterInfo);
             footerPanel.Controls.Add(btnPrev);
@@ -369,86 +410,421 @@ namespace EducationSystem
             return btn;
         }
 
-        private void SeedArchiveIfEmpty()
+
+        private void LoadArchiveFromDatabase()
         {
-            if (ArchiveStore.ArchivedItems.Count > 0) return;
+            archiveItems.Clear();
 
-            ArchiveStore.ArchivedItems.Add(new ArchiveItem
+            try
             {
-                ArchiveID = "#LF-9021",
-                Module = "Transaction",
-                RecordID = "TRX-1021",
-                ItemName = "Oakwood College Library",
-                ExtraInfo = "OC",
-                ArchivedBy = "Admin Astra",
-                ArchivedDate = new DateTime(2023, 10, 12, 14, 30, 0),
-                Status = "Archived"
-            });
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
 
-            ArchiveStore.ArchivedItems.Add(new ArchiveItem
-            {
-                ArchiveID = "#LF-8842",
-                Module = "Book",
-                RecordID = "BK-8842",
-                ItemName = "Summit View Academy",
-                ExtraInfo = "SV",
-                ArchivedBy = "Admin Astra",
-                ArchivedDate = new DateTime(2023, 10, 11, 9, 15, 0),
-                Status = "Archived"
-            });
+                EnsureArchiveSchema(conn);
 
-            ArchiveStore.ArchivedItems.Add(new ArchiveItem
-            {
-                ArchiveID = "#LF-7920",
-                Module = "Member",
-                RecordID = "MB-7920",
-                ItemName = "Metropolis University",
-                ExtraInfo = "MU",
-                ArchivedBy = "Admin Astra",
-                ArchivedDate = new DateTime(2023, 10, 8, 18, 44, 0),
-                Status = "Archived"
-            });
+                LoadArchivedBooks(conn);
+                LoadArchivedCategories(conn);
+                LoadArchivedUsers(conn);
+                LoadArchivedBorrowing(conn);
+                LoadArchivedReturns(conn);
+                LoadArchivedFines(conn);
 
-            ArchiveStore.ArchivedItems.Add(new ArchiveItem
+                archiveItems = archiveItems
+                    .OrderByDescending(x => x.ArchivedDate)
+                    .ToList();
+            }
+            catch (Exception ex)
             {
-                ArchiveID = "#LF-7712",
-                Module = "Transaction",
-                RecordID = "TRX-7712",
-                ItemName = "Oakwood College Library",
-                ExtraInfo = "OC",
-                ArchivedBy = "Admin Astra",
-                ArchivedDate = new DateTime(2023, 10, 5, 11, 20, 0),
-                Status = "Archived"
-            });
+                MessageBox.Show(
+                    "Archive records could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
 
-            ArchiveStore.ArchivedItems.Add(new ArchiveItem
-            {
-                ArchiveID = "#LF-7690",
-                Module = "Book",
-                RecordID = "BK-7690",
-                ItemName = "Summit View Academy",
-                ExtraInfo = "SV",
-                ArchivedBy = "Admin Astra",
-                ArchivedDate = new DateTime(2023, 9, 28, 16, 50, 0),
-                Status = "Archived"
-            });
+                archiveItems.Clear();
+            }
         }
+
+        private void LoadArchivedBooks(SqlConnection conn)
+        {
+            if (!TableExists(conn, "Books"))
+                return;
+
+            const string query = @"
+SELECT
+    b.BookID,
+    ISNULL(NULLIF(b.BookTitle, ''), 'Untitled Book') AS ItemName,
+    b.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(b.UpdatedAt, b.CreatedAt, SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.Books b
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = b.ClientID
+WHERE ISNULL(b.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                string recordId = SafeText(reader["BookID"], "BOOK");
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#BK-" + recordId.Replace("BK-", ""),
+                    RecordID = recordId,
+                    Module = "Book",
+                    ItemName = SafeText(reader["ItemName"], "Untitled Book"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "Books"
+                });
+            }
+        }
+
+        private void LoadArchivedCategories(SqlConnection conn)
+        {
+            if (!TableExists(conn, "Categories"))
+                return;
+
+            const string query = @"
+SELECT
+    c.CategoryID,
+    ISNULL(NULLIF(c.CategoryName, ''), 'Untitled Category') AS ItemName,
+    c.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(c.UpdatedAt, c.CreatedAt, SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.Categories c
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = c.ClientID
+WHERE ISNULL(c.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                string recordId = SafeText(reader["CategoryID"], "CAT");
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#CAT-" + recordId.Replace("CAT-", ""),
+                    RecordID = recordId,
+                    Module = "Category",
+                    ItemName = SafeText(reader["ItemName"], "Untitled Category"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "Categories"
+                });
+            }
+        }
+
+        private void LoadArchivedUsers(SqlConnection conn)
+        {
+            if (!TableExists(conn, "Users"))
+                return;
+
+            const string query = @"
+SELECT
+    u.UserID,
+    ISNULL(NULLIF(u.FullName, ''), 'Unnamed User') AS ItemName,
+    ISNULL(NULLIF(u.Role, ''), 'Member') AS Role,
+    u.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(u.UpdatedAt, u.CreatedAt, SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.Users u
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = u.ClientID
+WHERE ISNULL(u.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                int userId = Convert.ToInt32(reader["UserID"]);
+                string role = SafeText(reader["Role"], "Member");
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#USR-" + userId.ToString("0000"),
+                    RecordID = userId.ToString(),
+                    Module = role.Contains("LIBRARIAN", StringComparison.OrdinalIgnoreCase) ? "Librarian" : "Member",
+                    ItemName = SafeText(reader["ItemName"], "Unnamed User"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "Users"
+                });
+            }
+        }
+
+        private void LoadArchivedBorrowing(SqlConnection conn)
+        {
+            if (!TableExists(conn, "BorrowingRecords"))
+                return;
+
+            const string query = @"
+SELECT
+    br.BorrowID,
+    ISNULL(NULLIF(u.FullName, ''), 'Unknown Member') AS MemberName,
+    ISNULL(NULLIF(br.BookTitle, ''), 'Unknown Book') AS BookTitle,
+    br.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(br.UpdatedAt, br.CreatedAt, CAST(br.IssueDate AS DATETIME2), SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.BorrowingRecords br
+LEFT JOIN dbo.Users u ON u.UserID = br.MemberID
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = br.ClientID
+WHERE ISNULL(br.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                int id = Convert.ToInt32(reader["BorrowID"]);
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#BR-" + id.ToString("0000"),
+                    RecordID = id.ToString(),
+                    Module = "Borrowing",
+                    ItemName = SafeText(reader["MemberName"], "Unknown Member") + " - " + SafeText(reader["BookTitle"], "Unknown Book"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "BorrowingRecords"
+                });
+            }
+        }
+
+        private void LoadArchivedReturns(SqlConnection conn)
+        {
+            if (!TableExists(conn, "ReturnRecords"))
+                return;
+
+            const string query = @"
+SELECT
+    rr.ReturnID,
+    ISNULL(NULLIF(rr.MemberName, ''), 'Unknown Member') AS MemberName,
+    ISNULL(NULLIF(rr.BookTitle, ''), 'Unknown Book') AS BookTitle,
+    rr.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(rr.UpdatedAt, rr.CreatedAt, CAST(rr.ReturnDate AS DATETIME2), SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.ReturnRecords rr
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = rr.ClientID
+WHERE ISNULL(rr.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                int id = Convert.ToInt32(reader["ReturnID"]);
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#RT-" + id.ToString("0000"),
+                    RecordID = id.ToString(),
+                    Module = "Return",
+                    ItemName = SafeText(reader["MemberName"], "Unknown Member") + " - " + SafeText(reader["BookTitle"], "Unknown Book"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "ReturnRecords"
+                });
+            }
+        }
+
+        private void LoadArchivedFines(SqlConnection conn)
+        {
+            if (!TableExists(conn, "FineRecords"))
+                return;
+
+            const string query = @"
+SELECT
+    fr.FineID,
+    ISNULL(NULLIF(fr.MemberName, ''), 'Unknown Member') AS MemberName,
+    ISNULL(NULLIF(fr.BookTitle, ''), 'Unknown Book') AS BookTitle,
+    ISNULL(NULLIF(fr.Reason, ''), 'Fine') AS Reason,
+    fr.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown Institution') AS Institution,
+    COALESCE(fr.UpdatedAt, fr.CreatedAt, SYSUTCDATETIME()) AS ArchivedAt
+FROM dbo.FineRecords fr
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = fr.ClientID
+WHERE ISNULL(fr.IsArchived, 0) = 1;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                int id = Convert.ToInt32(reader["FineID"]);
+                string institution = SafeText(reader["Institution"], "Unknown Institution");
+
+                archiveItems.Add(new SuperArchiveItem
+                {
+                    ArchiveID = "#FN-" + id.ToString("0000"),
+                    RecordID = id.ToString(),
+                    Module = "Fine",
+                    ItemName = SafeText(reader["MemberName"], "Unknown Member") + " - " + SafeText(reader["BookTitle"], "Unknown Book"),
+                    Institution = institution,
+                    InstitutionCode = GetInstitutionCode(institution),
+                    ClientID = reader["ClientID"] == DBNull.Value ? 0 : Convert.ToInt32(reader["ClientID"]),
+                    ArchivedDate = reader["ArchivedAt"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["ArchivedAt"]),
+                    SourceTable = "FineRecords"
+                });
+            }
+        }
+
+        private void EnsureArchiveSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.ClientLibraries', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.ClientLibraries', 'IsArchived') IS NULL
+        ALTER TABLE dbo.ClientLibraries ADD IsArchived BIT NOT NULL CONSTRAINT DF_ClientLibraries_SAArchive_IsArchived DEFAULT 0;
+END;
+
+IF OBJECT_ID('dbo.Books', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Books', 'ClientID') IS NULL
+        ALTER TABLE dbo.Books ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Books', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.Books ADD UpdatedAt DATETIME2 NULL;
+END;
+
+IF OBJECT_ID('dbo.Categories', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
+        ALTER TABLE dbo.Categories ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Categories', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Categories ADD IsArchived BIT NOT NULL CONSTRAINT DF_Categories_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Categories', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.Categories ADD UpdatedAt DATETIME2 NULL;
+END;
+
+IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+        ALTER TABLE dbo.Users ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Users', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Users ADD IsArchived BIT NOT NULL CONSTRAINT DF_Users_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Users', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.Users ADD UpdatedAt DATETIME2 NULL;
+END;
+
+IF OBJECT_ID('dbo.BorrowingRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_BorrowingRecords_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD UpdatedAt DATETIME2 NULL;
+END;
+
+IF OBJECT_ID('dbo.ReturnRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.ReturnRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_ReturnRecords_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD UpdatedAt DATETIME2 NULL;
+END;
+
+IF OBJECT_ID('dbo.FineRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.FineRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.FineRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.FineRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.FineRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_FineRecords_SAArchive_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.FineRecords', 'UpdatedAt') IS NULL
+        ALTER TABLE dbo.FineRecords ADD UpdatedAt DATETIME2 NULL;
+END;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private bool TableExists(SqlConnection conn, string tableName)
+        {
+            using SqlCommand cmd = new SqlCommand(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'dbo' AND TABLE_NAME = @TableName;",
+                conn);
+
+            cmd.Parameters.AddWithValue("@TableName", tableName);
+
+            return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+        }
+
+        private string SafeText(object value, string fallback = "")
+        {
+            if (value == null || value == DBNull.Value)
+                return fallback;
+
+            string text = Convert.ToString(value) ?? "";
+            return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+        }
+
+        private string GetInstitutionCode(string institution)
+        {
+            string[] words = institution.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (words.Length == 0)
+                return "NA";
+
+            if (words.Length == 1)
+                return words[0].Substring(0, Math.Min(2, words[0].Length)).ToUpperInvariant();
+
+            return (words[0][0].ToString() + words[1][0]).ToUpperInvariant();
+        }
+
 
         private void LoadInstitutionFilter()
         {
+            string previous = cboInstitution.SelectedItem?.ToString() ?? "All Institutions";
+
             cboInstitution.Items.Clear();
             cboInstitution.Items.Add("All Institutions");
 
-            foreach (string school in ArchiveStore.ArchivedItems
-                         .Select(x => x.ItemName)
-                         .Distinct()
+            foreach (string school in archiveItems
+                         .Select(x => x.Institution)
+                         .Where(x => !string.IsNullOrWhiteSpace(x))
+                         .Distinct(StringComparer.OrdinalIgnoreCase)
                          .OrderBy(x => x))
             {
                 cboInstitution.Items.Add(school);
             }
 
-            cboInstitution.SelectedIndex = 0;
+            int index = cboInstitution.Items.IndexOf(previous);
+            cboInstitution.SelectedIndex = index >= 0 ? index : 0;
         }
+
 
         private void LoadArchiveItems()
         {
@@ -459,11 +835,11 @@ namespace EducationSystem
 
             bool useSearch = !string.IsNullOrWhiteSpace(searchText) && searchText != "Search archive...";
 
-            var filteredItems = ArchiveStore.ArchivedItems.AsEnumerable();
+            IEnumerable<SuperArchiveItem> filteredItems = archiveItems.AsEnumerable();
 
             if (selectedInstitution != "All Institutions")
             {
-                filteredItems = filteredItems.Where(x => x.ItemName == selectedInstitution);
+                filteredItems = filteredItems.Where(x => x.Institution.Equals(selectedInstitution, StringComparison.OrdinalIgnoreCase));
             }
 
             if (useSearch)
@@ -471,33 +847,131 @@ namespace EducationSystem
                 filteredItems = filteredItems.Where(x =>
                     x.ArchiveID.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     x.ItemName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    x.Institution.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     x.Module.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    x.RecordID.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    x.ArchivedBy.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+                    x.RecordID.Contains(searchText, StringComparison.OrdinalIgnoreCase));
             }
 
-            var results = filteredItems.ToList();
+            currentFilteredItems = filteredItems.ToList();
 
-            foreach (ArchiveItem item in results)
+            totalPages = Math.Max(1, (int)Math.Ceiling(currentFilteredItems.Count / (double)PageSize));
+
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+
+            if (currentPage < 1)
+                currentPage = 1;
+
+            List<SuperArchiveItem> pageItems = currentFilteredItems
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            foreach (SuperArchiveItem item in pageItems)
             {
                 dgvArchive.Rows.Add(
                     item.ArchiveID,
-                    $"{item.ExtraInfo}|{item.ItemName}|{GetInstitutionBack(item.Module)}|{GetInstitutionFore(item.Module)}",
+                    $"{item.InstitutionCode}|{item.Institution}|{GetInstitutionBack(item.Module)}|{GetInstitutionFore(item.Module)}",
                     item.Module,
                     item.ArchivedDate.ToString("MMM dd, yyyy • HH:mm"),
                     "Restore|Delete");
             }
 
             dgvArchive.ClearSelection();
-            lblFooterInfo.Text = $"Showing 1 to {results.Count} of {results.Count:N0} entries";
+
+            if (currentFilteredItems.Count == 0)
+            {
+                lblFooterInfo.Text = "Showing 0 of 0 entries";
+            }
+            else
+            {
+                int start = ((currentPage - 1) * PageSize) + 1;
+                int end = Math.Min(start + pageItems.Count - 1, currentFilteredItems.Count);
+                lblFooterInfo.Text = $"Showing {start} to {end} of {currentFilteredItems.Count:N0} entries";
+            }
+
+            UpdatePager();
+        }
+
+        private void GoToArchivePage(Button button)
+        {
+            if (button.Tag == null)
+                return;
+
+            if (int.TryParse(button.Tag.ToString(), out int page))
+            {
+                currentPage = page;
+                LoadArchiveItems();
+            }
+        }
+
+        private void UpdatePager()
+        {
+            totalPages = Math.Max(1, totalPages);
+
+            btnPrev.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+
+            btnPrev.ForeColor = btnPrev.Enabled ? OnSurface : Color.FromArgb(170, 185, 190);
+            btnNext.ForeColor = btnNext.Enabled ? OnSurface : Color.FromArgb(170, 185, 190);
+
+            int page1 = Math.Max(1, currentPage - 1);
+
+            if (currentPage >= totalPages && totalPages >= 3)
+                page1 = totalPages - 2;
+            else if (currentPage == totalPages && totalPages == 2)
+                page1 = 1;
+
+            int page2 = page1 + 1;
+            int page3 = page1 + 2;
+
+            SetPagerButton(btnPage1, page1, page1 <= totalPages);
+            SetPagerButton(btnPage2, page2, page2 <= totalPages);
+            SetPagerButton(btnPage3, page3, page3 <= totalPages);
+
+            bool showLast = totalPages > 3 && page3 < totalPages;
+            lblEllipsis.Visible = showLast;
+            btnPageLast.Visible = showLast;
+
+            btnPageLast.Text = totalPages.ToString();
+            btnPageLast.Tag = totalPages;
+            StylePagerButton(btnPageLast, currentPage == totalPages);
+
+            AdjustLayout();
+        }
+
+        private void SetPagerButton(Button button, int pageNumber, bool visible)
+        {
+            button.Visible = visible;
+            button.Text = pageNumber.ToString();
+            button.Tag = pageNumber;
+            StylePagerButton(button, currentPage == pageNumber);
+        }
+
+        private void StylePagerButton(Button button, bool active)
+        {
+            if (active)
+            {
+                button.BackColor = AccentEmerald;
+                button.ForeColor = Color.White;
+            }
+            else
+            {
+                button.BackColor = Color.Transparent;
+                button.ForeColor = OnSurface;
+            }
         }
 
         private string GetInstitutionBack(string module)
         {
             return module switch
             {
-                "Transaction" => "#B7EBD7",
+                "Borrowing" => "#B7EBD7",
+                "Return" => "#B7EBD7",
+                "Fine" => "#FDE7E2",
                 "Book" => "#D9F4EC",
+                "Category" => "#D9F4EC",
+                "Librarian" => "#E2E9EC",
                 "Member" => "#FDE7E2",
                 _ => "#E2E9EC"
             };
@@ -507,8 +981,12 @@ namespace EducationSystem
         {
             return module switch
             {
-                "Transaction" => "#376758",
+                "Borrowing" => "#376758",
+                "Return" => "#376758",
+                "Fine" => "#A03F30",
                 "Book" => "#006B55",
+                "Category" => "#006B55",
+                "Librarian" => "#3C4A44",
                 "Member" => "#A03F30",
                 _ => "#3C4A44"
             };
@@ -546,13 +1024,40 @@ namespace EducationSystem
 
             lblFooterInfo.Location = new Point(22, 20);
 
-            btnNext.Location = new Point(footerPanel.Width - 40, 11);
-            btnPageLast.Location = new Point(btnNext.Left - btnPageLast.Width - 6, 11);
-            lblEllipsis.Location = new Point(btnPageLast.Left - 22, 18);
-            btnPage3.Location = new Point(lblEllipsis.Left - btnPage3.Width - 6, 11);
-            btnPage2.Location = new Point(btnPage3.Left - btnPage2.Width - 6, 11);
-            btnPage1.Location = new Point(btnPage2.Left - btnPage1.Width - 6, 11);
-            btnPrev.Location = new Point(btnPage1.Left - btnPrev.Width - 6, 11);
+            int pagerRight = footerPanel.Width - 24;
+
+            btnNext.Location = new Point(pagerRight - btnNext.Width, 11);
+            pagerRight = btnNext.Left - 8;
+
+            if (btnPageLast.Visible)
+            {
+                btnPageLast.Width = Math.Max(34, TextRenderer.MeasureText(btnPageLast.Text, btnPageLast.Font).Width + 18);
+                btnPageLast.Location = new Point(pagerRight - btnPageLast.Width, 11);
+                pagerRight = btnPageLast.Left - 8;
+
+                lblEllipsis.Location = new Point(pagerRight - lblEllipsis.Width, 18);
+                pagerRight = lblEllipsis.Left - 8;
+            }
+
+            if (btnPage3.Visible)
+            {
+                btnPage3.Location = new Point(pagerRight - btnPage3.Width, 11);
+                pagerRight = btnPage3.Left - 8;
+            }
+
+            if (btnPage2.Visible)
+            {
+                btnPage2.Location = new Point(pagerRight - btnPage2.Width, 11);
+                pagerRight = btnPage2.Left - 8;
+            }
+
+            if (btnPage1.Visible)
+            {
+                btnPage1.Location = new Point(pagerRight - btnPage1.Width, 11);
+                pagerRight = btnPage1.Left - 8;
+            }
+
+            btnPrev.Location = new Point(pagerRight - btnPrev.Width, 11);
 
             canvas.AutoScrollMinSize = new Size(0, tableCard.Bottom + 30);
         }
@@ -604,14 +1109,18 @@ namespace EducationSystem
                 string text = e.FormattedValue?.ToString() ?? "";
                 string icon = text switch
                 {
-                    "Transaction" => "⇄",
+                    "Borrowing" => "⇄",
+                    "Return" => "↩",
+                    "Fine" => "₱",
                     "Book" => "📘",
+                    "Category" => "▦",
+                    "Librarian" => "👤",
                     "Member" => "👤",
                     _ => "•"
                 };
 
-                Color back = text == "Book" ? SecondaryContainer : SurfaceHigh;
-                Color fore = text == "Book" ? SecondaryText : OnSurfaceVariant;
+                Color back = (text == "Book" || text == "Category") ? SecondaryContainer : SurfaceHigh;
+                Color fore = (text == "Book" || text == "Category") ? SecondaryText : OnSurfaceVariant;
 
                 Size textSize = TextRenderer.MeasureText(text.ToUpper(), new Font("Segoe UI", 8F, FontStyle.Bold));
                 int badgeWidth = textSize.Width + 34;
@@ -680,6 +1189,7 @@ namespace EducationSystem
             }
         }
 
+
         private void dgvArchive_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
@@ -696,32 +1206,156 @@ namespace EducationSystem
             Rectangle deleteRect = new Rectangle(startX + 36, iconTop, 28, 28);
 
             string archiveId = dgvArchive.Rows[e.RowIndex].Cells["ArchiveID"].Value?.ToString() ?? "";
-            ArchiveItem? item = ArchiveStore.ArchivedItems.FirstOrDefault(x => x.ArchiveID == archiveId);
+            SuperArchiveItem? item = archiveItems.FirstOrDefault(x => x.ArchiveID == archiveId);
             if (item == null) return;
 
             if (restoreRect.Contains(clientPoint))
             {
-                ArchiveStore.ArchivedItems.Remove(item);
-                LoadInstitutionFilter();
-                LoadArchiveItems();
+                RestoreArchiveItem(item);
                 return;
             }
 
             if (deleteRect.Contains(clientPoint))
             {
-                DialogResult result = MessageBox.Show(
-                    $"Permanently delete {item.ArchiveID}?",
-                    "Confirm Delete",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Warning);
-
-                if (result == DialogResult.Yes)
-                {
-                    ArchiveStore.ArchivedItems.Remove(item);
-                    LoadInstitutionFilter();
-                    LoadArchiveItems();
-                }
+                DeleteArchiveItem(item);
             }
         }
+
+        private void RestoreArchiveItem(SuperArchiveItem item)
+        {
+            DialogResult result = MessageBox.Show(
+                $"Restore {item.ArchiveID}?",
+                "Restore Archived Record",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                string keyColumn = GetKeyColumn(item.SourceTable);
+
+                string query = $@"
+UPDATE dbo.{item.SourceTable}
+SET IsArchived = 0,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE {keyColumn} = @RecordID;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                AddRecordIdParameter(cmd, item);
+                cmd.ExecuteNonQuery();
+
+                LoadArchiveFromDatabase();
+                LoadInstitutionFilter();
+                LoadArchiveItems();
+
+                MessageBox.Show(
+                    "Record restored successfully.",
+                    "Restored",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Archived record could not be restored.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void DeleteArchiveItem(SuperArchiveItem item)
+        {
+            DialogResult result = MessageBox.Show(
+                $"Permanently delete {item.ArchiveID}?\n\nThis cannot be undone.",
+                "Confirm Permanent Delete",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+
+            if (result != DialogResult.Yes)
+                return;
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                string keyColumn = GetKeyColumn(item.SourceTable);
+
+                string query = $@"
+DELETE FROM dbo.{item.SourceTable}
+WHERE {keyColumn} = @RecordID
+  AND IsArchived = 1;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                AddRecordIdParameter(cmd, item);
+                cmd.ExecuteNonQuery();
+
+                LoadArchiveFromDatabase();
+                LoadInstitutionFilter();
+                LoadArchiveItems();
+
+                MessageBox.Show(
+                    "Archived record permanently deleted.",
+                    "Deleted",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Archived record could not be deleted.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private string GetKeyColumn(string sourceTable)
+        {
+            return sourceTable switch
+            {
+                "Books" => "BookID",
+                "Categories" => "CategoryID",
+                "Users" => "UserID",
+                "BorrowingRecords" => "BorrowID",
+                "ReturnRecords" => "ReturnID",
+                "FineRecords" => "FineID",
+                _ => throw new InvalidOperationException("Unknown archive table: " + sourceTable)
+            };
+        }
+
+        private void AddRecordIdParameter(SqlCommand cmd, SuperArchiveItem item)
+        {
+            if (item.SourceTable == "Users" ||
+                item.SourceTable == "BorrowingRecords" ||
+                item.SourceTable == "ReturnRecords" ||
+                item.SourceTable == "FineRecords")
+            {
+                cmd.Parameters.AddWithValue("@RecordID", Convert.ToInt32(item.RecordID));
+            }
+            else
+            {
+                cmd.Parameters.AddWithValue("@RecordID", item.RecordID);
+            }
+        }
+    }
+
+    public class SuperArchiveItem
+    {
+        public string ArchiveID { get; set; } = "";
+        public string RecordID { get; set; } = "";
+        public string Module { get; set; } = "";
+        public string ItemName { get; set; } = "";
+        public string Institution { get; set; } = "";
+        public string InstitutionCode { get; set; } = "";
+        public int ClientID { get; set; }
+        public DateTime ArchivedDate { get; set; }
+        public string SourceTable { get; set; } = "";
     }
 }

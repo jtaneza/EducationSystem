@@ -1,28 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
     public partial class BorrowingViewForm : Form
     {
         private readonly Color Background = ColorTranslator.FromHtml("#F4FAFD");
-        private readonly Color Surface = ColorTranslator.FromHtml("#FFFFFF");
+        private readonly Color Surface = Color.White;
         private readonly Color SurfaceLow = ColorTranslator.FromHtml("#EEF5F7");
         private readonly Color SurfaceContainer = ColorTranslator.FromHtml("#E8EFF1");
-        private readonly Color SurfaceHigh = ColorTranslator.FromHtml("#DDE4E6");
         private readonly Color Outline = ColorTranslator.FromHtml("#DDE4E6");
-
         private readonly Color OnSurface = ColorTranslator.FromHtml("#161D1F");
         private readonly Color OnSurfaceVariant = ColorTranslator.FromHtml("#3C4A44");
         private readonly Color Primary = ColorTranslator.FromHtml("#006B55");
         private readonly Color PrimaryContainer = ColorTranslator.FromHtml("#00B894");
-        private readonly Color OnPrimary = Color.White;
-        private readonly Color SuccessText = ColorTranslator.FromHtml("#3B6B5C");
         private readonly Color WarningText = ColorTranslator.FromHtml("#6E1B0F");
 
+        private Panel pageCanvas = null!;
         private Panel heroPanel = null!;
         private Label lblTitle = null!;
         private Label lblSubTitle = null!;
@@ -36,21 +35,17 @@ namespace EducationSystem
         private Panel statsPanel = null!;
         private Panel cardTotal = null!;
         private Panel cardOverview = null!;
-        private Panel healthPanel = null!;
         private Panel dueBlock = null!;
         private Panel overdueBlock = null!;
         private Panel borrowersBlock = null!;
 
+        private Panel filterRow = null!;
         private Panel tableWrap = null!;
         private Panel tableShell = null!;
+        private Panel gridHost = null!;
         private DataGridView dgvBorrowing = null!;
         private Panel footerPanel = null!;
         private Label lblFooter = null!;
-        private Button btnPrev = null!;
-        private Button btnPage1 = null!;
-        private Button btnPage2 = null!;
-        private Button btnPage3 = null!;
-        private Button btnNext = null!;
 
         private List<BorrowingRowItem> allRows = new List<BorrowingRowItem>();
 
@@ -58,7 +53,7 @@ namespace EducationSystem
         {
             InitializeComponent();
             BuildUI();
-            SeedData();
+            LoadBorrowingFromDatabase();
             LoadSchoolFilter();
             LoadBorrowingData();
         }
@@ -71,26 +66,17 @@ namespace EducationSystem
             Dock = DockStyle.Fill;
             AutoScroll = false;
 
-            BuildHero();
-            BuildStats();
-            BuildTable();
-
-            Controls.Add(tableWrap);
-            Controls.Add(statsPanel);
-            Controls.Add(heroPanel);
-
-            Resize += BorrowingViewForm_Resize;
-            AdjustLayout();
-        }
-
-        private void BuildHero()
-        {
-            heroPanel = new Panel
+            pageCanvas = new Panel
             {
-                Dock = DockStyle.Top,
-                Height = 150,
-                BackColor = Background
+                Dock = DockStyle.Fill,
+                BackColor = Background,
+                AutoScroll = true
             };
+            pageCanvas.HorizontalScroll.Enabled = false;
+            pageCanvas.HorizontalScroll.Visible = false;
+            Controls.Add(pageCanvas);
+
+            heroPanel = new Panel { BackColor = Background };
 
             lblTitle = new Label
             {
@@ -102,18 +88,13 @@ namespace EducationSystem
 
             lblSubTitle = new Label
             {
-                Text = " Comprehensive oversight of all active book circulations.",
+                Text = "Comprehensive oversight of all active book circulations.",
                 Font = new Font("Segoe UI", 12F),
                 ForeColor = OnSurfaceVariant,
                 AutoSize = true
             };
 
-            filterHost = new Panel
-            {
-                BackColor = SurfaceContainer,
-                Size = new Size(220, 38)
-            };
-
+            filterHost = new Panel { BackColor = SurfaceContainer, Size = new Size(220, 38) };
             cboSchoolFilter = new ComboBox
             {
                 FlatStyle = FlatStyle.Flat,
@@ -126,12 +107,7 @@ namespace EducationSystem
             cboSchoolFilter.SelectedIndexChanged += (s, e) => LoadBorrowingData();
             filterHost.Controls.Add(cboSchoolFilter);
 
-            searchHost = new Panel
-            {
-                BackColor = SurfaceContainer,
-                Size = new Size(280, 38)
-            };
-
+            searchHost = new Panel { BackColor = SurfaceContainer, Size = new Size(280, 38) };
             lblSearchIcon = new Label
             {
                 Text = "⌕",
@@ -139,7 +115,6 @@ namespace EducationSystem
                 ForeColor = OnSurfaceVariant,
                 AutoSize = true
             };
-
             txtSearch = new TextBox
             {
                 BorderStyle = BorderStyle.None,
@@ -181,28 +156,11 @@ namespace EducationSystem
 
             searchHost.Controls.Add(lblSearchIcon);
             searchHost.Controls.Add(txtSearch);
-
             heroPanel.Controls.Add(lblTitle);
             heroPanel.Controls.Add(lblSubTitle);
-            heroPanel.Controls.Add(filterHost);
-            heroPanel.Controls.Add(searchHost);
-            heroPanel.Controls.Add(btnFilter);
-        }
 
-        private void BuildStats()
-        {
-            statsPanel = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = 156,
-                BackColor = Background
-            };
-
-            cardTotal = new Panel
-            {
-                BackColor = SurfaceLow
-            };
-
+            statsPanel = new Panel { Height = 156, BackColor = Background };
+            cardTotal = new Panel { BackColor = SurfaceLow };
             Label lblTotalCaption = new Label
             {
                 Text = "TOTAL ACTIVE LOANS",
@@ -211,114 +169,39 @@ namespace EducationSystem
                 AutoSize = true,
                 Location = new Point(24, 24)
             };
-
             Label lblTotalValue = new Label
             {
                 Name = "lblTotalValue",
-                Text = "12,482",
+                Text = "0",
                 Font = new Font("Segoe UI", 30F, FontStyle.Bold),
                 ForeColor = Primary,
                 AutoSize = true,
                 Location = new Point(24, 48)
             };
-
-            Label lblBookIcon = new Label
-            {
-                Text = "📖",
-                Font = new Font("Segoe UI Emoji", 56F),
-                ForeColor = Color.FromArgb(24, 40, 48, 52),
-                AutoSize = true,
-                Location = new Point(220, 20)
-            };
-
             cardTotal.Controls.Add(lblTotalCaption);
             cardTotal.Controls.Add(lblTotalValue);
-            cardTotal.Controls.Add(lblBookIcon);
 
-            cardOverview = new Panel
-            {
-                BackColor = Surface
-            };
-
-            dueBlock = CreateOverviewBlock("Upcoming Due", "842", OnSurface, Point.Empty);
-            overdueBlock = CreateOverviewBlock("Overdue Notices", "156", WarningText, Point.Empty);
-            borrowersBlock = CreateOverviewBlock("Unique Borrowers", "4,120", OnSurface, Point.Empty);
-
+            cardOverview = new Panel { BackColor = Surface };
+            dueBlock = CreateOverviewBlock("Upcoming Due", "0", OnSurface);
+            overdueBlock = CreateOverviewBlock("Overdue Notices", "0", WarningText);
+            borrowersBlock = CreateOverviewBlock("Unique Borrowers", "0", OnSurface);
             cardOverview.Controls.Add(dueBlock);
             cardOverview.Controls.Add(overdueBlock);
             cardOverview.Controls.Add(borrowersBlock);
-
-            healthPanel = new Panel
-            {
-                BackColor = Color.FromArgb(235, 246, 240),
-                Size = new Size(138, 52)
-            };
-
-            Label lblHealth = new Label
-            {
-                Text = "SYSTEM HEALTH:\r\nOPTIMAL",
-                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = SuccessText,
-                AutoSize = true,
-                Location = new Point(14, 9)
-            };
-
-            healthPanel.Controls.Add(lblHealth);
-            cardOverview.Controls.Add(healthPanel);
-
             statsPanel.Controls.Add(cardTotal);
             statsPanel.Controls.Add(cardOverview);
-        }
 
-        private Panel CreateOverviewBlock(string caption, string value, Color valueColor, Point location)
-        {
-            Panel panel = new Panel
+            filterRow = new Panel
             {
-                Location = location,
-                Size = new Size(120, 68),
-                BackColor = Color.Transparent
+                Height = 64,
+                BackColor = Background
             };
+            filterRow.Controls.Add(filterHost);
+            filterRow.Controls.Add(searchHost);
+            filterRow.Controls.Add(btnFilter);
 
-            Label lblCaption = new Label
-            {
-                Text = caption,
-                Font = new Font("Segoe UI", 9.5F),
-                ForeColor = OnSurfaceVariant,
-                AutoSize = true,
-                Location = new Point(0, 0)
-            };
-
-            Label lblValue = new Label
-            {
-                Name = "lblValue",
-                Text = value,
-                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
-                ForeColor = valueColor,
-                AutoSize = true,
-                Location = new Point(0, 18)
-            };
-
-            panel.Controls.Add(lblCaption);
-            panel.Controls.Add(lblValue);
-            return panel;
-        }
-
-        private void BuildTable()
-        {
-            tableWrap = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Background,
-                Padding = new Padding(34, 0, 34, 24)
-            };
-
-            tableShell = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = Surface,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-
+            tableWrap = new Panel { BackColor = Background, Padding = new Padding(34, 0, 34, 24) };
+            tableShell = new Panel { Dock = DockStyle.Fill, BackColor = Surface, BorderStyle = BorderStyle.FixedSingle };
             dgvBorrowing = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -327,34 +210,32 @@ namespace EducationSystem
                 RowHeadersVisible = false,
                 AllowUserToAddRows = false,
                 AllowUserToResizeRows = false,
-                AllowUserToResizeColumns = false,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false,
                 ReadOnly = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 EnableHeadersVisualStyles = false,
                 ColumnHeadersHeight = 58,
                 GridColor = Outline,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
-                ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.Vertical,
+                MultiSelect = false,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                TabStop = false
             };
-
             dgvBorrowing.RowTemplate.Height = 78;
-            dgvBorrowing.DefaultCellStyle.Padding = new Padding(8, 8, 8, 8);
-            dgvBorrowing.ColumnHeadersDefaultCellStyle.Padding = new Padding(10, 12, 10, 12);
-
             dgvBorrowing.ColumnHeadersDefaultCellStyle.BackColor = SurfaceContainer;
             dgvBorrowing.ColumnHeadersDefaultCellStyle.ForeColor = OnSurfaceVariant;
             dgvBorrowing.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
             dgvBorrowing.ColumnHeadersDefaultCellStyle.SelectionBackColor = SurfaceContainer;
             dgvBorrowing.ColumnHeadersDefaultCellStyle.SelectionForeColor = OnSurfaceVariant;
-
             dgvBorrowing.DefaultCellStyle.BackColor = Surface;
             dgvBorrowing.DefaultCellStyle.ForeColor = OnSurface;
             dgvBorrowing.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
             dgvBorrowing.DefaultCellStyle.SelectionBackColor = Color.FromArgb(243, 250, 248);
             dgvBorrowing.DefaultCellStyle.SelectionForeColor = OnSurface;
+            dgvBorrowing.RowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(243, 250, 248);
+            dgvBorrowing.RowsDefaultCellStyle.SelectionForeColor = OnSurface;
+            dgvBorrowing.AlternatingRowsDefaultCellStyle.SelectionBackColor = Color.FromArgb(243, 250, 248);
+            dgvBorrowing.AlternatingRowsDefaultCellStyle.SelectionForeColor = OnSurface;
 
             dgvBorrowing.Columns.Add("TransactionId", "TRANSACTION\r\nID");
             dgvBorrowing.Columns.Add("SchoolName", "SCHOOL NAME");
@@ -376,81 +257,127 @@ namespace EducationSystem
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
 
             dgvBorrowing.CellPainting += dgvBorrowing_CellPainting;
-
-            footerPanel = new Panel
+            dgvBorrowing.SelectionChanged += (s, e) =>
             {
-                Dock = DockStyle.Bottom,
-                Height = 56,
-                BackColor = SurfaceLow
+                if (dgvBorrowing.SelectedCells.Count > 0 || dgvBorrowing.SelectedRows.Count > 0)
+                    dgvBorrowing.ClearSelection();
             };
 
+            footerPanel = new Panel { Dock = DockStyle.Bottom, Height = 56, BackColor = SurfaceLow };
             lblFooter = new Label
             {
-                Text = "Showing 7 of 12,482 entries",
+                Text = "Showing 0 of 0 entries",
                 Font = new Font("Segoe UI", 9.5F),
                 ForeColor = OnSurfaceVariant,
-                AutoSize = true
+                AutoSize = true,
+                Location = new Point(20, 18)
             };
-
-            btnPrev = CreatePagerButton("‹", false);
-            btnPage1 = CreatePagerButton("1", true);
-            btnPage2 = CreatePagerButton("2", false);
-            btnPage3 = CreatePagerButton("3", false);
-            btnNext = CreatePagerButton("›", false);
-
             footerPanel.Controls.Add(lblFooter);
-            footerPanel.Controls.Add(btnPrev);
-            footerPanel.Controls.Add(btnPage1);
-            footerPanel.Controls.Add(btnPage2);
-            footerPanel.Controls.Add(btnPage3);
-            footerPanel.Controls.Add(btnNext);
 
-            tableShell.Controls.Add(dgvBorrowing);
+            gridHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Surface,
+                Padding = new Padding(0, 0, 0, 0)
+            };
+            gridHost.Controls.Add(dgvBorrowing);
+
             tableShell.Controls.Add(footerPanel);
+            tableShell.Controls.Add(gridHost);
+            footerPanel.BringToFront();
+
             tableWrap.Controls.Add(tableShell);
+
+            pageCanvas.Controls.Add(tableWrap);
+            pageCanvas.Controls.Add(filterRow);
+            pageCanvas.Controls.Add(statsPanel);
+            pageCanvas.Controls.Add(heroPanel);
+
+            Resize += (s, e) => AdjustLayout();
+            AdjustLayout();
         }
 
-        private Button CreatePagerButton(string text, bool active)
+        private Panel CreateOverviewBlock(string caption, string value, Color valueColor)
         {
-            Button btn = new Button
-            {
-                Text = text,
-                FlatStyle = FlatStyle.Flat,
-                Width = 34,
-                Height = 34,
-                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
-                Cursor = Cursors.Hand
-            };
+            Panel panel = new Panel { Size = new Size(130, 68), BackColor = Color.Transparent };
 
-            if (active)
+            panel.Controls.Add(new Label
             {
-                btn.BackColor = Primary;
-                btn.ForeColor = OnPrimary;
-                btn.FlatAppearance.BorderSize = 0;
-            }
-            else
-            {
-                btn.BackColor = Surface;
-                btn.ForeColor = OnSurface;
-                btn.FlatAppearance.BorderColor = Color.FromArgb(225, 231, 232);
-                btn.FlatAppearance.BorderSize = 1;
-            }
+                Text = caption,
+                Font = new Font("Segoe UI", 9.5F),
+                ForeColor = OnSurfaceVariant,
+                AutoSize = true,
+                Location = new Point(0, 0)
+            });
 
-            return btn;
+            panel.Controls.Add(new Label
+            {
+                Name = "lblValue",
+                Text = value,
+                Font = new Font("Segoe UI", 22F, FontStyle.Bold),
+                ForeColor = valueColor,
+                AutoSize = true,
+                Location = new Point(0, 18)
+            });
+
+            return panel;
         }
 
-        private void SeedData()
+        private void LoadBorrowingFromDatabase()
         {
-            allRows = new List<BorrowingRowItem>
+            allRows.Clear();
+
+            try
             {
-                new BorrowingRowItem("TX-94021", "Emerald Peak Academy", "Julian Vance", "Principles of Quantum Mechanics", "Oct 12, 2023", "Oct 26, 2023", false, "In Progress", "#B7EBD7", "#3B6B5C"),
-                new BorrowingRowItem("TX-94025", "North Star Institute", "Elena Rodriguez", "Artificial Intelligence: A Modern Approach", "Oct 14, 2023", "Oct 28, 2023", false, "In Progress", "#B7EBD7", "#3B6B5C"),
-                new BorrowingRowItem("TX-94029", "Silverwood Prep", "Marcus Thorne", "Advanced Economic Theory", "Oct 10, 2023", "Oct 24, 2023", true, "Overdue", "#F7816D", "#6E1B0F"),
-                new BorrowingRowItem("TX-94032", "Emerald Peak Academy", "Sarah Jenkins", "The Art of Computer Programming", "Oct 15, 2023", "Oct 29, 2023", false, "In Progress", "#B7EBD7", "#3B6B5C"),
-                new BorrowingRowItem("TX-94038", "Oak Ridge College", "David Chen", "Organic Chemistry Vol. 2", "Oct 08, 2023", "Oct 22, 2023", false, "Returned Today", "#DDE4E6", "#3C4A44"),
-                new BorrowingRowItem("TX-94041", "North Star Institute", "Leila Smith", "Biotechnology Fundamentals", "Oct 16, 2023", "Oct 30, 2023", false, "In Progress", "#B7EBD7", "#3B6B5C"),
-                new BorrowingRowItem("TX-94045", "Silverwood Prep", "Kevin Wu", "History of Modern Architecture", "Oct 11, 2023", "Oct 25, 2023", true, "Overdue", "#F7816D", "#6E1B0F")
-            };
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+                EnsureBorrowingViewSchema(conn);
+
+                const string query = @"
+SELECT
+    br.BorrowID,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown School') AS SchoolName,
+    ISNULL(NULLIF(u.FullName, ''), 'Unknown Member') AS MemberName,
+    ISNULL(NULLIF(br.BookTitle, ''), 'Unknown Book') AS BookTitle,
+    br.IssueDate,
+    br.DueDate,
+    ISNULL(NULLIF(br.Status, ''), 'ACTIVE') AS Status
+FROM dbo.BorrowingRecords br
+LEFT JOIN dbo.ClientLibraries cl ON cl.ClientID = br.ClientID
+LEFT JOIN dbo.Users u ON u.UserID = br.MemberID
+WHERE ISNULL(br.IsArchived, 0) = 0
+ORDER BY COALESCE(br.CreatedAt, CAST(br.IssueDate AS DATETIME2), SYSUTCDATETIME()) DESC, br.BorrowID DESC;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int borrowId = Convert.ToInt32(reader["BorrowID"]);
+                    DateTime issueDate = reader["IssueDate"] == DBNull.Value ? DateTime.Now : Convert.ToDateTime(reader["IssueDate"]);
+                    DateTime dueDate = reader["DueDate"] == DBNull.Value ? issueDate : Convert.ToDateTime(reader["DueDate"]);
+                    string rawStatus = SafeText(reader["Status"], "ACTIVE").ToUpperInvariant();
+                    bool isOverdue = dueDate.Date < DateTime.Today &&
+                                     (rawStatus == "ACTIVE" || rawStatus == "BORROWED" || rawStatus == "OVERDUE");
+
+                    allRows.Add(new BorrowingRowItem(
+                        "TX-" + borrowId.ToString("00000"),
+                        SafeText(reader["SchoolName"], "Unknown School"),
+                        SafeText(reader["MemberName"], "Unknown Member"),
+                        SafeText(reader["BookTitle"], "Unknown Book"),
+                        issueDate.ToString("MMM dd, yyyy"),
+                        dueDate.ToString("MMM dd, yyyy"),
+                        isOverdue,
+                        isOverdue ? "Overdue" : rawStatus == "RETURNED" ? "Returned Today" : "In Progress",
+                        isOverdue ? "#F7816D" : rawStatus == "RETURNED" ? "#DDE4E6" : "#B7EBD7",
+                        isOverdue ? "#6E1B0F" : rawStatus == "RETURNED" ? "#3C4A44" : "#3B6B5C"));
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Borrowing records could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void LoadSchoolFilter()
@@ -458,7 +385,7 @@ namespace EducationSystem
             cboSchoolFilter.Items.Clear();
             cboSchoolFilter.Items.Add("All Schools");
 
-            foreach (string school in allRows.Select(x => x.SchoolName).Distinct().OrderBy(x => x))
+            foreach (string school in allRows.Select(x => x.SchoolName).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().OrderBy(x => x))
                 cboSchoolFilter.Items.Add(school);
 
             cboSchoolFilter.SelectedIndex = 0;
@@ -475,7 +402,7 @@ namespace EducationSystem
             IEnumerable<BorrowingRowItem> filtered = allRows;
 
             if (selectedSchool != "All Schools")
-                filtered = filtered.Where(x => x.SchoolName == selectedSchool);
+                filtered = filtered.Where(x => x.SchoolName.Equals(selectedSchool, StringComparison.OrdinalIgnoreCase));
 
             if (useSearch)
             {
@@ -497,29 +424,49 @@ namespace EducationSystem
                     InsertBookLineBreak(row.BookTitle),
                     InsertDateLineBreak(row.BorrowDate),
                     row.IsDueOverdue ? InsertDateLineBreak(row.DueDate) + "|overdue" : InsertDateLineBreak(row.DueDate),
-                    $"{row.Status}|{row.StatusBack}|{row.StatusFore}"
-                );
+                    $"{row.Status}|{row.StatusBack}|{row.StatusFore}");
             }
 
             dgvBorrowing.ClearSelection();
             lblFooter.Text = $"Showing {results.Count} of {results.Count} entries";
-
             UpdateSummary(results);
         }
 
         private void UpdateSummary(List<BorrowingRowItem> rows)
         {
-            Label? lblTotalValue = cardTotal.Controls.Find("lblTotalValue", true).FirstOrDefault() as Label;
-            if (lblTotalValue != null) lblTotalValue.Text = rows.Count.ToString("N0");
+            Label? total = cardTotal.Controls.Find("lblTotalValue", true).FirstOrDefault() as Label;
+            if (total != null) total.Text = rows.Count.ToString("N0");
 
-            Label? dueValue = dueBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
-            if (dueValue != null) dueValue.Text = rows.Count(x => x.Status == "In Progress").ToString("N0");
+            Label? due = dueBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
+            if (due != null) due.Text = rows.Count(x => x.Status == "In Progress").ToString("N0");
 
-            Label? overdueValue = overdueBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
-            if (overdueValue != null) overdueValue.Text = rows.Count(x => x.Status == "Overdue").ToString("N0");
+            Label? overdue = overdueBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
+            if (overdue != null) overdue.Text = rows.Count(x => x.Status == "Overdue").ToString("N0");
 
-            Label? borrowersValue = borrowersBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
-            if (borrowersValue != null) borrowersValue.Text = rows.Select(x => x.MemberName).Distinct().Count().ToString("N0");
+            Label? borrowers = borrowersBlock.Controls.Find("lblValue", true).FirstOrDefault() as Label;
+            if (borrowers != null) borrowers.Text = rows.Select(x => x.MemberName).Distinct().Count().ToString("N0");
+        }
+
+        private string SafeText(object value, string fallback = "")
+        {
+            if (value == null || value == DBNull.Value) return fallback;
+            string text = Convert.ToString(value) ?? "";
+            return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+        }
+
+        private void EnsureBorrowingViewSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
+    ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NULL;
+IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
+    ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_BorrowingRecords_View_IsArchived DEFAULT 0;
+IF COL_LENGTH('dbo.BorrowingRecords', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.BorrowingRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_BorrowingRecords_View_CreatedAt DEFAULT SYSUTCDATETIME();
+IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+    ALTER TABLE dbo.Users ADD ClientID INT NULL;";
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private string InsertBookLineBreak(string text)
@@ -530,17 +477,12 @@ namespace EducationSystem
             return string.Join(" ", words.Take(mid)) + "\n" + string.Join(" ", words.Skip(mid));
         }
 
-        private string InsertDateLineBreak(string text)
-        {
-            return text.Replace(", ", ",\n");
-        }
+        private string InsertDateLineBreak(string text) => text.Replace(", ", ",\n");
 
         private static string ReplaceFirst(string input, string oldValue, string newValue)
         {
             int index = input.IndexOf(oldValue, StringComparison.Ordinal);
-            if (index < 0) return input;
-
-            return input.Substring(0, index) + newValue + input.Substring(index + oldValue.Length);
+            return index < 0 ? input : input.Substring(0, index) + newValue + input.Substring(index + oldValue.Length);
         }
 
         private void dgvBorrowing_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
@@ -552,17 +494,9 @@ namespace EducationSystem
             if (column == "BookTitle")
             {
                 e.PaintBackground(e.CellBounds, true);
-                string text = e.FormattedValue?.ToString() ?? "";
-
-                TextRenderer.DrawText(
-                    e.Graphics,
-                    text,
-                    new Font("Segoe UI", 10F, FontStyle.Italic),
+                TextRenderer.DrawText(e.Graphics, e.FormattedValue?.ToString() ?? "", new Font("Segoe UI", 10F, FontStyle.Italic),
                     new Rectangle(e.CellBounds.X + 10, e.CellBounds.Y + 10, e.CellBounds.Width - 16, e.CellBounds.Height - 16),
-                    OnSurface,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak
-                );
-
+                    OnSurface, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
                 e.Handled = true;
             }
             else if (column == "DueDate")
@@ -571,116 +505,86 @@ namespace EducationSystem
                 string raw = e.FormattedValue?.ToString() ?? "";
                 bool overdue = raw.Contains("|overdue");
                 string text = raw.Replace("|overdue", "");
-
-                TextRenderer.DrawText(
-                    e.Graphics,
-                    text,
-                    new Font("Segoe UI", 10F, FontStyle.Bold),
+                TextRenderer.DrawText(e.Graphics, text, new Font("Segoe UI", 10F, FontStyle.Bold),
                     new Rectangle(e.CellBounds.X + 10, e.CellBounds.Y + 10, e.CellBounds.Width - 16, e.CellBounds.Height - 16),
-                    overdue ? WarningText : OnSurface,
-                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak
-                );
-
+                    overdue ? WarningText : OnSurface, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
                 e.Handled = true;
             }
             else if (column == "Status")
             {
                 e.PaintBackground(e.CellBounds, true);
-
                 string raw = e.FormattedValue?.ToString() ?? "";
                 string[] parts = raw.Split('|');
                 string text = parts[0];
-                Color back = parts.Length > 1 ? ColorTranslator.FromHtml(parts[1]) : SurfaceHigh;
+                Color back = parts.Length > 1 ? ColorTranslator.FromHtml(parts[1]) : SurfaceContainer;
                 Color fore = parts.Length > 2 ? ColorTranslator.FromHtml(parts[2]) : OnSurfaceVariant;
-
                 Size textSize = TextRenderer.MeasureText(text.ToUpper(), new Font("Segoe UI", 8.5F, FontStyle.Bold));
-                Rectangle badge = new Rectangle(
-                    e.CellBounds.X + 10,
-                    e.CellBounds.Y + (e.CellBounds.Height - 28) / 2,
-                    textSize.Width + 20,
-                    28
-                );
-
-                using (SolidBrush brush = new SolidBrush(back))
-                    e.Graphics.FillRectangle(brush, badge);
-
-                TextRenderer.DrawText(
-                    e.Graphics,
-                    text.ToUpper(),
-                    new Font("Segoe UI", 8.5F, FontStyle.Bold),
-                    badge,
-                    fore,
-                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter
-                );
-
+                Rectangle badge = new Rectangle(e.CellBounds.X + 10, e.CellBounds.Y + (e.CellBounds.Height - 28) / 2, textSize.Width + 20, 28);
+                using (SolidBrush brush = new SolidBrush(back)) e.Graphics.FillRectangle(brush, badge);
+                TextRenderer.DrawText(e.Graphics, text.ToUpper(), new Font("Segoe UI", 8.5F, FontStyle.Bold), badge, fore,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 e.Handled = true;
             }
         }
 
-        private void BorrowingViewForm_Resize(object? sender, EventArgs e)
-        {
-            AdjustLayout();
-        }
-
         private void AdjustLayout()
         {
+            if (pageCanvas == null) return;
+
             int margin = 34;
             int gap = 24;
-            int width = ClientSize.Width - (margin * 2);
+            int clientWidth = pageCanvas.ClientSize.Width;
+            int width = Math.Max(800, clientWidth - (margin * 2));
 
-            lblTitle.Location = new Point(margin, 12);
-            lblSubTitle.Location = new Point(margin, 60);
+            int y = 0;
 
-            btnFilter.Location = new Point(ClientSize.Width - btnFilter.Width - 34, 36);
+            heroPanel.Bounds = new Rectangle(0, y, clientWidth, 150);
+            lblTitle.Location = new Point(margin, 28);
+            lblSubTitle.Location = new Point(margin, 76);
+            y += heroPanel.Height;
 
-            searchHost.Location = new Point(btnFilter.Left - 290, 36);
-            searchHost.Size = new Size(280, 38);
+            statsPanel.Bounds = new Rectangle(0, y, clientWidth, 156);
 
-            filterHost.Location = new Point(searchHost.Left - 230, 36);
-            filterHost.Size = new Size(220, 38);
+            int cardHeight = 118;
+            int leftWidth = (int)(width * 0.34);
+            int rightWidth = width - leftWidth - gap;
+
+            cardTotal.Bounds = new Rectangle(margin, 18, leftWidth, cardHeight);
+            cardOverview.Bounds = new Rectangle(cardTotal.Right + gap, 18, rightWidth, cardHeight);
+
+            int overviewPadding = 28;
+            int overviewGap = 24;
+            int blockWidth = Math.Max(130, (cardOverview.Width - (overviewPadding * 2) - (overviewGap * 2)) / 3);
+
+            dueBlock.Bounds = new Rectangle(overviewPadding, 28, blockWidth, 68);
+            overdueBlock.Bounds = new Rectangle(dueBlock.Right + overviewGap, 28, blockWidth, 68);
+            borrowersBlock.Bounds = new Rectangle(overdueBlock.Right + overviewGap, 28, blockWidth, 68);
+
+            y += statsPanel.Height;
+
+            filterRow.Bounds = new Rectangle(0, y, clientWidth, 64);
+
+            btnFilter.Location = new Point(clientWidth - btnFilter.Width - margin, 12);
+            searchHost.Location = new Point(btnFilter.Left - searchHost.Width - 10, 12);
+            filterHost.Location = new Point(searchHost.Left - filterHost.Width - 10, 12);
 
             cboSchoolFilter.Location = new Point(10, 6);
             cboSchoolFilter.Width = filterHost.Width - 20;
 
             lblSearchIcon.Location = new Point(10, 8);
             txtSearch.Location = new Point(42, 11);
-            txtSearch.Width = 220;
+            txtSearch.Width = searchHost.Width - 54;
 
-            int cardHeight = 118;
-            int leftWidth = (int)(width * 0.34);
-            int rightWidth = width - leftWidth - gap;
+            y += filterRow.Height;
 
-            cardTotal.Bounds = new Rectangle(margin, 10, leftWidth, cardHeight);
-            cardOverview.Bounds = new Rectangle(cardTotal.Right + gap, 10, rightWidth, cardHeight);
+            int tableHeight = 620; // page scroll will reveal the bottom if the screen is short
+            tableWrap.Bounds = new Rectangle(0, y, clientWidth, tableHeight);
+            tableWrap.Padding = new Padding(margin, 0, margin, 24);
 
-            int innerPadding = 28;
-            int blockTop = 28;
-            int blockWidth = 120;
-            int healthGap = 28;
+            dgvBorrowing.ScrollBars = ScrollBars.Vertical;
+            dgvBorrowing.ClearSelection();
 
-            healthPanel.Location = new Point(cardOverview.Width - healthPanel.Width - innerPadding, 33);
-
-            int usableLeftArea = healthPanel.Left - healthGap - innerPadding;
-            int totalBlocksWidth = blockWidth * 3;
-            int equalGap = (usableLeftArea - totalBlocksWidth) / 4;
-
-            if (equalGap < 12)
-                equalGap = 12;
-
-            int x1 = innerPadding + equalGap;
-            int x2 = x1 + blockWidth + equalGap;
-            int x3 = x2 + blockWidth + equalGap;
-
-            dueBlock.Location = new Point(x1, blockTop);
-            overdueBlock.Location = new Point(x2, blockTop);
-            borrowersBlock.Location = new Point(x3, blockTop);
-
-            lblFooter.Location = new Point(20, 18);
-            btnNext.Location = new Point(footerPanel.Width - 42, 11);
-            btnPage3.Location = new Point(btnNext.Left - 40, 11);
-            btnPage2.Location = new Point(btnPage3.Left - 40, 11);
-            btnPage1.Location = new Point(btnPage2.Left - 40, 11);
-            btnPrev.Location = new Point(btnPage1.Left - 40, 11);
+            pageCanvas.AutoScrollMinSize = new Size(0, y + tableHeight + 28);
         }
     }
 

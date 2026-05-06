@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Linq;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -31,14 +33,20 @@ namespace EducationSystem
         private Panel locationCard = null!;
         private Panel rulesCard = null!;
 
-        private Panel fieldLibraryName = null!;
-        private Panel fieldEmail = null!;
-        private Panel fieldPhone = null!;
-        private Panel fieldBlock = null!;
-        private Panel fieldWing = null!;
-        private Panel fieldZip = null!;
+        private TextBox txtLibraryName = null!;
+        private TextBox txtEmail = null!;
+        private TextBox txtPhone = null!;
+        private TextBox txtBlock = null!;
+        private TextBox txtWing = null!;
+        private TextBox txtZip = null!;
+        private TextBox txtMapTitle = null!;
+        private TextBox txtMapAddress = null!;
 
         private Label lblSundayClosed = null!;
+        private DateTimePicker dtMonFriOpen = null!;
+        private DateTimePicker dtMonFriClose = null!;
+        private DateTimePicker dtSaturdayOpen = null!;
+        private DateTimePicker dtSaturdayClose = null!;
         private Panel mapPanel = null!;
         private Label lblMapBadge = null!;
 
@@ -69,6 +77,7 @@ namespace EducationSystem
 
         private void LibrarySetupForm_Load(object? sender, EventArgs e)
         {
+            LoadSettingsFromDatabase();
             AdjustLayout();
         }
 
@@ -129,25 +138,25 @@ namespace EducationSystem
             var icon = CreateCornerIcon("▣");
 
             var lblName = CreateFieldLabel("OFFICIAL LIBRARY NAME");
-            fieldLibraryName = CreateValueField("ABC School Library");
+            txtLibraryName = CreateValueTextBox("ABC School Library");
 
             var lblEmail = CreateFieldLabel("CONTACT EMAIL");
-            fieldEmail = CreateValueField("admin@abcschool.edu");
+            txtEmail = CreateValueTextBox("admin@abcschool.edu");
 
             var lblPhone = CreateFieldLabel("PHONE SYSTEM");
-            fieldPhone = CreateValueField("+1 (555) 012-3456");
+            txtPhone = CreateValueTextBox("+1 (555) 012-3456");
 
             brandingCard.Controls.Add(title);
             brandingCard.Controls.Add(subtitle);
             brandingCard.Controls.Add(icon);
             brandingCard.Controls.Add(lblName);
-            brandingCard.Controls.Add(fieldLibraryName);
+            brandingCard.Controls.Add(txtLibraryName);
             brandingCard.Controls.Add(lblEmail);
-            brandingCard.Controls.Add(fieldEmail);
+            brandingCard.Controls.Add(txtEmail);
             brandingCard.Controls.Add(lblPhone);
-            brandingCard.Controls.Add(fieldPhone);
+            brandingCard.Controls.Add(txtPhone);
 
-            brandingCard.Tag = new Control[] { title, subtitle, icon, lblName, fieldLibraryName, lblEmail, fieldEmail, lblPhone, fieldPhone };
+            brandingCard.Tag = new Control[] { title, subtitle, icon, lblName, txtLibraryName, lblEmail, txtEmail, lblPhone, txtPhone };
         }
 
         private void BuildHoursCard()
@@ -205,17 +214,29 @@ namespace EducationSystem
             locationCard = CreateLightCard();
             canvas.Controls.Add(locationCard);
 
-            var title = CreateCardTitle("Campus Location");
-            var subtitle = CreateCardSubTitle("Physical repository address");
+            var title = CreateCardTitle("Library Location");
+            var subtitle = CreateCardSubTitle("Set the Philippine address shown in the member portal and reports.");
 
-            var lblBlock = CreateFieldLabel("BLOCK/BUILDING");
-            fieldBlock = CreateValueField("Main Academic Block C");
+            var lblBlock = CreateFieldLabel("SCHOOL / CAMPUS NAME");
+            txtBlock = CreateValueTextBox("ABC School Library");
 
-            var lblWing = CreateFieldLabel("ROOM/WING");
-            fieldWing = CreateValueField("Librarium Floor 2, East Wing");
+            var lblWing = CreateFieldLabel("STREET / BARANGAY");
+            txtWing = CreateValueTextBox("Barangay Poblacion");
 
-            var lblZip = CreateFieldLabel("ZIP CODE");
-            fieldZip = CreateValueField("90210");
+            var lblZip = CreateFieldLabel("POSTAL CODE");
+            txtZip = CreateValueTextBox("8000");
+
+            var lblMapTitle = CreateFieldLabel("BRANCH / LOCATION LABEL");
+            txtMapTitle = CreateValueTextBox("Main Library Branch");
+
+            var lblMapAddress = CreateFieldLabel("CITY / PROVINCE / COUNTRY");
+            txtMapAddress = CreateValueTextBox("Davao City, Davao del Sur, Philippines");
+
+            txtBlock.TextChanged += LocationTextChanged;
+            txtWing.TextChanged += LocationTextChanged;
+            txtZip.TextChanged += LocationTextChanged;
+            txtMapTitle.TextChanged += LocationTextChanged;
+            txtMapAddress.TextChanged += LocationTextChanged;
 
             mapPanel = new Panel
             {
@@ -259,14 +280,54 @@ namespace EducationSystem
             locationCard.Controls.Add(title);
             locationCard.Controls.Add(subtitle);
             locationCard.Controls.Add(lblBlock);
-            locationCard.Controls.Add(fieldBlock);
+            locationCard.Controls.Add(txtBlock);
             locationCard.Controls.Add(lblWing);
-            locationCard.Controls.Add(fieldWing);
+            locationCard.Controls.Add(txtWing);
             locationCard.Controls.Add(lblZip);
-            locationCard.Controls.Add(fieldZip);
+            locationCard.Controls.Add(txtZip);
+            locationCard.Controls.Add(lblMapTitle);
+            locationCard.Controls.Add(txtMapTitle);
+            locationCard.Controls.Add(lblMapAddress);
+            locationCard.Controls.Add(txtMapAddress);
             locationCard.Controls.Add(mapPanel);
 
-            locationCard.Tag = new Control[] { title, subtitle, lblBlock, fieldBlock, lblWing, fieldWing, lblZip, fieldZip, mapPanel, badge };
+            locationCard.Tag = new Control[]
+            {
+                title, subtitle,
+                lblBlock, txtBlock,
+                lblWing, txtWing,
+                lblZip, txtZip,
+                lblMapTitle, txtMapTitle,
+                lblMapAddress, txtMapAddress,
+                mapPanel, badge
+            };
+
+            UpdateMapBadge();
+        }
+
+        private void LocationTextChanged(object? sender, EventArgs e)
+        {
+            UpdateMapBadge();
+            mapPanel?.Invalidate();
+        }
+
+        private void UpdateMapBadge()
+        {
+            if (lblMapBadge == null)
+                return;
+
+            string title = string.IsNullOrWhiteSpace(txtMapTitle?.Text)
+                ? "Main Library Branch"
+                : txtMapTitle.Text.Trim();
+
+            string address = string.IsNullOrWhiteSpace(txtMapAddress?.Text)
+                ? "Davao City, Davao del Sur, Philippines"
+                : txtMapAddress.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(address))
+                address = "Campus location not set";
+
+            lblMapBadge.Text = $"{title}: {address}";
         }
 
         private void BuildRulesCard()
@@ -398,6 +459,7 @@ namespace EducationSystem
                 Cursor = Cursors.Hand
             };
             btnSavePreferences.FlatAppearance.BorderSize = 0;
+            btnSavePreferences.Click += SavePreferences_Click;
 
             rulesCard.Controls.Add(title);
             rulesCard.Controls.Add(subtitle);
@@ -501,27 +563,19 @@ namespace EducationSystem
             };
         }
 
-        private Panel CreateValueField(string value)
+        private TextBox CreateValueTextBox(string value)
         {
-            Panel p = new Panel
-            {
-                BackColor = FieldBack
-            };
-
-            Label lbl = new Label
+            TextBox txt = new TextBox
             {
                 Text = value,
-                AutoSize = false,
-                Dock = DockStyle.Fill,
+                BorderStyle = BorderStyle.None,
                 Font = new Font("Segoe UI", 11F),
                 ForeColor = PrimaryText,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(16, 0, 16, 0),
-                BackColor = FieldBack
+                BackColor = FieldBack,
+                Multiline = true
             };
 
-            p.Controls.Add(lbl);
-            return p;
+            return txt;
         }
 
         private Panel CreateHoursRow(string day, string start, string end)
@@ -541,7 +595,8 @@ namespace EducationSystem
                 BackColor = CardBack
             };
 
-            Panel lblStart = CreateHourChip(start);
+            DateTimePicker startPicker = CreateTimePicker(start);
+            DateTimePicker endPicker = CreateTimePicker(end);
 
             Panel separator = new Panel
             {
@@ -549,37 +604,43 @@ namespace EducationSystem
                 BackColor = SecondaryText
             };
 
-            Panel lblEnd = CreateHourChip(end);
+            if (day == "Mon - Fri")
+            {
+                dtMonFriOpen = startPicker;
+                dtMonFriClose = endPicker;
+            }
+            else if (day == "Saturday")
+            {
+                dtSaturdayOpen = startPicker;
+                dtSaturdayClose = endPicker;
+            }
 
             row.Controls.Add(lblDay);
-            row.Controls.Add(lblStart);
+            row.Controls.Add(startPicker);
             row.Controls.Add(separator);
-            row.Controls.Add(lblEnd);
+            row.Controls.Add(endPicker);
 
-            row.Tag = new Control[] { lblDay, lblStart, separator, lblEnd };
+            row.Tag = new Control[] { lblDay, startPicker, separator, endPicker };
             return row;
         }
 
-        private Panel CreateHourChip(string text)
+        private DateTimePicker CreateTimePicker(string text)
         {
-            Panel chip = new Panel
+            DateTimePicker picker = new DateTimePicker
             {
-                Size = new Size(86, 30),
-                BackColor = FieldBack
-            };
-
-            Label lbl = new Label
-            {
-                Dock = DockStyle.Fill,
-                Text = text,
-                TextAlign = ContentAlignment.MiddleCenter,
+                Format = DateTimePickerFormat.Custom,
+                CustomFormat = "hh:mm tt",
+                ShowUpDown = true,
                 Font = new Font("Segoe UI", 9F),
-                ForeColor = PrimaryText,
-                BackColor = FieldBack
+                Size = new Size(86, 30),
+                CalendarForeColor = PrimaryText,
+                CalendarMonthBackground = FieldBack
             };
 
-            chip.Controls.Add(lbl);
-            return chip;
+            if (DateTime.TryParse(text, out DateTime value))
+                picker.Value = DateTime.Today.Add(value.TimeOfDay);
+
+            return picker;
         }
 
         private void AdjustLayout()
@@ -622,11 +683,11 @@ namespace EducationSystem
             var c = (Control[])brandingCard.Tag;
             Label icon = (Label)c[2];
             Label lblName = (Label)c[3];
-            Panel valueName = (Panel)c[4];
+            TextBox valueName = (TextBox)c[4];
             Label lblEmail = (Label)c[5];
-            Panel valueEmail = (Panel)c[6];
+            TextBox valueEmail = (TextBox)c[6];
             Label lblPhone = (Label)c[7];
-            Panel valuePhone = (Panel)c[8];
+            TextBox valuePhone = (TextBox)c[8];
 
             icon.Location = new Point(brandingCard.Width - 50, 30);
 
@@ -669,9 +730,9 @@ namespace EducationSystem
         {
             var items = (Control[])row.Tag;
             Label lblDay = (Label)items[0];
-            Panel start = (Panel)items[1];
+            DateTimePicker start = (DateTimePicker)items[1];
             Panel separator = (Panel)items[2];
-            Panel end = (Panel)items[3];
+            DateTimePicker end = (DateTimePicker)items[3];
 
             lblDay.Location = new Point(12, 18);
             end.Location = new Point(row.Width - end.Width - 12, 15);
@@ -682,38 +743,57 @@ namespace EducationSystem
         private void LayoutLocationCard()
         {
             var c = (Control[])locationCard.Tag;
+
             Label lblBlock = (Label)c[2];
-            Panel valueBlock = (Panel)c[3];
+            TextBox valueBlock = (TextBox)c[3];
             Label lblWing = (Label)c[4];
-            Panel valueWing = (Panel)c[5];
+            TextBox valueWing = (TextBox)c[5];
             Label lblZip = (Label)c[6];
-            Panel valueZip = (Panel)c[7];
-            Panel map = (Panel)c[8];
-            Panel badge = (Panel)c[9];
+            TextBox valueZip = (TextBox)c[7];
+            Label lblMapTitle = (Label)c[8];
+            TextBox valueMapTitle = (TextBox)c[9];
+            Label lblMapAddress = (Label)c[10];
+            TextBox valueMapAddress = (TextBox)c[11];
+            Panel map = (Panel)c[12];
+            Panel badge = (Panel)c[13];
 
-            int formWidth = (int)(locationCard.Width * 0.47);
-            int mapWidth = locationCard.Width - formWidth;
+            int gap = 34;
+            int formWidth = Math.Max(470, (int)(locationCard.Width * 0.53));
+            int mapX = formWidth + gap;
+            int mapWidth = Math.Max(260, locationCard.Width - mapX);
 
-            lblBlock.Location = new Point(32, 124);
-            valueBlock.Bounds = new Rectangle(32, 150, formWidth - 64, 42);
+            c[0].Location = new Point(32, 34); // title
+            c[1].Location = new Point(32, 70); // subtitle
+            ((Label)c[1]).MaximumSize = new Size(formWidth - 64, 0);
 
-            lblWing.Location = new Point(32, 210);
-            valueWing.Bounds = new Rectangle(32, 236, formWidth - 64, 42);
+            lblBlock.Location = new Point(32, 128);
+            valueBlock.Bounds = new Rectangle(32, 154, formWidth - 64, 42);
 
-            lblZip.Location = new Point(32, 296);
-            valueZip.Bounds = new Rectangle(32, 322, formWidth - 64, 42);
+            lblWing.Location = new Point(32, 214);
+            valueWing.Bounds = new Rectangle(32, 240, formWidth - 64, 42);
 
-            map.Bounds = new Rectangle(formWidth, 0, mapWidth, locationCard.Height);
+            lblZip.Location = new Point(32, 300);
+            valueZip.Bounds = new Rectangle(32, 326, formWidth - 64, 42);
+
+            lblMapTitle.Location = new Point(32, 386);
+            valueMapTitle.Bounds = new Rectangle(32, 412, formWidth - 64, 42);
+
+            lblMapAddress.Location = new Point(32, 472);
+            valueMapAddress.Bounds = new Rectangle(32, 498, formWidth - 64, 42);
+
+            map.Bounds = new Rectangle(mapX, 0, mapWidth, locationCard.Height);
 
             badge.Bounds = new Rectangle(
                 42,
-                map.Height - 86,
-                Math.Min(290, map.Width - 84),
-                58
+                map.Height - 96,
+                Math.Min(380, Math.Max(260, map.Width - 84)),
+                68
             );
 
-            lblMapBadge.Location = new Point(54, 10);
-            lblMapBadge.Size = new Size(badge.Width - 70, 40);
+            lblMapBadge.Location = new Point(54, 8);
+            lblMapBadge.Size = new Size(badge.Width - 70, 52);
+
+            UpdateMapBadge();
         }
 
         private void LayoutRulesCard()
@@ -748,18 +828,547 @@ namespace EducationSystem
             btnSave.Bounds = new Rectangle(32, rulesCard.Height - 88, rulesCard.Width - 64, 52);
         }
 
+
+        private int GetCurrentClientId()
+        {
+            try
+            {
+                if (int.TryParse(Convert.ToString(ClientSession.ClientId), out int clientId) && clientId > 0)
+                    return clientId;
+            }
+            catch
+            {
+                // fallback below
+            }
+
+            return 1;
+        }
+
+        private void EnsureLibrarySetupSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.ClientLibraries', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClientLibraries
+    (
+        ClientID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        LibraryCode NVARCHAR(50) NULL,
+        LibraryName NVARCHAR(200) NULL,
+        Email NVARCHAR(150) NULL,
+        PasswordText NVARCHAR(150) NULL,
+        UserCount INT NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Active',
+        ImagePath NVARCHAR(250) NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'LibraryName') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD LibraryName NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'Email') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD Email NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'Phone') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD Phone NVARCHAR(50) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'BlockBuilding') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD BlockBuilding NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'RoomWing') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD RoomWing NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'ZipCode') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD ZipCode NVARCHAR(20) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MapTitle') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD MapTitle NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MapAddress') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD MapAddress NVARCHAR(300) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MondayFridayOpen') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD MondayFridayOpen TIME NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MondayFridayClose') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD MondayFridayClose TIME NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'SaturdayOpen') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD SaturdayOpen TIME NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'SaturdayClose') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD SaturdayClose TIME NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'SundayClosed') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD SundayClosed BIT NOT NULL CONSTRAINT DF_ClientLibraries_SundayClosed DEFAULT 1;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'GuestBrowsingEnabled') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD GuestBrowsingEnabled BIT NOT NULL CONSTRAINT DF_ClientLibraries_GuestBrowsing DEFAULT 1;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'DefaultLoanDays') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD DefaultLoanDays INT NOT NULL CONSTRAINT DF_ClientLibraries_DefaultLoanDays DEFAULT 14;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MaxBooksPerUser') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD MaxBooksPerUser INT NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'UpdatedAt') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD UpdatedAt DATETIME2 NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_ClientLibraries_CreatedAt_Setup DEFAULT SYSUTCDATETIME();
+
+IF OBJECT_ID('dbo.SystemConfigurations', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.SystemConfigurations', 'LibraryHoursMonFri') IS NULL
+        ALTER TABLE dbo.SystemConfigurations ADD LibraryHoursMonFri NVARCHAR(50) NULL;
+
+    IF COL_LENGTH('dbo.SystemConfigurations', 'LibraryHoursSaturday') IS NULL
+        ALTER TABLE dbo.SystemConfigurations ADD LibraryHoursSaturday NVARCHAR(50) NULL;
+
+    IF COL_LENGTH('dbo.SystemConfigurations', 'LibraryHoursSunday') IS NULL
+        ALTER TABLE dbo.SystemConfigurations ADD LibraryHoursSunday NVARCHAR(50) NULL;
+
+    IF COL_LENGTH('dbo.SystemConfigurations', 'LibraryBranchName') IS NULL
+        ALTER TABLE dbo.SystemConfigurations ADD LibraryBranchName NVARCHAR(150) NULL;
+
+    IF COL_LENGTH('dbo.SystemConfigurations', 'LibraryBranchLocation') IS NULL
+        ALTER TABLE dbo.SystemConfigurations ADD LibraryBranchLocation NVARCHAR(150) NULL;
+END;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private void LoadSettingsFromDatabase()
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureLibrarySetupSchema(conn);
+
+                int clientId = GetCurrentClientId();
+
+                const string query = @"
+SELECT TOP 1
+    LibraryName,
+    Email,
+    Phone,
+    BlockBuilding,
+    RoomWing,
+    ZipCode,
+    MapTitle,
+    MapAddress,
+    MondayFridayOpen,
+    MondayFridayClose,
+    SaturdayOpen,
+    SaturdayClose,
+    SundayClosed,
+    GuestBrowsingEnabled,
+    DefaultLoanDays,
+    MaxBooksPerUser
+FROM dbo.ClientLibraries
+WHERE ClientID = @ClientID;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@ClientID", clientId);
+
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                if (!reader.Read())
+                    return;
+
+                txtLibraryName.Text = ReadText(reader["LibraryName"], "ABC School Library");
+                txtEmail.Text = ReadText(reader["Email"], "admin@abcschool.edu");
+                txtPhone.Text = ReadText(reader["Phone"], "+1 (555) 012-3456");
+                txtBlock.Text = ReadText(reader["BlockBuilding"], "ABC School Library");
+                txtWing.Text = ReadText(reader["RoomWing"], "Barangay Poblacion");
+                txtZip.Text = ReadText(reader["ZipCode"], "8000");
+                txtMapTitle.Text = ReadText(reader["MapTitle"], "Main Library Branch");
+                txtMapAddress.Text = ReadText(reader["MapAddress"], "Davao City, Davao del Sur, Philippines");
+                UpdateMapBadge();
+
+                SetTimePicker(dtMonFriOpen, reader["MondayFridayOpen"], "08:00 AM");
+                SetTimePicker(dtMonFriClose, reader["MondayFridayClose"], "06:00 PM");
+                SetTimePicker(dtSaturdayOpen, reader["SaturdayOpen"], "10:00 AM");
+                SetTimePicker(dtSaturdayClose, reader["SaturdayClose"], "02:00 PM");
+
+                guestBrowsingEnabled = reader["GuestBrowsingEnabled"] == DBNull.Value || Convert.ToBoolean(reader["GuestBrowsingEnabled"]);
+                UpdateGuestToggleVisual();
+
+                int loanDays = reader["DefaultLoanDays"] == DBNull.Value ? 14 : Convert.ToInt32(reader["DefaultLoanDays"]);
+                loanDays = Math.Max(trackLoanDays.Minimum, Math.Min(trackLoanDays.Maximum, loanDays));
+                trackLoanDays.Value = loanDays;
+                lblLoanDays.Text = $"{loanDays} Days";
+
+                int maxBooks = reader["MaxBooksPerUser"] == DBNull.Value ? 10 : Convert.ToInt32(reader["MaxBooksPerUser"]);
+                SelectMaxBooks(maxBooks);
+
+                UpdateMapBadge();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Library setup could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private string ReadText(object value, string fallback)
+        {
+            if (value == null || value == DBNull.Value)
+                return fallback;
+
+            string text = Convert.ToString(value) ?? "";
+            return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+        }
+
+        private void SetTimePicker(DateTimePicker picker, object value, string fallback)
+        {
+            TimeSpan time;
+
+            if (value == null || value == DBNull.Value)
+            {
+                DateTime.TryParse(fallback, out DateTime fallbackDate);
+                time = fallbackDate.TimeOfDay;
+            }
+            else if (value is TimeSpan span)
+            {
+                time = span;
+            }
+            else
+            {
+                DateTime.TryParse(Convert.ToString(value), out DateTime parsed);
+                time = parsed.TimeOfDay;
+            }
+
+            picker.Value = DateTime.Today.Add(time);
+        }
+
+        private void SelectMaxBooks(int maxBooks)
+        {
+            string value = maxBooks <= 0 ? "Unlimited" : $"{maxBooks} Books";
+
+            int index = cboMaxBooks.Items.IndexOf(value);
+            cboMaxBooks.SelectedIndex = index >= 0 ? index : 1;
+        }
+
+        private int GetSelectedMaxBooks()
+        {
+            string selected = cboMaxBooks.SelectedItem?.ToString() ?? "10 Books";
+
+            if (selected.Equals("Unlimited", StringComparison.OrdinalIgnoreCase))
+                return 0;
+
+            string digits = new string(selected.Where(char.IsDigit).ToArray());
+
+            return int.TryParse(digits, out int result) ? result : 10;
+        }
+
+        private void SavePreferences_Click(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtLibraryName.Text))
+            {
+                MessageBox.Show("Please enter the official library name.", "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtLibraryName.Focus();
+                return;
+            }
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureLibrarySetupSchema(conn);
+
+                int clientId = GetCurrentClientId();
+
+                const string query = @"
+UPDATE dbo.ClientLibraries
+SET
+    LibraryName = @LibraryName,
+    Email = @Email,
+    Phone = @Phone,
+    BlockBuilding = @BlockBuilding,
+    RoomWing = @RoomWing,
+    ZipCode = @ZipCode,
+    MapTitle = @MapTitle,
+    MapAddress = @MapAddress,
+    MondayFridayOpen = @MondayFridayOpen,
+    MondayFridayClose = @MondayFridayClose,
+    SaturdayOpen = @SaturdayOpen,
+    SaturdayClose = @SaturdayClose,
+    SundayClosed = @SundayClosed,
+    GuestBrowsingEnabled = @GuestBrowsingEnabled,
+    DefaultLoanDays = @DefaultLoanDays,
+    MaxBooksPerUser = @MaxBooksPerUser,
+    UpdatedAt = SYSUTCDATETIME()
+WHERE ClientID = @ClientID;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+
+                cmd.Parameters.AddWithValue("@ClientID", clientId);
+                cmd.Parameters.AddWithValue("@LibraryName", txtLibraryName.Text.Trim());
+                cmd.Parameters.AddWithValue("@Email", txtEmail.Text.Trim());
+                cmd.Parameters.AddWithValue("@Phone", txtPhone.Text.Trim());
+                cmd.Parameters.AddWithValue("@BlockBuilding", txtBlock.Text.Trim());
+                cmd.Parameters.AddWithValue("@RoomWing", txtWing.Text.Trim());
+                cmd.Parameters.AddWithValue("@ZipCode", txtZip.Text.Trim());
+                cmd.Parameters.AddWithValue("@MapTitle", txtMapTitle.Text.Trim());
+                cmd.Parameters.AddWithValue("@MapAddress", txtMapAddress.Text.Trim());
+                cmd.Parameters.AddWithValue("@MondayFridayOpen", dtMonFriOpen.Value.TimeOfDay);
+                cmd.Parameters.AddWithValue("@MondayFridayClose", dtMonFriClose.Value.TimeOfDay);
+                cmd.Parameters.AddWithValue("@SaturdayOpen", dtSaturdayOpen.Value.TimeOfDay);
+                cmd.Parameters.AddWithValue("@SaturdayClose", dtSaturdayClose.Value.TimeOfDay);
+                cmd.Parameters.AddWithValue("@SundayClosed", true);
+                cmd.Parameters.AddWithValue("@GuestBrowsingEnabled", guestBrowsingEnabled);
+                cmd.Parameters.AddWithValue("@DefaultLoanDays", trackLoanDays.Value);
+
+                int maxBooks = GetSelectedMaxBooks();
+                if (maxBooks <= 0)
+                    cmd.Parameters.AddWithValue("@MaxBooksPerUser", DBNull.Value);
+                else
+                    cmd.Parameters.AddWithValue("@MaxBooksPerUser", maxBooks);
+
+                int affected = cmd.ExecuteNonQuery();
+
+                if (affected <= 0)
+                    throw new InvalidOperationException("No client library record was updated. Please check the current ClientID.");
+
+                SaveSystemConfigurationMirror(conn, clientId);
+                UpdateMapBadge();
+
+                MessageBox.Show(
+                    "Library setup saved successfully. Super Admin View Clients will reflect the updated library name and email.",
+                    "Saved",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Library setup could not be saved.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+
+        private void SaveSystemConfigurationMirror(SqlConnection conn, int clientId)
+        {
+            const string ensureConfig = @"
+IF OBJECT_ID('dbo.SystemConfigurations', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM dbo.SystemConfigurations WHERE ClientID = @ClientID)
+    BEGIN
+        INSERT INTO dbo.SystemConfigurations
+        (
+            ClientID,
+            AdminFullAccess,
+            StaffCanChangeRules,
+            StudentFacultyAccess,
+            GuestReadAccess,
+            DailyLateFee,
+            MaximumTotalFee,
+            LostBookFee,
+            AllowAutoRenewals,
+            BlockOutstandingFees,
+            CrossCampusBorrowing,
+            CreatedAt,
+            UpdatedAt
+        )
+        VALUES
+        (
+            @ClientID,
+            1,
+            1,
+            1,
+            1,
+            2.50,
+            100.00,
+            500.00,
+            1,
+            0,
+            0,
+            SYSUTCDATETIME(),
+            SYSUTCDATETIME()
+        );
+    END
+END;";
+
+            using (SqlCommand ensureCmd = new SqlCommand(ensureConfig, conn))
+            {
+                ensureCmd.Parameters.AddWithValue("@ClientID", clientId);
+                ensureCmd.ExecuteNonQuery();
+            }
+
+            const string updateConfig = @"
+IF OBJECT_ID('dbo.SystemConfigurations', 'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.SystemConfigurations
+    SET
+        LibraryHoursMonFri = @LibraryHoursMonFri,
+        LibraryHoursSaturday = @LibraryHoursSaturday,
+        LibraryHoursSunday = @LibraryHoursSunday,
+        LibraryBranchName = @LibraryBranchName,
+        LibraryBranchLocation = @LibraryBranchLocation,
+        DailyLateFee = ISNULL(DailyLateFee, 2.50),
+        MaximumTotalFee = ISNULL(MaximumTotalFee, 100.00),
+        UpdatedAt = SYSUTCDATETIME()
+    WHERE ClientID = @ClientID;
+END;";
+
+            using SqlCommand cmd = new SqlCommand(updateConfig, conn);
+            cmd.Parameters.AddWithValue("@ClientID", clientId);
+            cmd.Parameters.AddWithValue("@LibraryHoursMonFri", FormatTimeRange(dtMonFriOpen, dtMonFriClose));
+            cmd.Parameters.AddWithValue("@LibraryHoursSaturday", FormatTimeRange(dtSaturdayOpen, dtSaturdayClose));
+            cmd.Parameters.AddWithValue("@LibraryHoursSunday", "Closed");
+            cmd.Parameters.AddWithValue("@LibraryBranchName", string.IsNullOrWhiteSpace(txtMapTitle.Text) ? "Main Library Branch" : txtMapTitle.Text.Trim());
+            cmd.Parameters.AddWithValue("@LibraryBranchLocation", string.IsNullOrWhiteSpace(txtMapAddress.Text) ? "Davao City, Davao del Sur, Philippines" : txtMapAddress.Text.Trim());
+            cmd.ExecuteNonQuery();
+        }
+
+        private string FormatTimeRange(DateTimePicker openPicker, DateTimePicker closePicker)
+        {
+            return $"{openPicker.Value:HH:mm} - {closePicker.Value:HH:mm}";
+        }
+
+
         private void DrawMapTexture(object? sender, PaintEventArgs e)
         {
             if (sender is not Panel p) return;
 
-            using Pen p1 = new Pen(Color.FromArgb(235, 240, 241), 1);
-            using Pen p2 = new Pen(Color.FromArgb(220, 226, 228), 1);
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-            for (int x = 20; x < p.Width; x += 38)
-                e.Graphics.DrawLine(p1, x, 0, x + 50, p.Height);
+            using SolidBrush bg = new SolidBrush(ColorTranslator.FromHtml("#E7EFF1"));
+            e.Graphics.FillRectangle(bg, p.ClientRectangle);
 
-            for (int y = 15; y < p.Height; y += 34)
-                e.Graphics.DrawLine(p2, 0, y, p.Width, y + 25);
+            using Pen grid = new Pen(Color.FromArgb(38, 255, 255, 255), 1);
+            for (int x = -40; x < p.Width; x += 44)
+                e.Graphics.DrawLine(grid, x, 0, x + 70, p.Height);
+
+            for (int y = 8; y < p.Height; y += 40)
+                e.Graphics.DrawLine(grid, 0, y, p.Width, y + 14);
+
+            Rectangle mapArea = new Rectangle(
+                Math.Max(20, p.Width / 2 - 150),
+                42,
+                Math.Min(300, p.Width - 40),
+                Math.Max(250, p.Height - 172)
+            );
+
+            DrawPhilippinesMap(e.Graphics, mapArea);
+
+            PointF marker = GetPhilippineMarkerPoint(mapArea);
+            DrawLocationPin(e.Graphics, marker);
+
+            string address = string.IsNullOrWhiteSpace(txtMapAddress?.Text)
+                ? "Davao City, Davao del Sur, Philippines"
+                : txtMapAddress.Text.Trim();
+
+            using Font addressFont = new Font("Segoe UI", 8.8F, FontStyle.Bold);
+            using SolidBrush addressBrush = new SolidBrush(Color.FromArgb(132, 22, 29, 31));
+
+            SizeF addressSize = e.Graphics.MeasureString(address, addressFont);
+            float xAddress = Math.Max(16, Math.Min(p.Width - addressSize.Width - 16, marker.X - addressSize.Width / 2));
+            float yAddress = Math.Min(p.Height - 118, marker.Y + 28);
+            e.Graphics.DrawString(address, addressFont, addressBrush, xAddress, yAddress);
+        }
+
+        private void DrawPhilippinesMap(Graphics g, Rectangle area)
+        {
+            Color islandFill = Color.FromArgb(165, 181, 235, 221);
+            Color islandAccent = Color.FromArgb(205, 109, 250, 210);
+            Color outline = Color.FromArgb(210, 0, 107, 85);
+
+            using SolidBrush fill = new SolidBrush(islandFill);
+            using SolidBrush accent = new SolidBrush(islandAccent);
+            using Pen pen = new Pen(outline, 2.1F);
+
+            PointF luzon = new PointF(area.Left + area.Width * 0.47F, area.Top + area.Height * 0.17F);
+            PointF mindoro = new PointF(area.Left + area.Width * 0.52F, area.Top + area.Height * 0.34F);
+            PointF visayas = new PointF(area.Left + area.Width * 0.54F, area.Top + area.Height * 0.47F);
+            PointF mindanao = new PointF(area.Left + area.Width * 0.51F, area.Top + area.Height * 0.72F);
+
+            DrawIsland(g, luzon, 42, 88, -16, accent, pen);
+            DrawIsland(g, new PointF(luzon.X + 28, luzon.Y + 75), 24, 54, 7, fill, pen);
+            DrawIsland(g, mindoro, 36, 30, 4, fill, pen);
+            DrawIsland(g, visayas, 78, 34, 4, accent, pen);
+            DrawIsland(g, new PointF(visayas.X + 55, visayas.Y + 20), 34, 24, 12, fill, pen);
+            DrawIsland(g, mindanao, 98, 62, -8, accent, pen);
+
+            using Font font = new Font("Segoe UI", 7.5F, FontStyle.Bold);
+            using SolidBrush label = new SolidBrush(Color.FromArgb(105, 60, 74, 70));
+
+            g.DrawString("LUZON", font, label, luzon.X - 24, luzon.Y - 61);
+            g.DrawString("VISAYAS", font, label, visayas.X + 46, visayas.Y - 4);
+            g.DrawString("MINDANAO", font, label, mindanao.X - 38, mindanao.Y + 48);
+        }
+
+        private void DrawIsland(Graphics g, PointF center, int width, int height, float angle, Brush fill, Pen pen)
+        {
+            using System.Drawing.Drawing2D.GraphicsPath path = new System.Drawing.Drawing2D.GraphicsPath();
+
+            path.AddClosedCurve(new PointF[]
+            {
+                new PointF(center.X - width * 0.42F, center.Y - height * 0.16F),
+                new PointF(center.X - width * 0.12F, center.Y - height * 0.50F),
+                new PointF(center.X + width * 0.30F, center.Y - height * 0.36F),
+                new PointF(center.X + width * 0.44F, center.Y + height * 0.08F),
+                new PointF(center.X + width * 0.12F, center.Y + height * 0.46F),
+                new PointF(center.X - width * 0.34F, center.Y + height * 0.30F)
+            }, 0.55F);
+
+            using System.Drawing.Drawing2D.Matrix matrix = new System.Drawing.Drawing2D.Matrix();
+            matrix.RotateAt(angle, center);
+            path.Transform(matrix);
+
+            g.FillPath(fill, path);
+            g.DrawPath(pen, path);
+        }
+
+        private PointF GetPhilippineMarkerPoint(Rectangle area)
+        {
+            string address = (txtMapAddress?.Text ?? "").ToLowerInvariant();
+
+            if (address.Contains("davao") || address.Contains("mindanao") || address.Contains("zamboanga") ||
+                address.Contains("cotabato") || address.Contains("butuan") || address.Contains("cagayan de oro"))
+            {
+                return new PointF(area.Left + area.Width * 0.56F, area.Top + area.Height * 0.73F);
+            }
+
+            if (address.Contains("cebu") || address.Contains("iloilo") || address.Contains("bacolod") ||
+                address.Contains("bohol") || address.Contains("leyte") || address.Contains("visayas"))
+            {
+                return new PointF(area.Left + area.Width * 0.60F, area.Top + area.Height * 0.49F);
+            }
+
+            if (address.Contains("manila") || address.Contains("quezon") || address.Contains("makati") ||
+                address.Contains("pasig") || address.Contains("baguio") || address.Contains("luzon") ||
+                address.Contains("cavite") || address.Contains("laguna") || address.Contains("bulacan"))
+            {
+                return new PointF(area.Left + area.Width * 0.49F, area.Top + area.Height * 0.22F);
+            }
+
+            return new PointF(area.Left + area.Width * 0.56F, area.Top + area.Height * 0.73F);
+        }
+
+        private void DrawLocationPin(Graphics g, PointF point)
+        {
+            using SolidBrush glow = new SolidBrush(Color.FromArgb(76, 109, 250, 210));
+            using SolidBrush outer = new SolidBrush(AccentEmerald);
+            using SolidBrush inner = new SolidBrush(AccentDeep);
+            using Pen ring = new Pen(Color.White, 2);
+
+            g.FillEllipse(glow, point.X - 30, point.Y - 30, 60, 60);
+            g.FillEllipse(outer, point.X - 11, point.Y - 11, 22, 22);
+            g.FillEllipse(inner, point.X - 5, point.Y - 5, 10, 10);
+            g.DrawEllipse(ring, point.X - 11, point.Y - 11, 22, 22);
         }
 
         private void RoundedPanelPaint(object? sender, PaintEventArgs e)

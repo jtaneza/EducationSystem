@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -36,6 +37,7 @@ namespace EducationSystem
         private Label lblSearchIcon = null!;
         private TextBox txtSearch = null!;
         private Button btnFilter = null!;
+        private Panel filterRow = null!;
 
         private Panel statsPanel = null!;
         private Panel cardActiveAccounts = null!;
@@ -65,7 +67,7 @@ namespace EducationSystem
         {
             InitializeComponent();
             BuildUI();
-            SeedData();
+            LoadClientsFromDatabase();
             LoadSchoolFilter();
             LoadClientsGrid();
         }
@@ -91,6 +93,7 @@ namespace EducationSystem
             BuildTable();
 
             canvas.Controls.Add(tableShell);
+            canvas.Controls.Add(filterRow);
             canvas.Controls.Add(statsPanel);
             canvas.Controls.Add(headerPanel);
 
@@ -104,7 +107,7 @@ namespace EducationSystem
         {
             headerPanel = new Panel
             {
-                Height = 160,
+                Height = 140,
                 Dock = DockStyle.Top,
                 BackColor = Background
             };
@@ -200,9 +203,6 @@ namespace EducationSystem
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSubTitle);
-            headerPanel.Controls.Add(filterHost);
-            headerPanel.Controls.Add(searchHost);
-            headerPanel.Controls.Add(btnFilter);
         }
 
         private void BuildStats()
@@ -284,6 +284,15 @@ namespace EducationSystem
 
             statsPanel.Controls.Add(cardActiveAccounts);
             statsPanel.Controls.Add(cardSystemHealth);
+
+            filterRow = new Panel
+            {
+                BackColor = Background,
+                Height = 64
+            };
+            filterRow.Controls.Add(filterHost);
+            filterRow.Controls.Add(searchHost);
+            filterRow.Controls.Add(btnFilter);
         }
 
         private void BuildTable()
@@ -332,21 +341,17 @@ namespace EducationSystem
 
             dgvClients.Columns.Add("ClientId", "CLIENT ID");
             dgvClients.Columns.Add("SchoolName", "SCHOOL NAME");
-            dgvClients.Columns.Add("Location", "LOCATION");
-            dgvClients.Columns.Add("PrincipalAdmin", "PRINCIPAL ADMIN");
-            dgvClients.Columns.Add("ContactEmail", "CONTACT EMAIL");
+            dgvClients.Columns.Add("ContactEmail", "EMAIL");
             dgvClients.Columns.Add("TotalUsers", "TOTAL USERS");
             dgvClients.Columns.Add("JoinedDate", "JOINED DATE");
             dgvClients.Columns.Add("Status", "STATUS");
 
             dgvClients.Columns["ClientId"].FillWeight = 14;
-            dgvClients.Columns["SchoolName"].FillWeight = 22;
-            dgvClients.Columns["Location"].FillWeight = 14;
-            dgvClients.Columns["PrincipalAdmin"].FillWeight = 16;
-            dgvClients.Columns["ContactEmail"].FillWeight = 18;
-            dgvClients.Columns["TotalUsers"].FillWeight = 10;
-            dgvClients.Columns["JoinedDate"].FillWeight = 12;
-            dgvClients.Columns["Status"].FillWeight = 10;
+            dgvClients.Columns["SchoolName"].FillWeight = 30;
+            dgvClients.Columns["ContactEmail"].FillWeight = 26;
+            dgvClients.Columns["TotalUsers"].FillWeight = 12;
+            dgvClients.Columns["JoinedDate"].FillWeight = 14;
+            dgvClients.Columns["Status"].FillWeight = 12;
 
             dgvClients.Columns["TotalUsers"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
             dgvClients.Columns["JoinedDate"].HeaderCell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
@@ -386,8 +391,8 @@ namespace EducationSystem
             footerPanel.Controls.Add(btnPage3);
             footerPanel.Controls.Add(btnNext);
 
-            tableShell.Controls.Add(dgvClients);
             tableShell.Controls.Add(footerPanel);
+            tableShell.Controls.Add(dgvClients);
         }
 
         private Button CreatePagerButton(string text, bool active)
@@ -419,21 +424,148 @@ namespace EducationSystem
             return btn;
         }
 
-        private void SeedData()
+        private void LoadClientsFromDatabase()
         {
-            allClients = new List<ClientDirectoryItem>
-            {
-                new ClientDirectoryItem("LF-UP-2022", "University of the Philippines", "Quezon City", "Dr. Maria Santos", "m.santos@up.edu.ph", 12450, new DateTime(2022, 1, 12), "Active"),
-                new ClientDirectoryItem("LF-ADMU-2023", "Ateneo de Manila University", "Quezon City", "Fr. Roberto Tan", "rtan@ateneo.edu", 8200, new DateTime(2023, 3, 5), "Active"),
-                new ClientDirectoryItem("LF-UST-2022", "UST Manila", "Manila", "Angelico Rivera", "arivera@ust.edu.ph", 15600, new DateTime(2022, 8, 20), "Active"),
-                new ClientDirectoryItem("LF-USEP-2024", "USeP Davao", "Davao City", "Luzviminda Cruz", "l.cruz@usep.edu.ph", 5400, new DateTime(2024, 2, 14), "Active"),
-                new ClientDirectoryItem("LF-USC-2023", "University of San Carlos", "Cebu City", "Benigno Garcia", "bgarcia@usc.edu.ph", 9800, new DateTime(2023, 11, 30), "Active"),
-                new ClientDirectoryItem("LF-XU-2022", "Xavier University", "Cagayan de Oro", "Sarah Lim", "slim@xu.edu.ph", 4100, new DateTime(2022, 5, 18), "Suspended"),
-                new ClientDirectoryItem("LF-DLSU-2023", "De La Salle University", "Manila", "Br. Raymundo Suplido", "ray.suplido@dlsu.edu.ph", 11200, new DateTime(2023, 10, 10), "Active"),
-                new ClientDirectoryItem("LF-CLSU-2024", "Central Luzon State Univ.", "Muñoz, Nueva Ecija", "Dr. Jose Abad", "j.abad@clsu.edu.ph", 7300, new DateTime(2024, 4, 2), "Active")
-            };
+            allClients.Clear();
 
-            lblActiveValue.Text = allClients.Count(c => c.Status == "Active").ToString("D2");
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureClientViewSchema(conn);
+
+                const string query = @"
+SELECT
+    cl.ClientID,
+    cl.LibraryCode,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unnamed School') AS SchoolName,
+    ISNULL(NULLIF(cl.Email, ''), '') AS ContactEmail,
+    cl.CreatedAt,
+    ISNULL(NULLIF(cl.Status, ''), 'Active') AS Status,
+    (
+        SELECT COUNT(*)
+        FROM dbo.Users u
+        WHERE u.ClientID = cl.ClientID
+    ) AS TotalUsers
+FROM dbo.ClientLibraries cl
+ORDER BY cl.LibraryName ASC;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int clientIdValue = Convert.ToInt32(reader["ClientID"]);
+                    string libraryCode = Convert.ToString(reader["LibraryCode"]) ?? "";
+                    string clientCode = string.IsNullOrWhiteSpace(libraryCode)
+                        ? "CL-" + clientIdValue.ToString("0000")
+                        : libraryCode;
+
+                    allClients.Add(new ClientDirectoryItem(
+                        clientCode,
+                        Convert.ToString(reader["SchoolName"]) ?? "Unnamed School",
+                        "",
+                        "",
+                        Convert.ToString(reader["ContactEmail"]) ?? "",
+                        reader["TotalUsers"] == DBNull.Value ? 0 : Convert.ToInt32(reader["TotalUsers"]),
+                        reader["CreatedAt"] == DBNull.Value ? DateTime.Today : Convert.ToDateTime(reader["CreatedAt"]),
+                        Convert.ToString(reader["Status"]) ?? "Active"
+                    ));
+                }
+
+                lblActiveValue.Text = allClients.Count(c => c.Status.Equals("Active", StringComparison.OrdinalIgnoreCase)).ToString("D2");
+                lblActiveTrend.Text = $"{allClients.Count:N0} total client libraries";
+                lblHealthValue.Text = allClients.Count == 0 ? "No Client Data" : "Operational";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Client directory could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                allClients.Clear();
+                lblActiveValue.Text = "00";
+                lblActiveTrend.Text = "No live data";
+                lblHealthValue.Text = "Database Check";
+            }
+        }
+
+        private void EnsureClientViewSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.ClientLibraries', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ClientLibraries
+    (
+        ClientID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        LibraryCode NVARCHAR(50) NULL,
+        LibraryName NVARCHAR(200) NULL,
+        Email NVARCHAR(150) NULL,
+        PasswordText NVARCHAR(150) NULL,
+        UserCount INT NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Active',
+        ImagePath NVARCHAR(250) NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'LibraryCode') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD LibraryCode NVARCHAR(50) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'LibraryName') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD LibraryName NVARCHAR(200) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'Email') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD Email NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'PasswordText') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD PasswordText NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'UserCount') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD UserCount INT NOT NULL CONSTRAINT DF_ClientLibraries_UserCount_View DEFAULT 0;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'Status') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD Status NVARCHAR(50) NOT NULL CONSTRAINT DF_ClientLibraries_Status_View2 DEFAULT 'Active';
+
+IF COL_LENGTH('dbo.ClientLibraries', 'ImagePath') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD ImagePath NVARCHAR(250) NULL;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_ClientLibraries_CreatedAt_View2 DEFAULT SYSUTCDATETIME();
+
+IF OBJECT_ID('dbo.Users', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Users
+    (
+        UserID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ClientID INT NULL,
+        FullName NVARCHAR(150) NULL,
+        Email NVARCHAR(150) NULL,
+        PasswordText NVARCHAR(150) NULL,
+        Role NVARCHAR(50) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Active',
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    );
+END;
+
+IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+    ALTER TABLE dbo.Users ADD ClientID INT NULL;
+
+IF COL_LENGTH('dbo.Users', 'Status') IS NULL
+    ALTER TABLE dbo.Users ADD Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Users_Status_ClientView DEFAULT 'Active';
+
+IF COL_LENGTH('dbo.Users', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.Users ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Users_CreatedAt_ClientView DEFAULT SYSUTCDATETIME();
+
+UPDATE dbo.ClientLibraries
+SET LibraryName = CONCAT('Library ', ClientID)
+WHERE LibraryName IS NULL OR LTRIM(RTRIM(LibraryName)) = '';";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private void LoadSchoolFilter()
@@ -441,8 +573,14 @@ namespace EducationSystem
             cboSchoolFilter.Items.Clear();
             cboSchoolFilter.Items.Add("All Schools");
 
-            foreach (string school in allClients.Select(x => x.SchoolName).Distinct().OrderBy(x => x))
+            foreach (string school in allClients
+                .Select(x => x.SchoolName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(x => x))
+            {
                 cboSchoolFilter.Items.Add(school);
+            }
 
             cboSchoolFilter.SelectedIndex = 0;
         }
@@ -459,14 +597,14 @@ namespace EducationSystem
             IEnumerable<ClientDirectoryItem> filtered = allClients;
 
             if (selectedSchool != "All Schools")
-                filtered = filtered.Where(x => x.SchoolName == selectedSchool);
+                filtered = filtered.Where(x => x.SchoolName.Equals(selectedSchool, StringComparison.OrdinalIgnoreCase));
 
             if (useSearch)
             {
                 filtered = filtered.Where(x =>
                     x.SchoolName.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
                     x.ContactEmail.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
-                    x.PrincipalAdmin.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+                    x.ClientId.Contains(searchText, StringComparison.OrdinalIgnoreCase));
             }
 
             List<ClientDirectoryItem> results = filtered.ToList();
@@ -474,19 +612,23 @@ namespace EducationSystem
             foreach (var client in results)
             {
                 dgvClients.Rows.Add(
-                    client.ClientId,
-                    client.SchoolName,
-                    client.Location,
-                    client.PrincipalAdmin,
-                    client.ContactEmail,
-                    client.TotalUsers.ToString("N0"),
-                    client.JoinedDate.ToString("MMM dd, yyyy"),
-                    client.Status
-                );
+                client.ClientId,
+                client.SchoolName,
+                client.ContactEmail,
+                client.TotalUsers.ToString("N0"),
+                client.JoinedDate.ToString("MMM dd, yyyy"),
+                client.Status
+            );
             }
 
             dgvClients.ClearSelection();
-            lblFooter.Text = $"Showing 1-{results.Count} of {results.Count} Clients";
+
+            lblActiveValue.Text = results.Count(x => x.Status.Equals("Active", StringComparison.OrdinalIgnoreCase)).ToString("D2");
+            lblActiveTrend.Text = $"{results.Count:N0} total client libraries";
+
+            lblFooter.Text = results.Count == 0
+                ? "Showing 0 of 0 Clients"
+                : $"Showing 1-{results.Count} of {results.Count} Clients";
         }
 
         private void dgvClients_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)
@@ -514,6 +656,18 @@ namespace EducationSystem
                     e.Graphics,
                     e.FormattedValue?.ToString() ?? "",
                     new Font("Segoe UI", 10F, FontStyle.Bold),
+                    new Rectangle(e.CellBounds.X + 12, e.CellBounds.Y + 10, e.CellBounds.Width - 18, e.CellBounds.Height - 16),
+                    OnSurface,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                e.Handled = true;
+            }
+            else if (col == "ContactEmail")
+            {
+                e.PaintBackground(e.CellBounds, true);
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    e.FormattedValue?.ToString() ?? "",
+                    new Font("Segoe UI", 10F),
                     new Rectangle(e.CellBounds.X + 12, e.CellBounds.Y + 10, e.CellBounds.Width - 18, e.CellBounds.Height - 16),
                     OnSurface,
                     TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
@@ -598,18 +752,46 @@ namespace EducationSystem
         private void AdjustLayout()
         {
             int margin = 34;
-            int width = Math.Max(1040, canvas.ClientSize.Width - (margin * 2));
+            int gap = 24;
+            int clientWidth = canvas.ClientSize.Width;
+            int width = Math.Max(1040, clientWidth - (margin * 2));
 
-            headerPanel.Height = 160;
-            lblTitle.Location = new Point(margin, 20);
-            lblSubTitle.Location = new Point(margin + 4, 74);
+            int y = 0;
 
-            btnFilter.Location = new Point(ClientSize.Width - 72, 28);
+            headerPanel.Bounds = new Rectangle(0, y, clientWidth, 140);
+            lblTitle.Location = new Point(margin, 28);
+            lblSubTitle.Location = new Point(margin + 4, 78);
+            y += headerPanel.Height;
 
-            searchHost.Location = new Point(btnFilter.Left - 290, 28);
+            statsPanel.Bounds = new Rectangle(0, y, clientWidth, 190);
+
+            int leftWidth = (int)(width * 0.30);
+            int rightWidth = width - leftWidth - gap;
+
+            cardActiveAccounts.Bounds = new Rectangle(margin, 18, leftWidth, 130);
+            cardSystemHealth.Bounds = new Rectangle(cardActiveAccounts.Right + gap, 18, rightWidth, 130);
+
+            lblActiveTitle.Location = new Point(34, 28);
+            lblActiveValue.Location = new Point(34, 60);
+            lblActiveTrend.Location = new Point(cardActiveAccounts.Width - lblActiveTrend.Width - 34, 88);
+
+            lblHealthTitle.Location = new Point(34, 28);
+            lblHealthValue.Location = new Point(34, 54);
+
+            healthLine1.Location = new Point(34, 108);
+            healthLine2.Location = new Point(92, 108);
+            healthLine3.Location = new Point(150, 108);
+
+            y += statsPanel.Height;
+
+            filterRow.Bounds = new Rectangle(0, y, clientWidth, 64);
+
+            btnFilter.Location = new Point(clientWidth - btnFilter.Width - margin, 12);
+
+            searchHost.Location = new Point(btnFilter.Left - searchHost.Width - 10, 12);
             searchHost.Size = new Size(280, 38);
 
-            filterHost.Location = new Point(searchHost.Left - 230, 28);
+            filterHost.Location = new Point(searchHost.Left - filterHost.Width - 10, 12);
             filterHost.Size = new Size(220, 38);
 
             cboSchoolFilter.Location = new Point(10, 6);
@@ -617,29 +799,12 @@ namespace EducationSystem
 
             lblSearchIcon.Location = new Point(10, 8);
             txtSearch.Location = new Point(42, 11);
-            txtSearch.Width = 220;
+            txtSearch.Width = searchHost.Width - 54;
 
-            statsPanel.Height = 220;
+            y += filterRow.Height;
 
-            int gap = 24;
-            int leftWidth = (int)(width * 0.30);
-            int rightWidth = width - leftWidth - gap;
-
-            cardActiveAccounts.Bounds = new Rectangle(margin, 20, leftWidth, 150);
-            cardSystemHealth.Bounds = new Rectangle(cardActiveAccounts.Right + gap, 20, rightWidth, 150);
-
-            lblActiveTitle.Location = new Point(34, 34);
-            lblActiveValue.Location = new Point(34, 72);
-            lblActiveTrend.Location = new Point(cardActiveAccounts.Width - lblActiveTrend.Width - 34, 104);
-
-            lblHealthTitle.Location = new Point(34, 34);
-            lblHealthValue.Location = new Point(34, 62);
-
-            healthLine1.Location = new Point(34, 118);
-            healthLine2.Location = new Point(92, 118);
-            healthLine3.Location = new Point(150, 118);
-
-            tableShell.Bounds = new Rectangle(margin, headerPanel.Bottom + statsPanel.Height - 10, width, 560);
+            int tableHeight = 430;
+            tableShell.Bounds = new Rectangle(margin, y, width, tableHeight);
 
             lblFooter.Location = new Point(12, 22);
 
@@ -649,7 +814,7 @@ namespace EducationSystem
             btnPage1.Location = new Point(btnPage2.Left - 46, 16);
             btnPrev.Location = new Point(btnPage1.Left - 46, 16);
 
-            canvas.AutoScrollMinSize = new Size(0, tableShell.Bottom + 40);
+            canvas.AutoScrollMinSize = new Size(0, tableShell.Bottom + 50);
         }
     }
 

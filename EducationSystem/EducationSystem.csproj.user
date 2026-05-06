@@ -1,16 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Compile Update="AddCategoryDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="BookCatalogForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="BookManagementForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="BorrowingForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="BorrowingViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="CategoryManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ClientArchiveForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="ClientDashboardForm.cs">
@@ -23,6 +32,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="ClientViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="FinesForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="FinesViewForm.cs">
@@ -58,6 +70,12 @@
     <Compile Update="Forms\SettingsForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="IssueBorrowDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LibrarianDashboardForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="LibrarianViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -67,10 +85,31 @@
     <Compile Update="LogsForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="MemberBorrowingStatusForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="MemberDashboardForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="MemberViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="ModuleDialogForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="OversightForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="RegisterLibrarianDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="RegisterMemberDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Update="ReportsViewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="ReturnsForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="ReturnsViewForm.cs">
@@ -80,12 +119,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Update="UserManagementForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="ModuleDialogForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Update="OversightForm.cs">
       <SubType>Form</SubType>
     </Compile>
   </ItemGroup>

@@ -1,14 +1,21 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
     public partial class LoginForm : Form
     {
         private bool isPasswordVisible = false;
+        private readonly Dictionary<string, string> loginHistory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private ListBox emailRecommendations = null!;
+        private ListBox passwordRecommendations = null!;
+        private bool isApplyingRecommendation = false;
 
         // Palette
         private readonly Color LeftPanelBack = Color.FromArgb(31, 41, 46);
@@ -39,7 +46,7 @@ namespace EducationSystem
 
             isPasswordVisible = false;
             password.UseSystemPasswordChar = true;
-            password.PasswordChar = '●';
+            password.PasswordChar = '\u25CF';
 
             picEye.Enabled = true;
             picEye.Visible = true;
@@ -50,6 +57,8 @@ namespace EducationSystem
             picEye.Click -= picEye_Click;
             picEye.Click += picEye_Click;
 
+            LoadLoginHistory();
+
             if (Settings.Default.RememberMe)
             {
                 emailadd.Text = Settings.Default.UserEmail;
@@ -58,9 +67,10 @@ namespace EducationSystem
 
                 isPasswordVisible = false;
                 password.UseSystemPasswordChar = true;
-                password.PasswordChar = '●';
+                password.PasswordChar = '\u25CF';
             }
 
+            ConfigureLoginRecommendations();
             ArrangeLoginLayout();
         }
 
@@ -193,6 +203,351 @@ namespace EducationSystem
             login.Size = new Size(formWidth, 40);
 
             lblPortalStatus.Location = new Point(startX + (formWidth - lblPortalStatus.PreferredWidth) / 2, login.Bottom + 34);
+            LayoutRecommendationBoxes();
+        }
+
+        private void ConfigureLoginRecommendations()
+        {
+            if (emailRecommendations != null && passwordRecommendations != null)
+                return;
+
+            emailRecommendations = CreateRecommendationList();
+            passwordRecommendations = CreateRecommendationList();
+
+            emailRecommendations.Click += (s, e) => ApplySelectedEmailRecommendation();
+            passwordRecommendations.Click += (s, e) => ApplySelectedPasswordRecommendation();
+            emailRecommendations.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Tab)
+                {
+                    ApplySelectedEmailRecommendation();
+                    emailadd.Focus();
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    emailRecommendations.Visible = false;
+                    emailadd.Focus();
+                }
+            };
+            passwordRecommendations.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Tab)
+                {
+                    ApplySelectedPasswordRecommendation();
+                    password.Focus();
+                    e.Handled = true;
+                }
+                else if (e.KeyCode == Keys.Escape)
+                {
+                    passwordRecommendations.Visible = false;
+                    password.Focus();
+                }
+            };
+
+            emailadd.TextChanged += (s, e) =>
+            {
+                if (isApplyingRecommendation) return;
+
+                ShowEmailRecommendations();
+
+                string email = emailadd.Text.Trim();
+                if (loginHistory.TryGetValue(email, out string savedPassword) && !password.Focused)
+                    ApplyPasswordText(savedPassword);
+            };
+
+            password.TextChanged += (s, e) =>
+            {
+                if (isApplyingRecommendation) return;
+                ShowPasswordRecommendations();
+            };
+
+            emailadd.LostFocus += (s, e) => BeginInvoke(new Action(() =>
+            {
+                if (!emailadd.Focused && !emailRecommendations.Focused)
+                    emailRecommendations.Visible = false;
+            }));
+
+            password.LostFocus += (s, e) => BeginInvoke(new Action(() =>
+            {
+                if (!password.Focused && !passwordRecommendations.Focused)
+                    passwordRecommendations.Visible = false;
+            }));
+
+            emailadd.KeyDown += EmailRecommendation_KeyDown;
+            password.KeyDown += PasswordRecommendation_KeyDown;
+
+            panelRight.Controls.Add(emailRecommendations);
+            panelRight.Controls.Add(passwordRecommendations);
+            LayoutRecommendationBoxes();
+        }
+
+        private ListBox CreateRecommendationList()
+        {
+            return new ListBox
+            {
+                Visible = false,
+                IntegralHeight = false,
+                Height = 92,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = InputBack,
+                ForeColor = InputText,
+                Font = new Font("Segoe UI", 10F, FontStyle.Regular),
+                Cursor = Cursors.Hand
+            };
+        }
+
+        private void LayoutRecommendationBoxes()
+        {
+            if (emailRecommendations == null || passwordRecommendations == null)
+                return;
+
+            emailRecommendations.Bounds = new Rectangle(
+                emailadd.Left - 10,
+                emailadd.Top + 28,
+                emailadd.Width + 20,
+                emailRecommendations.Height
+            );
+
+            passwordRecommendations.Bounds = new Rectangle(
+                password.Left - 10,
+                password.Top + 28,
+                password.Width + 44,
+                passwordRecommendations.Height
+            );
+
+            emailRecommendations.BringToFront();
+            passwordRecommendations.BringToFront();
+            picEye.BringToFront();
+        }
+
+        private void ShowEmailRecommendations()
+        {
+            if (!emailadd.Focused || loginHistory.Count == 0 || string.IsNullOrWhiteSpace(emailadd.Text))
+            {
+                emailRecommendations.Visible = false;
+                return;
+            }
+
+            string keyword = emailadd.Text.Trim();
+            var matches = loginHistory.Keys
+                .Where(email => string.IsNullOrWhiteSpace(keyword) ||
+                                email.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                .OrderBy(email => email)
+                .Take(6)
+                .ToArray();
+
+            ShowRecommendations(emailRecommendations, matches);
+        }
+
+        private void ShowPasswordRecommendations()
+        {
+            if (!password.Focused || loginHistory.Count == 0 || string.IsNullOrWhiteSpace(password.Text))
+            {
+                passwordRecommendations.Visible = false;
+                return;
+            }
+
+            string keyword = password.Text.Trim();
+            string email = emailadd.Text.Trim();
+
+            IEnumerable<string> candidates = loginHistory.TryGetValue(email, out string savedPassword)
+                ? new[] { savedPassword }
+                : loginHistory.Values.Distinct();
+
+            var matches = candidates
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Where(value => string.IsNullOrWhiteSpace(keyword) ||
+                                value.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                .Take(6)
+                .ToArray();
+
+            ShowRecommendations(passwordRecommendations, matches);
+        }
+
+        private void ShowRecommendations(ListBox list, string[] items)
+        {
+            list.BeginUpdate();
+            list.Items.Clear();
+            list.Items.AddRange(items);
+            list.EndUpdate();
+
+            list.Height = Math.Max(28, Math.Min(120, items.Length * 24 + 6));
+            LayoutRecommendationBoxes();
+            list.Visible = items.Length > 0;
+
+            if (list.Visible)
+                list.BringToFront();
+        }
+
+        private void ApplySelectedEmailRecommendation()
+        {
+            if (emailRecommendations.SelectedItem == null) return;
+
+            string selectedEmail = emailRecommendations.SelectedItem.ToString() ?? "";
+            if (string.IsNullOrWhiteSpace(selectedEmail)) return;
+
+            isApplyingRecommendation = true;
+            emailadd.Text = selectedEmail;
+            emailadd.SelectionStart = emailadd.TextLength;
+
+            if (loginHistory.TryGetValue(selectedEmail, out string savedPassword))
+                ApplyPasswordText(savedPassword);
+
+            isApplyingRecommendation = false;
+            emailRecommendations.Visible = false;
+            passwordRecommendations.Visible = false;
+        }
+
+        private void ApplySelectedPasswordRecommendation()
+        {
+            if (passwordRecommendations.SelectedItem == null) return;
+
+            string selectedPassword = passwordRecommendations.SelectedItem.ToString() ?? "";
+            ApplyPasswordText(selectedPassword);
+            password.SelectionStart = password.TextLength;
+            passwordRecommendations.Visible = false;
+        }
+
+        private void ApplyPasswordText(string value)
+        {
+            isApplyingRecommendation = true;
+            password.Text = value;
+            password.SelectionStart = password.TextLength;
+            password.UseSystemPasswordChar = !isPasswordVisible;
+            if (!isPasswordVisible)
+                password.PasswordChar = '\u25CF';
+            isApplyingRecommendation = false;
+        }
+
+        private void EmailRecommendation_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (!emailRecommendations.Visible) return;
+
+            if (e.KeyCode == Keys.Down && emailRecommendations.Items.Count > 0)
+            {
+                emailRecommendations.Focus();
+                emailRecommendations.SelectedIndex = Math.Max(0, emailRecommendations.SelectedIndex);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Tab)
+            {
+                if (emailRecommendations.Items.Count > 0)
+                {
+                    if (emailRecommendations.SelectedIndex < 0)
+                        emailRecommendations.SelectedIndex = 0;
+
+                    ApplySelectedEmailRecommendation();
+                    e.Handled = true;
+                }
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                emailRecommendations.Visible = false;
+            }
+        }
+
+        private void PasswordRecommendation_KeyDown(object? sender, KeyEventArgs e)
+        {
+            if (!passwordRecommendations.Visible) return;
+
+            if (e.KeyCode == Keys.Down && passwordRecommendations.Items.Count > 0)
+            {
+                passwordRecommendations.Focus();
+                passwordRecommendations.SelectedIndex = Math.Max(0, passwordRecommendations.SelectedIndex);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Enter || e.KeyCode == Keys.Tab)
+            {
+                if (passwordRecommendations.Items.Count > 0)
+                {
+                    if (passwordRecommendations.SelectedIndex < 0)
+                        passwordRecommendations.SelectedIndex = 0;
+
+                    ApplySelectedPasswordRecommendation();
+                    e.Handled = true;
+                }
+            }
+            else if (e.KeyCode == Keys.Escape)
+            {
+                passwordRecommendations.Visible = false;
+            }
+        }
+
+        private void LoadLoginHistory()
+        {
+            loginHistory.Clear();
+
+            try
+            {
+                string historyPath = GetLoginHistoryPath();
+                if (File.Exists(historyPath))
+                {
+                    foreach (string line in File.ReadAllLines(historyPath))
+                    {
+                        string[] parts = line.Split('\t');
+                        if (parts.Length != 2) continue;
+
+                        string email = DecodeHistoryValue(parts[0]);
+                        string savedPassword = DecodeHistoryValue(parts[1]);
+
+                        if (!string.IsNullOrWhiteSpace(email))
+                            loginHistory[email] = savedPassword;
+                    }
+                }
+
+                if (Settings.Default.RememberMe && !string.IsNullOrWhiteSpace(Settings.Default.UserEmail))
+                    loginHistory[Settings.Default.UserEmail] = Settings.Default.UserPassword;
+            }
+            catch
+            {
+            }
+        }
+
+        private void SaveLoginHistory(string email, string userPassword)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(userPassword))
+                    return;
+
+                loginHistory[email] = userPassword;
+
+                string historyPath = GetLoginHistoryPath();
+                Directory.CreateDirectory(Path.GetDirectoryName(historyPath)!);
+
+                string[] lines = loginHistory
+                    .OrderBy(item => item.Key)
+                    .Select(item => EncodeHistoryValue(item.Key) + "\t" + EncodeHistoryValue(item.Value))
+                    .ToArray();
+
+                File.WriteAllLines(historyPath, lines);
+            }
+            catch
+            {
+            }
+        }
+
+        private string GetLoginHistoryPath()
+        {
+            return Path.Combine(Application.UserAppDataPath, "login_history.dat");
+        }
+
+        private string EncodeHistoryValue(string value)
+        {
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(value ?? ""));
+        }
+
+        private string DecodeHistoryValue(string value)
+        {
+            try
+            {
+                return Encoding.UTF8.GetString(Convert.FromBase64String(value));
+            }
+            catch
+            {
+                return "";
+            }
         }
 
         private void LoadBranding()
@@ -260,90 +615,145 @@ namespace EducationSystem
                 return;
             }
 
-            if (email.Equals("supadmin@gmail.com", StringComparison.OrdinalIgnoreCase) &&
-                userPassword == "sup123")
+            try
             {
-                SaveRememberMe(email, userPassword);
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
 
-                UserSession.Username = "Super Admin";
-                UserSession.Role = "Super Admin";
-                UserSession.Email = "supadmin@gmail.com";
-                UserSession.Password = "sup123";
-                UserSession.ImagePath = Application.StartupPath + @"\Assets\user.png";
+                string query = @"
+SELECT 
+    u.UserID,
+    u.ClientID,
+    u.FullName,
+    u.Email,
+    u.PasswordText,
+    u.Role,
+    u.IsActive,
+    u.IsArchived,
+    u.ImagePath,
+    c.LibraryName
+FROM dbo.Users u
+LEFT JOIN dbo.ClientLibraries c ON u.ClientID = c.ClientID
+WHERE u.Email = @Email
+  AND u.PasswordText = @PasswordText;";
 
-                DashboardForm dashboard = new DashboardForm();
-                dashboard.Show();
-                Hide();
-                return;
-            }
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.Parameters.AddWithValue("@PasswordText", userPassword);
 
-            ClientItem? client = ClientArchiveStore.ActiveClients
-                .FirstOrDefault(c =>
-                    c.Email.Equals(email, StringComparison.OrdinalIgnoreCase) &&
-                    c.Password == userPassword);
+                using SqlDataReader reader = cmd.ExecuteReader();
 
-            if (client != null)
-            {
-                if (!client.Status.Equals("Active", StringComparison.OrdinalIgnoreCase))
+                if (!reader.Read())
                 {
-                    MessageBox.Show("Your account is inactive. Please contact the Super Admin.");
+                    MessageBox.Show("Invalid email or password.");
                     return;
                 }
 
+                bool isActive = reader["IsActive"] != DBNull.Value && Convert.ToBoolean(reader["IsActive"]);
+                bool isArchived = reader["IsArchived"] != DBNull.Value && Convert.ToBoolean(reader["IsArchived"]);
+
+                if (isArchived)
+                {
+                    MessageBox.Show("This account is archived and cannot log in.");
+                    return;
+                }
+
+                if (!isActive)
+                {
+                    MessageBox.Show("Your account is inactive. Please contact the administrator.");
+                    return;
+                }
+
+                int clientId = reader["ClientID"] == DBNull.Value
+    ? 0
+    : Convert.ToInt32(reader["ClientID"]);
+                string fullName = reader["FullName"] == DBNull.Value ? "" : Convert.ToString(reader["FullName"]) ?? "";
+                string role = reader["Role"] == DBNull.Value ? "" : Convert.ToString(reader["Role"]) ?? "";
+                string userEmail = reader["Email"] == DBNull.Value ? "" : Convert.ToString(reader["Email"]) ?? "";
+                string imagePath = reader["ImagePath"] == DBNull.Value ? "Assets\\user.png" : Convert.ToString(reader["ImagePath"]) ?? "Assets\\user.png";
+                string libraryName = reader["LibraryName"] == DBNull.Value ? "ABC School Library" : Convert.ToString(reader["LibraryName"]) ?? "ABC School Library";
+
                 SaveRememberMe(email, userPassword);
+                SaveLoginHistory(email, userPassword);
 
-                ClientSession.ClientId = client.ClientID;
-                ClientSession.LibraryName = client.LibraryName;
-                ClientSession.Email = client.Email;
-                ClientSession.Role = "Client Admin";
-                ClientSession.Username = client.LibraryName;
-                ClientSession.ImagePath = Application.StartupPath + @"\Assets\client.png";
+                UserSession.Username = fullName;
+                UserSession.Role = role;
+                UserSession.Email = userEmail;
+                UserSession.Password = userPassword;
+                UserSession.ImagePath = Application.StartupPath + "\\" + imagePath;
 
-                ClientDashboardForm clientDashboard = new ClientDashboardForm();
-                clientDashboard.Show();
-                Hide();
-                return;
+                if (role.Equals("Super Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    DashboardForm dashboard = new DashboardForm();
+                    dashboard.Show();
+                    Hide();
+                    return;
+                }
+
+                if (role.Equals("Client Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    ClientSession.ClientId = clientId;
+                    ClientSession.LibraryName = libraryName;
+                    ClientSession.Email = userEmail;
+                    ClientSession.Role = role;
+                    ClientSession.Username = fullName;
+                    ClientSession.ImagePath = Application.StartupPath + "\\" + imagePath;
+                    ClientSession.UserID = Convert.ToInt32(reader["UserID"]);
+
+                    ClientDashboardForm clientDashboard = new ClientDashboardForm();
+                    clientDashboard.Show();
+                    Hide();
+                    return;
+                }
+
+                if (role.Equals("Head Librarian", StringComparison.OrdinalIgnoreCase) ||
+     role.Equals("Librarian", StringComparison.OrdinalIgnoreCase) ||
+     role.Equals("Assistant", StringComparison.OrdinalIgnoreCase))
+                {
+                    ClientSession.ClientId = clientId;
+                    ClientSession.LibraryName = libraryName;
+                    ClientSession.Email = userEmail;
+                    ClientSession.Role = role;
+                    ClientSession.Username = fullName;
+                    ClientSession.ImagePath = Application.StartupPath + "\\" + imagePath;
+
+                    LibrarianDashboardForm librarianDashboard = new LibrarianDashboardForm();
+                    librarianDashboard.Show();
+                    Hide();
+                    return;
+                }
+
+                if (role.Equals("Student", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("Teacher", StringComparison.OrdinalIgnoreCase) ||
+                 role.Equals("Member", StringComparison.OrdinalIgnoreCase))
+                {
+                    ClientSession.ClientId = clientId;
+                    ClientSession.LibraryName = libraryName;
+                    ClientSession.Email = userEmail;
+                    ClientSession.Role = role;
+                    ClientSession.Username = fullName;
+                    ClientSession.ImagePath = Application.StartupPath + "\\" + imagePath;
+                    ClientSession.UserID = Convert.ToInt32(reader["UserID"]);
+
+                    MemberDashboardForm memberDashboard = new MemberDashboardForm();
+                    memberDashboard.Show();
+                    Hide();
+                    return;
+                }
+
+
+                MessageBox.Show("Unknown role: " + role);
             }
-
-            if (email.Equals("john@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "john123")
+            catch (Exception ex)
             {
-                SaveRememberMe(email, userPassword);
-
-                UserSession.Username = "John Cruz";
-                UserSession.Role = "Member";
-                UserSession.Email = "john@school.edu";
-                UserSession.Password = "john123";
-                UserSession.ImagePath = Application.StartupPath + @"\Assets\user.png";
-
-                MessageBox.Show("Member dashboard next.");
-                Hide();
-                return;
+                MessageBox.Show(
+                    "Login failed.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
-
-            if (email.Equals("maria@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "maria123")
-            {
-                SaveRememberMe(email, userPassword);
-
-                UserSession.Username = "Maria Santos";
-                UserSession.Role = "Member";
-                UserSession.Email = "maria@school.edu";
-                UserSession.Password = "maria123";
-                UserSession.ImagePath = Application.StartupPath + @"\Assets\user.png";
-
-                MessageBox.Show("Member dashboard next.");
-                Hide();
-                return;
-            }
-
-            if (email.Equals("anne@school.edu", StringComparison.OrdinalIgnoreCase) && userPassword == "anne123")
-            {
-                MessageBox.Show("This account is archived and cannot log in.");
-                return;
-            }
-
-            MessageBox.Show("Invalid email or password.");
         }
-
         private void SaveRememberMe(string email, string userPassword)
         {
             if (rememberme.Checked)
@@ -374,7 +784,7 @@ namespace EducationSystem
             else
             {
                 password.UseSystemPasswordChar = true;
-                password.PasswordChar = '●';
+                password.PasswordChar = '\u25CF';
             }
         }
 
@@ -421,3 +831,6 @@ namespace EducationSystem
         }
     }
 }
+
+
+

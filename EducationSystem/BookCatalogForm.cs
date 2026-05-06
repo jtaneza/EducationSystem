@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -56,7 +58,7 @@ namespace EducationSystem
         {
             InitializeComponent();
             BuildUI();
-            LoadSampleBooks();
+            LoadBooksFromDatabase();
         }
 
         private void BuildUI()
@@ -414,16 +416,100 @@ namespace EducationSystem
             return btn;
         }
 
-        private void LoadSampleBooks()
+        private void LoadBooksFromDatabase()
         {
             dgvBooks.Rows.Clear();
 
-            dgvBooks.Rows.Add("BK-90234", "The Great Gatsby|cover1", "Fiction", "Harborview Science Academy|Admin: Elena Rossi", "In Stock");
-            dgvBooks.Rows.Add("BK-44812", "Advanced Quantum Physics|cover2", "Science", "St. Jude Medical Univ.|Admin: Marcus Thorne", "Borrowed");
-            dgvBooks.Rows.Add("BK-11029", "The Rise of Empires|cover3", "History", "Global Heritage High|Admin: Sarah Jenkins", "In Stock");
-            dgvBooks.Rows.Add("BK-55391", "Calculus Vol. 2|cover4", "Mathematics", "Lakeview Polytechnic|Admin: David Wu", "In Stock");
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
 
-            dgvBooks.ClearSelection();
+                EnsureGlobalCatalogSchema(conn);
+
+                const string query = @"
+SELECT
+    b.BookID,
+    b.BookTitle,
+    b.Category,
+    b.RecordedBy,
+    b.Status,
+    ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown School') AS LibraryName
+FROM dbo.Books b
+LEFT JOIN dbo.ClientLibraries cl
+    ON cl.ClientID = b.ClientID
+WHERE ISNULL(b.IsArchived, 0) = 0
+ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                int total = 0;
+                HashSet<string> institutions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                int borrowed = 0;
+
+                while (reader.Read())
+                {
+                    string bookId = Convert.ToString(reader["BookID"]) ?? "";
+                    string title = Convert.ToString(reader["BookTitle"]) ?? "";
+                    string category = Convert.ToString(reader["Category"]) ?? "";
+                    string recordedBy = Convert.ToString(reader["RecordedBy"]) ?? "";
+                    string status = Convert.ToString(reader["Status"]) ?? "In Stock";
+                    string library = Convert.ToString(reader["LibraryName"]) ?? "Unknown School";
+
+                    dgvBooks.Rows.Add(
+                        bookId,
+                        title + "|cover",
+                        category,
+                        library + "|Admin: " + recordedBy,
+                        status
+                    );
+
+                    total++;
+                    institutions.Add(library);
+
+                    if (status.Equals("Borrowed", StringComparison.OrdinalIgnoreCase) ||
+                        status.Equals("Out of Stock", StringComparison.OrdinalIgnoreCase))
+                    {
+                        borrowed++;
+                    }
+                }
+
+                lblTotalValue.Text = total.ToString("N0");
+                lblInstitutionValue.Text = institutions.Count.ToString("N0");
+
+                int rate = total == 0 ? 0 : (int)Math.Round((double)borrowed / total * 100);
+                lblRateValue.Text = rate + "%";
+
+                if (circulationTrack.Controls.Count > 0)
+                    circulationTrack.Controls[0].Width = (int)(176 * Math.Min(100, rate) / 100.0);
+
+                lblFooterInfo.Text = total == 0
+                    ? "Showing 0 of 0 entries"
+                    : $"Showing 1 to {total:N0} of {total:N0} entries";
+
+                dgvBooks.ClearSelection();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Global catalog could not be loaded.\\n\\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void EnsureGlobalCatalogSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF COL_LENGTH('dbo.Books', 'ClientID') IS NULL
+    ALTER TABLE dbo.Books ADD ClientID INT NULL;
+
+IF COL_LENGTH('dbo.Books', 'RecordedBy') IS NULL
+    ALTER TABLE dbo.Books ADD RecordedBy NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
+    ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_IsArchived_Global DEFAULT 0;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private void BookCatalogForm_Resize(object? sender, EventArgs e)

@@ -604,7 +604,7 @@ namespace EducationSystem
 
                 TextRenderer.DrawText(
                     e.Graphics,
-                    "🗑",
+                    "📥",
                     new Font("Segoe UI Emoji", 11F, FontStyle.Regular),
                     delRect,
                     SecondaryText,

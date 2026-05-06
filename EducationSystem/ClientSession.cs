@@ -2,9 +2,10 @@
 {
     public static class ClientSession
     {
-        public static string? ClientId { get; set; }
-        public static string? Role { get; set; }
+        public static int ClientId { get; set; }
+        public static int UserID { get; set; }
 
+        public static string? Role { get; set; }
         public static string? LibraryName { get; set; }
         public static string? Username { get; set; }
         public static string? Email { get; set; }
@@ -13,7 +14,8 @@
 
         public static void Clear()
         {
-            ClientId = null;
+            ClientId = 0;
+            UserID = 0;
             Role = null;
             LibraryName = null;
             Username = null;

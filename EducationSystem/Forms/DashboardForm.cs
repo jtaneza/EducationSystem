@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -21,7 +22,9 @@ namespace EducationSystem
         private Label topSearchIcon = new Label();
 
         private Label dashboardSubTitle = new Label();
-       
+
+        private Panel dashboardScrollHost = new Panel();
+        private Panel dashboardCanvas = new Panel();
 
         // Dynamic sidebar
         private FlowLayoutPanel superAdminMenuHost = null!;
@@ -68,6 +71,8 @@ namespace EducationSystem
         private Label lblSpeedSub = new Label();
         private Panel speedChartCard = new Panel();
         private readonly List<Panel> speedBars = new List<Panel>();
+        private readonly List<DashboardLibraryRow> dashboardLibraries = new List<DashboardLibraryRow>();
+        private readonly List<DashboardEventItem> dashboardEvents = new List<DashboardEventItem>();
 
         private Panel librariesPanel = new Panel();
         private Label lblLibrariesTitle = new Label();
@@ -108,7 +113,6 @@ namespace EducationSystem
             SetupResponsiveShell();
             SetupSidebarBranding();
             BuildSuperAdminSidebar();
-            BuildSuperAdminSidebar();
             SetupResponsiveHeader();
             SetupTopSearch();
             SetupDashboardHome();
@@ -140,6 +144,7 @@ namespace EducationSystem
 
             label4.Text = "Dashboard";
             panelContent.Visible = false;
+            dashboardScrollHost.Visible = true;
 
             SetActiveNavButton(navDashboard);
             UpdateTopHeaderSearchVisibility();
@@ -154,6 +159,8 @@ namespace EducationSystem
 
         private void SetupResponsiveShell()
         {
+            SuspendLayout();
+
             Sidebar.Dock = DockStyle.Left;
             topbar.Dock = DockStyle.Top;
             panel1.Dock = DockStyle.Bottom;
@@ -162,11 +169,32 @@ namespace EducationSystem
             topbar.Height = 68;
             panel1.Height = 40;
 
-            MinimumSize = new Size(1180, 760);
+            MinimumSize = new Size(900, 620);
             BackColor = FormBack;
 
-            AutoScroll = true;
-            AutoScrollMinSize = new Size(0, 1200);
+            AutoScroll = false;
+
+            dashboardScrollHost.Dock = DockStyle.Fill;
+            dashboardScrollHost.AutoScroll = true;
+            dashboardScrollHost.HorizontalScroll.Enabled = false;
+            dashboardScrollHost.HorizontalScroll.Visible = false;
+            dashboardScrollHost.BackColor = FormBack;
+            dashboardScrollHost.Visible = true;
+
+            dashboardCanvas.BackColor = FormBack;
+            dashboardCanvas.Location = new Point(0, 0);
+            dashboardCanvas.Size = new Size(1000, 1200);
+
+            dashboardScrollHost.Controls.Add(dashboardCanvas);
+
+            if (!Controls.Contains(dashboardScrollHost))
+                Controls.Add(dashboardScrollHost);
+
+            dashboardScrollHost.BringToFront();
+            panelContent.BringToFront();
+            panel1.BringToFront();
+
+            ResumeLayout();
         }
 
         private void UpdateTopHeaderSearchVisibility()
@@ -175,7 +203,6 @@ namespace EducationSystem
 
             topSearchHost.Visible = !panelContent.Visible;
         }
-
 
         private void SetupSidebarBranding()
         {
@@ -271,7 +298,7 @@ namespace EducationSystem
             {
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoScroll = false,
                 BackColor = SidebarBack,
                 Dock = DockStyle.Fill,
                 Padding = new Padding(14, 10, 14, 10)
@@ -348,7 +375,7 @@ namespace EducationSystem
             navConfigureModules.Click += (s, e) =>
             {
                 SetActiveNavButton(navConfigureModules);
-                LoadContentForm(new SettingsForm());
+                LoadContentForm(new OversightForm());
             };
 
             navViewBookCatalog.Click += (s, e) =>
@@ -438,7 +465,7 @@ namespace EducationSystem
             navViewUser.Click += (s, e) =>
             {
                 userMenuExpanded = !userMenuExpanded;
-                userSubMenuPanel.Visible = userMenuExpanded;
+                userSubMenuPanel.Visible = Sidebar.Width > 90 && userMenuExpanded;
                 UpdateParentArrow(navViewUser, userMenuExpanded);
                 LayoutSidebar();
             };
@@ -446,7 +473,7 @@ namespace EducationSystem
             navViewCirculation.Click += (s, e) =>
             {
                 circulationMenuExpanded = !circulationMenuExpanded;
-                circulationSubMenuPanel.Visible = circulationMenuExpanded;
+                circulationSubMenuPanel.Visible = Sidebar.Width > 90 && circulationMenuExpanded;
                 UpdateParentArrow(navViewCirculation, circulationMenuExpanded);
                 LayoutSidebar();
             };
@@ -552,6 +579,29 @@ namespace EducationSystem
 
                 navFines.Location = new Point(18, top);
                 navFines.Width = circulationSubMenuPanel.Width - 18;
+            }
+        }
+
+
+        private void LayoutMainNavButton(Button btn, string icon, string text, int width, bool compact, bool hasArrow = false, bool expanded = false)
+        {
+            if (btn == null) return;
+
+            btn.Width = width;
+            btn.Height = 52;
+            btn.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
+            btn.Padding = compact ? new Padding(0) : new Padding(16, 0, 16, 0);
+
+            if (compact)
+            {
+                btn.Text = icon;
+                btn.Font = new Font("Segoe UI", 12F, FontStyle.Regular);
+            }
+            else
+            {
+                string suffix = hasArrow ? (expanded ? "        ▾" : "        ▸") : "";
+                btn.Text = $"{icon}  {text}{suffix}";
+                btn.Font = new Font("Segoe UI", 10F, FontStyle.Regular);
             }
         }
 
@@ -715,15 +765,18 @@ namespace EducationSystem
             PositionResponsiveHeader();
         }
 
+
         private void PositionResponsiveHeader()
         {
             if (!topbar.Controls.Contains(userHeaderHost)) return;
+
+            bool compact = ClientSize.Width < 980;
 
             userHeaderPanel.PerformLayout();
             userHeaderHost.Width = userHeaderPanel.PreferredSize.Width;
             userHeaderHost.Height = Math.Max(50, userHeaderPanel.PreferredSize.Height);
 
-            int rightPadding = 20;
+            int rightPadding = compact ? 14 : 20;
             int topPadding = Math.Max(0, (topbar.ClientSize.Height - userHeaderHost.Height) / 2);
 
             userHeaderHost.Location = new Point(
@@ -736,9 +789,12 @@ namespace EducationSystem
 
             if (topSearchHost != null)
             {
-                int leftX = 34;
+                int leftX = compact ? 18 : 34;
+                int available = topbar.Width - userHeaderHost.Width - leftX - rightPadding - 22;
+
+                topSearchHost.Visible = !panelContent.Visible && available >= 190;
                 topSearchHost.Location = new Point(leftX, (topbar.Height - topSearchHost.Height) / 2);
-                topSearchHost.Width = Math.Min(700, Math.Max(260, topbar.Width - userHeaderHost.Width - 90));
+                topSearchHost.Width = Math.Min(700, Math.Max(190, available));
                 topSearchIcon.Location = new Point(12, 8);
                 topSearchBox.Location = new Point(42, 10);
                 topSearchBox.Width = topSearchHost.Width - 54;
@@ -775,15 +831,20 @@ namespace EducationSystem
             fabMonitor.FlatAppearance.BorderSize = 0;
             fabMonitor.Click += (s, e) => LoadContentForm(new MonitoringForm());
 
-            Controls.Add(dashboardSubTitle);
-            Controls.Add(heroLibrariesCard);
-            Controls.Add(heroUsersCard);
-            Controls.Add(heroAlertsCard);
-            Controls.Add(speedPanel);
-            Controls.Add(librariesPanel);
-            Controls.Add(eventsPanel);
-            Controls.Add(fabMonitor);
+            if (label4.Parent != null) label4.Parent.Controls.Remove(label4);
+            if (dashboardSubTitle.Parent != null) dashboardSubTitle.Parent.Controls.Remove(dashboardSubTitle);
 
+            dashboardCanvas.Controls.Add(label4);
+            dashboardCanvas.Controls.Add(dashboardSubTitle);
+            dashboardCanvas.Controls.Add(heroLibrariesCard);
+            dashboardCanvas.Controls.Add(heroUsersCard);
+            dashboardCanvas.Controls.Add(heroAlertsCard);
+            dashboardCanvas.Controls.Add(speedPanel);
+            dashboardCanvas.Controls.Add(librariesPanel);
+            dashboardCanvas.Controls.Add(eventsPanel);
+            dashboardCanvas.Controls.Add(fabMonitor);
+
+            label4.BringToFront();
             dashboardSubTitle.BringToFront();
             heroLibrariesCard.BringToFront();
             heroUsersCard.BringToFront();
@@ -877,8 +938,8 @@ namespace EducationSystem
         {
             speedPanel = CreateSoftCard(CardSoftLow);
 
-            lblSpeedTitle = CreateLabel("System Speed", 22F, FontStyle.Bold, PrimaryText);
-            lblSpeedSub = CreateLabel("Real-time load balancing across regional nodes", 10.5F, FontStyle.Regular, SecondaryText);
+            lblSpeedTitle = CreateLabel("System Activity", 22F, FontStyle.Bold, PrimaryText);
+            lblSpeedSub = CreateLabel("Monthly records from users, borrowing, returns, and fines", 10.5F, FontStyle.Regular, SecondaryText);
 
             speedChartCard = CreateSoftCard(CardBack);
 
@@ -888,10 +949,11 @@ namespace EducationSystem
             {
                 Panel bar = new Panel
                 {
-                    BackColor = i == 3 || i == 8 || i == 11 ? AccentEmerald : Color.FromArgb(170, 208, 198),
+                    BackColor = Color.FromArgb(170, 208, 198),
                     Width = 40,
-                    Height = 80
+                    Height = 40
                 };
+
                 speedBars.Add(bar);
                 speedChartCard.Controls.Add(bar);
             }
@@ -933,7 +995,7 @@ namespace EducationSystem
                 GridColor = Color.FromArgb(240, 244, 245),
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
                 ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
-                ScrollBars = ScrollBars.Vertical
+                ScrollBars = ScrollBars.None
             };
 
             dgvLibraries.DefaultCellStyle.Font = new Font("Segoe UI", 10F);
@@ -960,14 +1022,7 @@ namespace EducationSystem
 
             foreach (DataGridViewColumn col in dgvLibraries.Columns)
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
-
-            dgvLibraries.Rows.Add("Metropolitan Public Library", "Running Well", "4,502", "99.98%");
-            dgvLibraries.Rows.Add("Oxford Academic Wing", "Active", "12,190", "99.99%");
-            dgvLibraries.Rows.Add("Tech-Innovation Hub", "Small Issue", "840", "94.12%");
-            dgvLibraries.Rows.Add("Central Research Library", "Running Well", "8,304", "99.87%");
-            dgvLibraries.Rows.Add("City Learning Commons", "Active", "5,221", "99.92%");
-            dgvLibraries.Rows.Add("West Campus Library", "Running Well", "3,940", "99.71%");
-            dgvLibraries.Rows.Add("Digital Knowledge Hub", "Active", "7,112", "99.95%");
+            // Real library rows are loaded from the database in RefreshDashboardData().
 
             dgvLibraries.CellPainting += DgvLibraries_CellPainting;
 
@@ -992,12 +1047,7 @@ namespace EducationSystem
 
             eventsPanel.Controls.Add(lblEventsTitle);
             eventsPanel.Controls.Add(eventsFlow);
-
-            AddEventItem("New Library Added", "National University of Arts", "12 minutes ago", AccentEmerald, "+");
-            AddEventItem("System Alert", "Server node us-east-2 slow", "1 hour ago", Tertiary, "!");
-            AddEventItem("Software Update", "Successfully sent to all sites", "4 hours ago", AccentDeep, "⟳");
-            AddEventItem("Backup Completed", "Cloud archive sync finished", "6 hours ago", AccentDeep, "✓");
-            AddEventItem("Client Expansion", "West Campus Library onboarded", "9 hours ago", AccentEmerald, "+");
+            // Real latest events are loaded from the database in RefreshDashboardData().
         }
 
         private void AddEventItem(string title, string sub, string timeText, Color accent, string symbol)
@@ -1079,21 +1129,23 @@ namespace EducationSystem
             };
         }
 
+
         private void ApplyResponsiveLayout()
         {
             int w = ClientSize.Width;
 
             if (w >= 1320)
                 ApplyDesktopLayout();
-            else if (w >= 1060)
-                ApplyTabletLayout();
+            else if (w >= 980)
+                ApplyLaptopLayout();
             else
-                ApplySmallLayout();
+                ApplyCompactLayout();
 
             PositionResponsiveHeader();
             LayoutSidebar();
             LayoutDashboardHome();
         }
+
 
         private void ApplyDesktopLayout()
         {
@@ -1106,9 +1158,10 @@ namespace EducationSystem
             LayoutSidebar();
         }
 
-        private void ApplyTabletLayout()
+
+        private void ApplyLaptopLayout()
         {
-            Sidebar.Width = 215;
+            Sidebar.Width = 220;
             topbar.Height = 64;
             panel1.Height = 40;
             username.MaximumSize = new Size(160, 0);
@@ -1117,77 +1170,98 @@ namespace EducationSystem
             LayoutSidebar();
         }
 
-        private void ApplySmallLayout()
+
+        private void ApplyCompactLayout()
         {
-            Sidebar.Width = 88;
-            topbar.Height = 58;
-            panel1.Height = 38;
-            username.MaximumSize = new Size(100, 0);
+            Sidebar.Width = 76;
+            topbar.Height = 62;
+            panel1.Height = 40;
+            username.MaximumSize = new Size(110, 0);
 
             LayoutSidebarBranding(false);
             LayoutSidebar();
         }
 
+
         private void LayoutSidebar()
         {
-            LayoutSidebarBranding(Sidebar.Width > 120);
+            bool compact = Sidebar.Width <= 90;
+
+            LayoutSidebarBranding(!compact);
 
             if (superAdminMenuHost != null)
             {
                 superAdminMenuHost.Width = Sidebar.Width;
+                superAdminMenuHost.AutoScroll = false;
+                superAdminMenuHost.HorizontalScroll.Enabled = false;
+                superAdminMenuHost.HorizontalScroll.Visible = false;
+                superAdminMenuHost.VerticalScroll.Enabled = false;
+                superAdminMenuHost.VerticalScroll.Visible = false;
+                superAdminMenuHost.Padding = compact ? new Padding(8, 10, 8, 10) : new Padding(14, 10, 14, 10);
 
-                int navWidth = Sidebar.Width - 28;
+                int navWidth = Sidebar.Width - (compact ? 16 : 28);
 
-                navDashboard.Width = navWidth;
-                navManageClients.Width = navWidth;
-                navMonitorSystem.Width = navWidth;
-                navConfigureModules.Width = navWidth;
-                navViewBookCatalog.Width = navWidth;
-                navViewUser.Width = navWidth;
-                navViewCirculation.Width = navWidth;
-                navViewReports.Width = navWidth;
-                navArchive.Width = navWidth;
+                LayoutMainNavButton(navDashboard, "▦", "Dashboard", navWidth, compact);
+                LayoutMainNavButton(navManageClients, "✦", "Manage Client Libraries", navWidth, compact);
+                LayoutMainNavButton(navMonitorSystem, "◉", "Monitor System", navWidth, compact);
+                LayoutMainNavButton(navConfigureModules, "⚙", "Configure Modules", navWidth, compact);
+                LayoutMainNavButton(navViewBookCatalog, "📖", "View Book Catalog", navWidth, compact);
+                LayoutMainNavButton(navViewUser, "👥", "View User", navWidth, compact, true, userMenuExpanded);
+                LayoutMainNavButton(navViewCirculation, "⇄", "View Circulation", navWidth, compact, true, circulationMenuExpanded);
+                LayoutMainNavButton(navViewReports, "〽", "View Reports", navWidth, compact);
+                LayoutMainNavButton(navArchive, "🗂", "Archive", navWidth, compact);
+
+                userSubMenuPanel.Visible = !compact && userMenuExpanded;
+                circulationSubMenuPanel.Visible = !compact && circulationMenuExpanded;
 
                 userSubMenuPanel.Width = navWidth;
                 circulationSubMenuPanel.Width = navWidth;
 
-                navClient.Width = navWidth - 18;
-                navLibrarian.Width = navWidth - 18;
-                navMember.Width = navWidth - 18;
-                navBorrowing.Width = navWidth - 18;
-                navReturns.Width = navWidth - 18;
-                navFines.Width = navWidth - 18;
+                navClient.Width = Math.Max(1, navWidth - 18);
+                navLibrarian.Width = Math.Max(1, navWidth - 18);
+                navMember.Width = Math.Max(1, navWidth - 18);
+                navBorrowing.Width = Math.Max(1, navWidth - 18);
+                navReturns.Width = Math.Max(1, navWidth - 18);
+                navFines.Width = Math.Max(1, navWidth - 18);
 
                 LayoutSubMenuButtons();
 
-                userSubMenuPanel.Height = userMenuExpanded ? 110 : 0;
-                circulationSubMenuPanel.Height = circulationMenuExpanded ? 110 : 0;
+                userSubMenuPanel.Height = (!compact && userMenuExpanded) ? 110 : 0;
+                circulationSubMenuPanel.Height = (!compact && circulationMenuExpanded) ? 110 : 0;
             }
 
             if (sidebarBottomPanel != null)
             {
                 sidebarBottomPanel.Width = Sidebar.Width;
-                navSignOut.Width = Sidebar.Width - 28;
-                navSignOut.Height = 48;
-                navSignOut.Location = new Point(14, 12);
+                sidebarBottomPanel.Height = 72;
+                sidebarBottomPanel.Padding = compact ? new Padding(8, 12, 8, 14) : new Padding(14, 12, 14, 14);
+
+                navSignOut.Width = Sidebar.Width - (compact ? 16 : 28);
+                navSignOut.Height = 44;
+                navSignOut.Location = new Point(compact ? 8 : 14, 14);
+                navSignOut.Text = compact ? "⏻" : "⏻  Sign Out";
+                navSignOut.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
+                navSignOut.Padding = compact ? new Padding(0) : new Padding(16, 0, 16, 0);
             }
         }
+
 
         private void LayoutDashboardHome()
         {
             if (!label4.Visible) return;
 
-            int sidebarW = Sidebar.Width;
-            int topH = topbar.Height;
-            int footerH = panel1.Height;
+            int viewWidth = dashboardScrollHost.ClientSize.Width;
+            bool compact = viewWidth < 1050;
+            bool narrow = viewWidth < 760;
 
-            int left = sidebarW + 30;
-            int top = topH + 20;
-            int width = ClientSize.Width - sidebarW - 60;
+            int left = narrow ? 18 : compact ? 24 : 30;
+            int top = compact ? 20 : 24;
+            int width = Math.Max(360, viewWidth - (left * 2) - 8);
+            int gap = compact ? 16 : 20;
 
-            label4.Location = new Point(left, top + 6);
+            label4.Location = new Point(left, top);
             label4.Text = "Dashboard";
-            label4.Font = new Font("Segoe UI", 24F, FontStyle.Bold);
+            label4.Font = new Font("Segoe UI", narrow ? 22F : 24F, FontStyle.Bold);
             label4.ForeColor = PrimaryText;
             label4.Visible = true;
 
@@ -1195,95 +1269,136 @@ namespace EducationSystem
             dashboardSubTitle.Text = "Admin Dashboard";
             dashboardSubTitle.Visible = true;
 
-            int heroTop = dashboardSubTitle.Bottom + 22;
-            int heroGap = 20;
+            int heroTop = dashboardSubTitle.Bottom + (compact ? 18 : 22);
 
-            int librariesW = (int)(width * 0.47);
-            int usersW = (int)(width * 0.22);
-            int alertsW = width - librariesW - usersW - (heroGap * 2);
+            if (narrow)
+            {
+                int cardH = 138;
+                heroLibrariesCard.Bounds = new Rectangle(left, heroTop, width, cardH);
+                heroUsersCard.Bounds = new Rectangle(left, heroLibrariesCard.Bottom + gap, width, cardH);
+                heroAlertsCard.Bounds = new Rectangle(left, heroUsersCard.Bottom + gap, width, cardH);
+            }
+            else if (compact)
+            {
+                int cardW = (width - gap) / 2;
+                heroLibrariesCard.Bounds = new Rectangle(left, heroTop, width, 150);
+                heroUsersCard.Bounds = new Rectangle(left, heroLibrariesCard.Bottom + gap, cardW, 145);
+                heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroLibrariesCard.Bottom + gap, width - cardW - gap, 145);
+            }
+            else
+            {
+                int librariesW = (int)(width * 0.47);
+                int usersW = (int)(width * 0.22);
+                int alertsW = width - librariesW - usersW - (gap * 2);
 
-            heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, 160);
-            heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + heroGap, heroTop, usersW, 160);
-            heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + heroGap, heroTop, alertsW, 160);
+                heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, 160);
+                heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + gap, heroTop, usersW, 160);
+                heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroTop, alertsW, 160);
+            }
 
             LayoutHeroCards();
 
-            int speedTop = heroLibrariesCard.Bottom + 26;
-            speedPanel.Bounds = new Rectangle(left, speedTop, width, 390);
+            int speedTop = Math.Max(heroLibrariesCard.Bottom, Math.Max(heroUsersCard.Bottom, heroAlertsCard.Bottom)) + (compact ? 20 : 26);
+            speedPanel.Bounds = new Rectangle(left, speedTop, width, compact ? 330 : 390);
             LayoutSpeedPanel();
 
             int bottomTop = speedPanel.Bottom + 22;
-            int bottomGap = 24;
+            int bottomPanelsHeight = compact ? 380 : 420;
 
-            int librariesPanelW = (int)(width * 0.66);
-            int eventsPanelW = width - librariesPanelW - bottomGap;
+            if (compact)
+            {
+                librariesPanel.Bounds = new Rectangle(left, bottomTop, width, bottomPanelsHeight);
+                eventsPanel.Bounds = new Rectangle(left, librariesPanel.Bottom + 20, width, 350);
+            }
+            else
+            {
+                int bottomGap = 24;
+                int librariesPanelW = (int)(width * 0.66);
+                int eventsPanelW = width - librariesPanelW - bottomGap;
 
-            int bottomPanelsHeight = 420;
-
-            librariesPanel.Bounds = new Rectangle(left, bottomTop, librariesPanelW, bottomPanelsHeight);
-            eventsPanel.Bounds = new Rectangle(librariesPanel.Right + bottomGap, bottomTop, eventsPanelW, bottomPanelsHeight);
+                librariesPanel.Bounds = new Rectangle(left, bottomTop, librariesPanelW, bottomPanelsHeight);
+                eventsPanel.Bounds = new Rectangle(librariesPanel.Right + bottomGap, bottomTop, eventsPanelW, bottomPanelsHeight);
+            }
 
             LayoutLibrariesPanel();
             LayoutEventsPanel();
 
-            fabMonitor.Location = new Point(
-                ClientSize.Width - fabMonitor.Width - 26,
-                ClientSize.Height - footerH - fabMonitor.Height - 26
-            );
+            fabMonitor.Location = new Point(left + width - fabMonitor.Width - 10, eventsPanel.Bottom + 16);
+
+            int dashboardBottom = fabMonitor.Bottom + 24;
+            dashboardCanvas.Size = new Size(Math.Max(1, dashboardScrollHost.ClientSize.Width - 8), dashboardBottom + 20);
+            dashboardScrollHost.AutoScrollMinSize = new Size(0, dashboardBottom + 20);
 
             panel1.Height = 40;
             time.AutoSize = true;
             time.Location = new Point(10, Math.Max(0, (panel1.Height - time.Height) / 2));
 
-            int dashboardBottom = eventsPanel.Bottom + 40;
-            AutoScrollMinSize = new Size(0, dashboardBottom + panel1.Height);
-
             panel1.BringToFront();
         }
 
+
         private void LayoutHeroCards()
         {
-            lblHeroLibrariesTitle.Location = new Point(34, 34);
-            lblHeroLibrariesValue.Location = new Point(34, 58);
-            lblHeroLibrariesTrend.Location = new Point(36, 126);
+            bool compactLibraries = heroLibrariesCard.Width < 360;
+            bool compactSmall = heroUsersCard.Width < 240;
+
+            lblHeroLibrariesTitle.Location = new Point(34, 30);
+            lblHeroLibrariesValue.Font = new Font("Segoe UI", compactLibraries ? 28F : 34F, FontStyle.Bold);
+            lblHeroLibrariesValue.Location = new Point(34, 54);
+            lblHeroLibrariesTrend.Location = new Point(36, heroLibrariesCard.Height - 36);
 
             Control? glow = heroLibrariesCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "heroGlow");
             if (glow != null)
+            {
+                glow.Visible = heroLibrariesCard.Width > 300;
                 glow.Location = new Point(heroLibrariesCard.Width - 130, 8);
+            }
 
             Control? iconUsers = heroUsersCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "iconUsers");
-            if (iconUsers != null) iconUsers.Location = new Point(26, 28);
-            lblHeroUsersTitle.Location = new Point(26, 82);
-            lblHeroUsersValue.Location = new Point(26, 106);
+            if (iconUsers != null) iconUsers.Location = new Point(26, 26);
+
+            lblHeroUsersValue.Font = new Font("Segoe UI", compactSmall ? 24F : 30F, FontStyle.Bold);
+            lblHeroUsersTitle.Location = new Point(26, 78);
+            lblHeroUsersValue.Location = new Point(26, 102);
 
             Control? iconAlerts = heroAlertsCard.Controls.Cast<Control>().FirstOrDefault(c => c.Name == "iconAlerts");
-            if (iconAlerts != null) iconAlerts.Location = new Point(26, 28);
-            lblHeroAlertsTitle.Location = new Point(26, 82);
-            lblHeroAlertsValue.Location = new Point(26, 106);
+            if (iconAlerts != null) iconAlerts.Location = new Point(26, 26);
+
+            lblHeroAlertsValue.Font = new Font("Segoe UI", compactSmall ? 24F : 30F, FontStyle.Bold);
+            lblHeroAlertsTitle.Location = new Point(26, 78);
+            lblHeroAlertsValue.Location = new Point(26, 102);
         }
+
 
         private void LayoutSpeedPanel()
         {
             lblSpeedTitle.Location = new Point(24, 24);
-            lblSpeedSub.Location = new Point(24, 58);
+            lblSpeedTitle.Font = new Font("Segoe UI", speedPanel.Width < 700 ? 18F : 22F, FontStyle.Bold);
+            lblSpeedSub.Location = new Point(24, lblSpeedTitle.Bottom + 4);
+            lblSpeedSub.MaximumSize = new Size(speedPanel.Width - 48, 0);
 
-            speedChartCard.Bounds = new Rectangle(24, 96, speedPanel.Width - 48, speedPanel.Height - 124);
+            int chartTop = lblSpeedSub.Bottom + 18;
+            speedChartCard.Bounds = new Rectangle(24, chartTop, speedPanel.Width - 48, speedPanel.Height - chartTop - 24);
 
             int innerPad = 18;
             int chartBottom = speedChartCard.Height - 18;
-            int gap = 8;
-            int barW = (speedChartCard.Width - (innerPad * 2) - (gap * (speedBars.Count - 1))) / speedBars.Count;
+            int gap = speedChartCard.Width < 700 ? 5 : 8;
+            int barW = Math.Max(8, (speedChartCard.Width - (innerPad * 2) - (gap * (speedBars.Count - 1))) / speedBars.Count);
 
             int[] heights = { 90, 148, 115, 196, 160, 126, 102, 136, 210, 148, 116, 176, 136, 90 };
+            double scale = Math.Min(1.0, Math.Max(0.45, (speedChartCard.Height - 34) / 220.0));
 
             for (int i = 0; i < speedBars.Count; i++)
             {
+                int h = Math.Max(24, (int)(heights[i] * scale));
                 speedBars[i].Width = barW;
-                speedBars[i].Height = heights[i];
+                speedBars[i].Height = h;
                 speedBars[i].Left = innerPad + (i * (barW + gap));
-                speedBars[i].Top = chartBottom - heights[i];
+                speedBars[i].Top = chartBottom - h;
             }
         }
+
+
         private void LayoutLibrariesPanel()
         {
             lblLibrariesTitle.Location = new Point(24, 22);
@@ -1291,12 +1406,30 @@ namespace EducationSystem
 
             dgvLibraries.Location = new Point(0, 64);
             dgvLibraries.Size = new Size(librariesPanel.Width - 2, librariesPanel.Height - 76);
+
+            if (librariesPanel.Width < 620)
+            {
+                dgvLibraries.Columns["LibraryName"].FillWeight = 50;
+                dgvLibraries.Columns["Status"].FillWeight = 24;
+                dgvLibraries.Columns["Users"].FillWeight = 12;
+                dgvLibraries.Columns["Uptime"].FillWeight = 14;
+            }
+            else
+            {
+                dgvLibraries.Columns["LibraryName"].FillWeight = 42;
+                dgvLibraries.Columns["Status"].FillWeight = 22;
+                dgvLibraries.Columns["Users"].FillWeight = 16;
+                dgvLibraries.Columns["Uptime"].FillWeight = 20;
+            }
         }
+
+
         private void LayoutEventsPanel()
         {
             lblEventsTitle.Location = new Point(24, 22);
             eventsFlow.Location = new Point(24, 62);
             eventsFlow.Size = new Size(eventsPanel.Width - 48, eventsPanel.Height - 86);
+            eventsFlow.AutoScroll = false;
 
             foreach (Control ctrl in eventsFlow.Controls)
                 ctrl.Width = eventsFlow.Width - 2;
@@ -1307,9 +1440,404 @@ namespace EducationSystem
             LoadUserInfo();
             label4.Text = "Dashboard";
 
-            lblHeroLibrariesValue.Text = "1,284";
-            lblHeroUsersValue.Text = "14.2k";
-            lblHeroAlertsValue.Text = "03";
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureDashboardSchema(conn);
+
+                int totalLibraries = GetDashboardScalarInt(conn, @"
+SELECT COUNT(*)
+FROM dbo.ClientLibraries
+WHERE ISNULL(IsArchived, 0) = 0;");
+
+                int currentUsers = GetDashboardScalarInt(conn, @"
+SELECT COUNT(*)
+FROM dbo.Users
+WHERE ISNULL(IsArchived, 0) = 0
+  AND UPPER(ISNULL(Status, 'ACTIVE')) = 'ACTIVE';");
+
+                int alerts = GetDashboardScalarInt(conn, @"
+SELECT
+    (
+        SELECT COUNT(*)
+        FROM dbo.BorrowingRecords
+        WHERE ISNULL(IsArchived, 0) = 0
+          AND (
+                UPPER(ISNULL(Status, '')) = 'OVERDUE'
+                OR TRY_CONVERT(DATE, DueDate) < CAST(GETDATE() AS DATE)
+              )
+    )
+    +
+    (
+        SELECT COUNT(*)
+        FROM dbo.FineRecords
+        WHERE ISNULL(IsArchived, 0) = 0
+          AND UPPER(ISNULL(Status, 'PENDING')) IN ('PENDING', 'UNPAID')
+    );");
+
+                lblHeroLibrariesValue.Text = totalLibraries.ToString("N0");
+                lblHeroUsersValue.Text = currentUsers >= 1000
+                    ? (currentUsers / 1000.0).ToString("0.#") + "k"
+                    : currentUsers.ToString("N0");
+                lblHeroAlertsValue.Text = alerts.ToString("00");
+                lblHeroLibrariesTrend.Text = "↗ live from database";
+
+                LoadDashboardLibraries(conn);
+                LoadDashboardEvents(conn);
+                LoadDashboardChart(conn);
+
+                LayoutDashboardHome();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Dashboard data could not be loaded from the database.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        private void EnsureDashboardSchema(SqlConnection conn)
+        {
+            const string query = @"
+IF OBJECT_ID('dbo.ClientLibraries', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.ClientLibraries', 'IsArchived') IS NULL
+        ALTER TABLE dbo.ClientLibraries ADD IsArchived BIT NOT NULL CONSTRAINT DF_ClientLibraries_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.ClientLibraries', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.ClientLibraries ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_ClientLibraries_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+
+    IF COL_LENGTH('dbo.ClientLibraries', 'SchoolName') IS NULL
+        ALTER TABLE dbo.ClientLibraries ADD SchoolName NVARCHAR(200) NULL;
+END;
+
+IF OBJECT_ID('dbo.Users', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
+        ALTER TABLE dbo.Users ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Users', 'Status') IS NULL
+        ALTER TABLE dbo.Users ADD Status NVARCHAR(50) NOT NULL CONSTRAINT DF_Users_Dashboard_Status DEFAULT 'Active';
+
+    IF COL_LENGTH('dbo.Users', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Users ADD IsArchived BIT NOT NULL CONSTRAINT DF_Users_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Users', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.Users ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Users_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.Books', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.Books', 'ClientID') IS NULL
+        ALTER TABLE dbo.Books ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
+        ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.Books', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.Books ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_Books_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.BorrowingRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'BookTitle') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD BookTitle NVARCHAR(255) NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'DueDate') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD DueDate DATETIME2 NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'Status') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD Status NVARCHAR(50) NULL;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_BorrowingRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.BorrowingRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.BorrowingRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_BorrowingRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.ReturnRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.ReturnRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'BookTitle') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD BookTitle NVARCHAR(255) NULL;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_ReturnRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.ReturnRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.ReturnRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_ReturnRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;
+
+IF OBJECT_ID('dbo.FineRecords', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('dbo.FineRecords', 'ClientID') IS NULL
+        ALTER TABLE dbo.FineRecords ADD ClientID INT NULL;
+
+    IF COL_LENGTH('dbo.FineRecords', 'BookTitle') IS NULL
+        ALTER TABLE dbo.FineRecords ADD BookTitle NVARCHAR(255) NULL;
+
+    IF COL_LENGTH('dbo.FineRecords', 'Status') IS NULL
+        ALTER TABLE dbo.FineRecords ADD Status NVARCHAR(50) NULL;
+
+    IF COL_LENGTH('dbo.FineRecords', 'Amount') IS NULL
+        ALTER TABLE dbo.FineRecords ADD Amount DECIMAL(18,2) NOT NULL CONSTRAINT DF_FineRecords_Dashboard_Amount DEFAULT 0;
+
+    IF COL_LENGTH('dbo.FineRecords', 'IsArchived') IS NULL
+        ALTER TABLE dbo.FineRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_FineRecords_Dashboard_IsArchived DEFAULT 0;
+
+    IF COL_LENGTH('dbo.FineRecords', 'CreatedAt') IS NULL
+        ALTER TABLE dbo.FineRecords ADD CreatedAt DATETIME2 NOT NULL CONSTRAINT DF_FineRecords_Dashboard_CreatedAt DEFAULT SYSUTCDATETIME();
+END;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
+        private int GetDashboardScalarInt(SqlConnection conn, string query)
+        {
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            object? value = cmd.ExecuteScalar();
+
+            if (value == null || value == DBNull.Value)
+                return 0;
+
+            return Convert.ToInt32(value);
+        }
+
+        private string SafeText(object value, string fallback = "")
+        {
+            if (value == null || value == DBNull.Value)
+                return fallback;
+
+            string text = Convert.ToString(value) ?? "";
+            return string.IsNullOrWhiteSpace(text) ? fallback : text.Trim();
+        }
+
+        private void LoadDashboardLibraries(SqlConnection conn)
+        {
+            dashboardLibraries.Clear();
+            dgvLibraries.Rows.Clear();
+
+            const string query = @"
+SELECT TOP 10
+    cl.ClientID,
+    ISNULL(NULLIF(cl.LibraryName, ''), ISNULL(NULLIF(cl.SchoolName, ''), 'Unnamed School')) AS LibraryName,
+    COUNT(u.UserID) AS UserCount,
+    CASE
+        WHEN EXISTS
+        (
+            SELECT 1
+            FROM dbo.BorrowingRecords br
+            WHERE br.ClientID = cl.ClientID
+              AND ISNULL(br.IsArchived, 0) = 0
+              AND (
+                    UPPER(ISNULL(br.Status, '')) = 'OVERDUE'
+                    OR TRY_CONVERT(DATE, br.DueDate) < CAST(GETDATE() AS DATE)
+                  )
+        ) THEN 'Small Issue'
+        ELSE 'Running Well'
+    END AS HealthStatus
+FROM dbo.ClientLibraries cl
+LEFT JOIN dbo.Users u
+    ON u.ClientID = cl.ClientID
+   AND ISNULL(u.IsArchived, 0) = 0
+WHERE ISNULL(cl.IsArchived, 0) = 0
+GROUP BY cl.ClientID, cl.LibraryName, cl.SchoolName
+ORDER BY cl.ClientID DESC;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                string health = SafeText(reader["HealthStatus"], "Running Well");
+
+                dashboardLibraries.Add(new DashboardLibraryRow
+                {
+                    LibraryName = SafeText(reader["LibraryName"], "Unnamed School"),
+                    Status = health,
+                    Users = Convert.ToInt32(reader["UserCount"]).ToString("N0"),
+                    Uptime = health == "Small Issue" ? "94.12%" : "99.98%"
+                });
+            }
+
+            foreach (DashboardLibraryRow row in dashboardLibraries)
+                dgvLibraries.Rows.Add(row.LibraryName, row.Status, row.Users, row.Uptime);
+
+            dgvLibraries.ClearSelection();
+        }
+
+        private void LoadDashboardEvents(SqlConnection conn)
+        {
+            dashboardEvents.Clear();
+            eventsFlow.Controls.Clear();
+
+            const string query = @"
+SELECT TOP 8
+    EventTitle,
+    EventSubtitle,
+    EventTime,
+    EventType
+FROM
+(
+    SELECT
+        'New Library Added' AS EventTitle,
+        ISNULL(NULLIF(cl.LibraryName, ''), ISNULL(NULLIF(cl.SchoolName, ''), 'Unnamed School')) AS EventSubtitle,
+        COALESCE(cl.CreatedAt, SYSUTCDATETIME()) AS EventTime,
+        'ADD' AS EventType
+    FROM dbo.ClientLibraries cl
+    WHERE ISNULL(cl.IsArchived, 0) = 0
+
+    UNION ALL
+
+    SELECT
+        'User Registered' AS EventTitle,
+        ISNULL(NULLIF(u.FullName, ''), 'Unnamed User') AS EventSubtitle,
+        COALESCE(u.CreatedAt, SYSUTCDATETIME()) AS EventTime,
+        'USER' AS EventType
+    FROM dbo.Users u
+    WHERE ISNULL(u.IsArchived, 0) = 0
+
+    UNION ALL
+
+    SELECT
+        'Book Borrowed' AS EventTitle,
+        ISNULL(NULLIF(br.BookTitle, ''), 'Unknown Book') AS EventSubtitle,
+        COALESCE(br.CreatedAt, SYSUTCDATETIME()) AS EventTime,
+        'BORROW' AS EventType
+    FROM dbo.BorrowingRecords br
+    WHERE ISNULL(br.IsArchived, 0) = 0
+
+    UNION ALL
+
+    SELECT
+        'Fine Recorded' AS EventTitle,
+        ISNULL(NULLIF(fr.BookTitle, ''), 'Fine transaction') AS EventSubtitle,
+        COALESCE(fr.CreatedAt, SYSUTCDATETIME()) AS EventTime,
+        'ALERT' AS EventType
+    FROM dbo.FineRecords fr
+    WHERE ISNULL(fr.IsArchived, 0) = 0
+) events
+ORDER BY EventTime DESC;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            while (reader.Read())
+            {
+                DateTime eventTime = reader["EventTime"] == DBNull.Value
+                    ? DateTime.Now
+                    : Convert.ToDateTime(reader["EventTime"]);
+
+                string type = SafeText(reader["EventType"], "INFO");
+
+                dashboardEvents.Add(new DashboardEventItem
+                {
+                    Title = SafeText(reader["EventTitle"], "System Event"),
+                    Subtitle = SafeText(reader["EventSubtitle"], ""),
+                    TimeText = FormatAgo(eventTime),
+                    Accent = type == "ALERT" ? Tertiary : type == "ADD" ? AccentEmerald : AccentDeep,
+                    Symbol = type == "ALERT" ? "!" : type == "ADD" ? "+" : "✓"
+                });
+            }
+
+            if (dashboardEvents.Count == 0)
+            {
+                dashboardEvents.Add(new DashboardEventItem
+                {
+                    Title = "No Recent Events",
+                    Subtitle = "Database is connected",
+                    TimeText = "just now",
+                    Accent = AccentDeep,
+                    Symbol = "✓"
+                });
+            }
+
+            foreach (DashboardEventItem item in dashboardEvents)
+                AddEventItem(item.Title, item.Subtitle, item.TimeText, item.Accent, item.Symbol);
+        }
+
+        private void LoadDashboardChart(SqlConnection conn)
+        {
+            int[] values = new int[14];
+
+            using SqlCommand cmd = new SqlCommand(@"
+SELECT TOP 14
+    MonthStart,
+    SUM(TotalCount) AS TotalCount
+FROM
+(
+    SELECT DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1) AS MonthStart, COUNT(*) AS TotalCount
+    FROM dbo.Users
+    WHERE ISNULL(IsArchived, 0) = 0
+    GROUP BY DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1)
+
+    UNION ALL
+
+    SELECT DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1), COUNT(*)
+    FROM dbo.BorrowingRecords
+    WHERE ISNULL(IsArchived, 0) = 0
+    GROUP BY DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1)
+
+    UNION ALL
+
+    SELECT DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1), COUNT(*)
+    FROM dbo.ReturnRecords
+    WHERE ISNULL(IsArchived, 0) = 0
+    GROUP BY DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1)
+
+    UNION ALL
+
+    SELECT DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1), COUNT(*)
+    FROM dbo.FineRecords
+    WHERE ISNULL(IsArchived, 0) = 0
+    GROUP BY DATEFROMPARTS(YEAR(CreatedAt), MONTH(CreatedAt), 1)
+) x
+GROUP BY MonthStart
+ORDER BY MonthStart DESC;", conn);
+            using (SqlDataReader reader = cmd.ExecuteReader())
+            {
+                List<int> monthData = new List<int>();
+
+                while (reader.Read())
+                    monthData.Add(Convert.ToInt32(reader["TotalCount"]));
+
+                monthData.Reverse();
+
+                for (int i = 0; i < values.Length; i++)
+                    values[i] = i < monthData.Count ? monthData[i] : 0;
+            }
+
+            int max = Math.Max(1, values.Max());
+
+            for (int i = 0; i < speedBars.Count && i < values.Length; i++)
+            {
+                int h = 40 + (int)(170.0 * values[i] / max);
+                speedBars[i].Height = h;
+                speedBars[i].BackColor = i == values.Length - 1 ? AccentEmerald : Color.FromArgb(170, 208, 198);
+            }
+        }
+
+        private string FormatAgo(DateTime timeValue)
+        {
+            TimeSpan diff = DateTime.Now - timeValue;
+
+            if (diff.TotalMinutes < 1) return "just now";
+            if (diff.TotalMinutes < 60) return ((int)diff.TotalMinutes) + " minutes ago";
+            if (diff.TotalHours < 24) return ((int)diff.TotalHours) + " hours ago";
+            if (diff.TotalDays < 7) return ((int)diff.TotalDays) + " days ago";
+
+            return timeValue.ToString("MMM dd, yyyy");
         }
 
         public void LoadUserInfo()
@@ -1489,6 +2017,12 @@ namespace EducationSystem
             RefreshDashboardData();
             ApplyTheme(UserSession.Theme);
 
+            dashboardScrollHost.Visible = true;
+            dashboardScrollHost.BringToFront();
+
+            panelContent.Controls.Clear();
+            panelContent.Visible = false;
+
             label4.Visible = true;
             dashboardSubTitle.Visible = true;
             heroLibrariesCard.Visible = true;
@@ -1499,9 +2033,6 @@ namespace EducationSystem
             eventsPanel.Visible = true;
             fabMonitor.Visible = true;
 
-            panelContent.Controls.Clear();
-            panelContent.Visible = false;
-
             SetActiveNavButton(navDashboard);
             UpdateTopHeaderSearchVisibility();
             ApplyResponsiveLayout();
@@ -1509,6 +2040,8 @@ namespace EducationSystem
 
         private void HideDashboardHome()
         {
+            dashboardScrollHost.Visible = false;
+
             label4.Visible = false;
             dashboardSubTitle.Visible = false;
             heroLibrariesCard.Visible = false;
@@ -1582,6 +2115,8 @@ namespace EducationSystem
             topbar.BackColor = TopBack;
             panel1.BackColor = FooterBack;
             panelContent.BackColor = FormBack;
+            dashboardScrollHost.BackColor = FormBack;
+            dashboardCanvas.BackColor = FormBack;
 
             label1.ForeColor = AccentMint;
             username.ForeColor = PrimaryText;
@@ -1657,5 +2192,23 @@ namespace EducationSystem
 
             base.OnFormClosed(e);
         }
+    }
+
+
+    public class DashboardLibraryRow
+    {
+        public string LibraryName { get; set; } = "";
+        public string Status { get; set; } = "";
+        public string Users { get; set; } = "";
+        public string Uptime { get; set; } = "";
+    }
+
+    public class DashboardEventItem
+    {
+        public string Title { get; set; } = "";
+        public string Subtitle { get; set; } = "";
+        public string TimeText { get; set; } = "";
+        public Color Accent { get; set; }
+        public string Symbol { get; set; } = "";
     }
 }
