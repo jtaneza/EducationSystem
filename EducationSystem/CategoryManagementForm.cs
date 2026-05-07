@@ -191,7 +191,9 @@ namespace EducationSystem
             {
                 Dock = DockStyle.Fill,
                 BackColor = FormBack,
-                AutoScroll = true
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 0),
+                AutoScrollMinSize = new Size(0, 0)
             };
             canvas.HorizontalScroll.Enabled = false;
             canvas.HorizontalScroll.Visible = false;
@@ -282,7 +284,7 @@ namespace EducationSystem
 
         private void BuildDirectory()
         {
-            directoryShell = CreateCard(CardSoft);
+            directoryShell = new Panel { BackColor = Color.Transparent };
             directoryCard = CreateCard(CardBack);
             directoryHeader = new Panel { BackColor = CardBack };
 
@@ -1062,13 +1064,6 @@ IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
             };
             archive.Click += async (s, e) => await ArchiveCategoryAsync(data);
 
-            Panel line = new Panel
-            {
-                Name = "Line",
-                Height = 1,
-                BackColor = LineSoft
-            };
-
             row.Controls.Add(id);
             row.Controls.Add(iconBox);
             row.Controls.Add(name);
@@ -1078,7 +1073,6 @@ IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
             row.Controls.Add(addedBy);
             row.Controls.Add(edit);
             row.Controls.Add(archive);
-            row.Controls.Add(line);
 
             return row;
         }
@@ -1238,11 +1232,13 @@ IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
             int directoryHeight = (narrow ? 116 : 92) + 54 + (visibleRowCount * rowHeight) + emptyStateHeight + 96;
 
             directoryShell.Bounds = new Rectangle(margin, directoryTop, usableWidth, directoryHeight);
-            directoryCard.Bounds = new Rectangle(4, 4, Math.Max(1, directoryShell.Width - 12), Math.Max(1, directoryShell.Height - 8));
+            directoryCard.Bounds = new Rectangle(0, 0, Math.Max(1, directoryShell.Width), Math.Max(1, directoryShell.Height));
 
             LayoutDirectory(narrow, tiny, rowHeight);
 
-            canvas.AutoScrollMinSize = new Size(Math.Max(0, usableWidth + (margin * 2)), directoryShell.Bottom + 42);
+            canvas.AutoScrollMinSize = new Size(0, directoryShell.Bottom + 42);
+            canvas.HorizontalScroll.Enabled = false;
+            canvas.HorizontalScroll.Visible = false;
         }
 
         private void LayoutStatCard(Panel card)
@@ -1409,7 +1405,6 @@ IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
             int actionStart = w - actionW;
             row.Controls["Edit"].Bounds = new Rectangle(actionStart + 28, (row.Height - 28) / 2, 28, 28);
             row.Controls["Archive"].Bounds = new Rectangle(actionStart + 72, (row.Height - 28) / 2, 28, 28);
-            row.Controls["Line"].Bounds = new Rectangle(0, row.Height - 1, w, 1);
         }
 
         private sealed class AddCategoryDialog : Form
@@ -1685,8 +1680,6 @@ IF COL_LENGTH('dbo.Categories', 'ClientID') IS NULL
             using System.Drawing.Drawing2D.GraphicsPath path = GetRoundedRectPath(new Rectangle(0, 0, panel.Width - 1, panel.Height - 1), 14);
             e.Graphics.FillPath(brush, path);
 
-            using Pen border = new Pen(Color.FromArgb(38, Outline), 1);
-            e.Graphics.DrawPath(border, path);
         }
 
         private void CirclePaint(object? sender, PaintEventArgs e)
