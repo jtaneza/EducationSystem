@@ -41,6 +41,11 @@ namespace EducationSystem
         private Button btnPage3 = null!;
         private Button btnNext = null!;
 
+        private const int PageSize = 3;
+        private int currentPage = 1;
+        private int totalPages = 1;
+        private List<ClientDbItem> currentClients = new List<ClientDbItem>();
+
         public ClientsForm()
         {
             InitializeComponent();
@@ -54,7 +59,7 @@ namespace EducationSystem
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
-            AutoScroll = true;
+            AutoScroll = false;
 
             headerPanel = new Panel
             {
@@ -103,7 +108,7 @@ namespace EducationSystem
             {
                 Dock = DockStyle.Fill,
                 BackColor = SurfaceLowest,
-                Padding = new Padding(34, 0, 34, 24),
+                Padding = new Padding(34, 0, 34, 34),
                 BorderStyle = BorderStyle.FixedSingle
             };
 
@@ -155,7 +160,7 @@ namespace EducationSystem
                 }
             };
 
-            txtSearch.TextChanged += (s, e) => LoadClientsToGrid();
+            txtSearch.TextChanged += (s, e) => { currentPage = 1; LoadClientsToGrid(); };
 
             btnFilter = CreateToolbarIconButton("☰");
             btnExport = CreateToolbarIconButton("⇩");
@@ -225,11 +230,14 @@ namespace EducationSystem
 
             dgvClients.CellPainting += dgvClients_CellPainting;
             dgvClients.CellClick += dgvClients_CellClick;
+            dgvClients.CellMouseEnter += dgvClients_CellMouseEnter;
+            dgvClients.CellMouseLeave += dgvClients_CellMouseLeave;
+            dgvClients.CellToolTipTextNeeded += dgvClients_CellToolTipTextNeeded;
 
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 64,
+                Height = 78,
                 BackColor = Color.FromArgb(250, 252, 252)
             };
 
@@ -253,6 +261,12 @@ namespace EducationSystem
             footerPanel.Controls.Add(btnPage2);
             footerPanel.Controls.Add(btnPage3);
             footerPanel.Controls.Add(btnNext);
+
+            btnPrev.Click += (s, e) => ChangePage(currentPage - 1);
+            btnPage1.Click += (s, e) => ChangePage(1);
+            btnPage2.Click += (s, e) => ChangePage(2);
+            btnPage3.Click += (s, e) => ChangePage(3);
+            btnNext.Click += (s, e) => ChangePage(currentPage + 1);
 
             tableCard.Controls.Add(dgvClients);
             tableCard.Controls.Add(footerPanel);
@@ -332,13 +346,17 @@ namespace EducationSystem
             btnExport.Location = new Point(tableCard.Width - 84, 24);
             btnFilter.Location = new Point(btnExport.Left - 48, 24);
 
-            lblFooterInfo.Location = new Point(26, 22);
+            int pagerY = 10;
+            int footerTextY = 22;
+            lblFooterInfo.Location = new Point(26, footerTextY);
 
-            btnNext.Location = new Point(footerPanel.Width - 44, 12);
-            btnPage3.Location = new Point(btnNext.Left - 48, 12);
-            btnPage2.Location = new Point(btnPage3.Left - 48, 12);
-            btnPage1.Location = new Point(btnPage2.Left - 48, 12);
-            btnPrev.Location = new Point(btnPage1.Left - 48, 12);
+            btnNext.Location = new Point(footerPanel.Width - 58, pagerY);
+            btnPage3.Location = new Point(btnNext.Left - 48, pagerY);
+            btnPage2.Location = new Point(btnPage3.Left - 48, pagerY);
+            btnPage1.Location = new Point(btnPage2.Left - 48, pagerY);
+            btnPrev.Location = new Point(btnPage1.Left - 48, pagerY);
+
+            footerPanel.Padding = new Padding(0, 0, 0, 12);
         }
 
         private void ClientsForm_Resize(object? sender, EventArgs e)
@@ -348,8 +366,6 @@ namespace EducationSystem
 
         private void LoadClientsToGrid()
         {
-            dgvClients.Rows.Clear();
-
             string searchText = "";
             if (txtSearch != null &&
                 !string.IsNullOrWhiteSpace(txtSearch.Text) &&
@@ -358,9 +374,37 @@ namespace EducationSystem
                 searchText = txtSearch.Text.Trim();
             }
 
-            List<ClientDbItem> clients = ClientService.GetClients(searchText);
+            currentClients = ClientService.GetClients(searchText);
+            totalPages = Math.Max(1, (int)Math.Ceiling(currentClients.Count / (double)PageSize));
 
-            foreach (ClientDbItem client in clients)
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+
+            if (currentPage < 1)
+                currentPage = 1;
+
+            RenderCurrentPage();
+        }
+
+        private void ChangePage(int page)
+        {
+            if (page < 1 || page > totalPages)
+                return;
+
+            currentPage = page;
+            RenderCurrentPage();
+        }
+
+        private void RenderCurrentPage()
+        {
+            dgvClients.Rows.Clear();
+
+            List<ClientDbItem> pageItems = currentClients
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            foreach (ClientDbItem client in pageItems)
             {
                 string schoolCell = GetInitials(client.LibraryName) + "|" + client.LibraryName + "|" + client.LibraryCode;
 
@@ -370,12 +414,51 @@ namespace EducationSystem
                     client.Email,
                     client.UserCount.ToString("N0"),
                     client.Status,
-                    "Edit|Delete"
+                    ""
                 );
             }
 
             dgvClients.ClearSelection();
-            lblFooterInfo.Text = $"Showing 1 - {clients.Count} of {clients.Count} institutions";
+
+            int total = currentClients.Count;
+            int start = total == 0 ? 0 : ((currentPage - 1) * PageSize) + 1;
+            int end = Math.Min(currentPage * PageSize, total);
+
+            lblFooterInfo.Text = total == 0
+                ? "Showing 0 institutions"
+                : $"Showing {start} - {end} of {total} institutions";
+
+            UpdatePagerButtons();
+        }
+
+        private void UpdatePagerButtons()
+        {
+            btnPrev.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+
+            Button[] pageButtons = { btnPage1, btnPage2, btnPage3 };
+
+            for (int i = 0; i < pageButtons.Length; i++)
+            {
+                int pageNumber = i + 1;
+                Button btn = pageButtons[i];
+
+                btn.Text = pageNumber.ToString();
+                btn.Visible = pageNumber <= totalPages;
+
+                bool active = currentPage == pageNumber;
+                btn.BackColor = active ? AccentEmerald : Color.Transparent;
+                btn.ForeColor = active ? Color.White : OnSurface;
+                btn.FlatAppearance.BorderSize = active ? 0 : 1;
+                btn.FlatAppearance.BorderColor = SurfaceVariant;
+            }
+
+            btnPrev.BackColor = Color.Transparent;
+            btnNext.BackColor = Color.Transparent;
+            btnPrev.ForeColor = btnPrev.Enabled ? OnSurface : SecondaryText;
+            btnNext.ForeColor = btnNext.Enabled ? OnSurface : SecondaryText;
+
+            AdjustResponsiveLayout();
         }
 
         private string GetInitials(string libraryName)
@@ -454,6 +537,45 @@ namespace EducationSystem
             }
         }
 
+        private void ToggleClientStatus(int dbClientId, string libraryName)
+        {
+            ClientDbItem? client = ClientService.GetClients()
+                .FirstOrDefault(c => c.DbClientID == dbClientId);
+
+            if (client == null) return;
+
+            string newStatus = client.Status.Equals("Active", StringComparison.OrdinalIgnoreCase)
+                ? "Inactive"
+                : "Active";
+
+            DialogResult result = MessageBox.Show(
+                $"Set '{libraryName}' status to {newStatus}?",
+                "Update Client Status",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+
+            if (result != DialogResult.Yes) return;
+
+            try
+            {
+                ClientService.UpdateClientWithAdmin(
+                    dbClientId,
+                    client.LibraryName,
+                    client.Email,
+                    client.PasswordText,
+                    newStatus
+                );
+
+                MessageBox.Show("Client status updated successfully.");
+                LoadClientsToGrid();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error updating client status:\n\n" + ex.Message);
+            }
+        }
+
         private void ArchiveClient(int dbClientId, string libraryName)
         {
             DialogResult result = MessageBox.Show(
@@ -484,8 +606,9 @@ namespace EducationSystem
 
         private void dgvClients_CellClick(object? sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex < 0) return;
-            if (dgvClients.Columns[e.ColumnIndex].Name != "Actions") return;
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
+            string columnName = dgvClients.Columns[e.ColumnIndex].Name;
 
             int dbClientId = Convert.ToInt32(dgvClients.Rows[e.RowIndex].Cells["DbClientID"].Value);
             string schoolCell = dgvClients.Rows[e.RowIndex].Cells["SchoolName"].Value?.ToString() ?? "";
@@ -495,13 +618,50 @@ namespace EducationSystem
             string libraryName = parts[1];
             string libraryCode = parts[2];
 
-            int relativeX = dgvClients.PointToClient(Cursor.Position).X
-                            - dgvClients.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false).X;
+            if (columnName == "Status")
+            {
+                ToggleClientStatus(dbClientId, libraryName);
+                return;
+            }
 
-            if (relativeX < 36)
+            if (columnName != "Actions") return;
+
+            Rectangle cellRect = dgvClients.GetCellDisplayRectangle(e.ColumnIndex, e.RowIndex, false);
+            Point mouse = dgvClients.PointToClient(Cursor.Position);
+            int relativeX = mouse.X - cellRect.X;
+
+            // Edit icon area.
+            if (relativeX >= 8 && relativeX <= 42)
+            {
                 EditClient(dbClientId, libraryCode);
-            else
+                return;
+            }
+
+            // Archive icon area.
+            if (relativeX >= 48 && relativeX <= 86)
+            {
                 ArchiveClient(dbClientId, libraryName);
+                return;
+            }
+        }
+
+        private void dgvClients_CellMouseEnter(object? sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+
+            string columnName = dgvClients.Columns[e.ColumnIndex].Name;
+            if (columnName == "Actions" || columnName == "Status")
+                dgvClients.Cursor = Cursors.Hand;
+        }
+
+        private void dgvClients_CellMouseLeave(object? sender, DataGridViewCellEventArgs e)
+        {
+            dgvClients.Cursor = Cursors.Default;
+        }
+
+        private void dgvClients_CellToolTipTextNeeded(object? sender, DataGridViewCellToolTipTextNeededEventArgs e)
+        {
+            e.ToolTipText = "";
         }
 
         private void dgvClients_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)

@@ -42,6 +42,7 @@ namespace EducationSystem
         private Label lblRateValue = null!;
         private Panel circulationTrack = null!;
 
+        private Panel tableOuter = null!;
         private Panel tableCard = null!;
         private DataGridView dgvBooks = null!;
         private Panel footerPanel = null!;
@@ -53,6 +54,22 @@ namespace EducationSystem
         private Label lblEllipsis = null!;
         private Button btnPageLast = null!;
         private Button btnNext = null!;
+
+        private const int PageSize = 4;
+        private int currentPage = 1;
+        private int totalPages = 1;
+        private List<BookCatalogItem> allBooks = new List<BookCatalogItem>();
+
+        private sealed class BookCatalogItem
+        {
+            public string BookId { get; set; } = "";
+            public string Title { get; set; } = "";
+            public string Category { get; set; } = "";
+            public string Library { get; set; } = "";
+            public string RecordedBy { get; set; } = "";
+            public string Status { get; set; } = "In Stock";
+            public DateTime? CreatedAt { get; set; }
+        }
 
         public BookCatalogForm()
         {
@@ -68,6 +85,8 @@ namespace EducationSystem
             TopLevel = false;
             Dock = DockStyle.Fill;
             AutoScroll = true;
+            HorizontalScroll.Enabled = false;
+            HorizontalScroll.Visible = false;
 
             headerPanel = new Panel
             {
@@ -139,6 +158,13 @@ namespace EducationSystem
             statsPanel.Controls.Add(cardInstitutions);
             statsPanel.Controls.Add(cardRate);
 
+            tableOuter = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Background,
+                Padding = new Padding(34, 0, 34, 34)
+            };
+
             tableCard = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -205,8 +231,9 @@ namespace EducationSystem
             footerPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 64,
-                BackColor = SurfaceLow
+                Height = 82,
+                BackColor = SurfaceLow,
+                Padding = new Padding(0, 0, 0, 14)
             };
 
             lblFooterInfo = new Label
@@ -241,10 +268,18 @@ namespace EducationSystem
             footerPanel.Controls.Add(btnPageLast);
             footerPanel.Controls.Add(btnNext);
 
+            btnPrev.Click += (s, e) => ChangePage(currentPage - 1);
+            btnPage1.Click += (s, e) => ChangePage(1);
+            btnPage2.Click += (s, e) => ChangePage(2);
+            btnPage3.Click += (s, e) => ChangePage(3);
+            btnPageLast.Click += (s, e) => ChangePage(totalPages);
+            btnNext.Click += (s, e) => ChangePage(currentPage + 1);
+
             tableCard.Controls.Add(dgvBooks);
             tableCard.Controls.Add(footerPanel);
+            tableOuter.Controls.Add(tableCard);
 
-            Controls.Add(tableCard);
+            Controls.Add(tableOuter);
             Controls.Add(statsPanel);
             Controls.Add(headerPanel);
 
@@ -283,7 +318,8 @@ namespace EducationSystem
 
             Label totalTrend = new Label
             {
-                Text = "↗  +1,204 this month",
+                Name = "TotalTrend",
+                Text = "↗  +0 this month",
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 ForeColor = AccentDeep,
                 AutoSize = true,
@@ -418,6 +454,7 @@ namespace EducationSystem
 
         private void LoadBooksFromDatabase()
         {
+            allBooks.Clear();
             dgvBooks.Rows.Clear();
 
             try
@@ -434,6 +471,7 @@ SELECT
     b.Category,
     b.RecordedBy,
     b.Status,
+    b.CreatedAt,
     ISNULL(NULLIF(cl.LibraryName, ''), 'Unknown School') AS LibraryName
 FROM dbo.Books b
 LEFT JOIN dbo.ClientLibraries cl
@@ -444,9 +482,9 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 using SqlDataReader reader = cmd.ExecuteReader();
 
-                int total = 0;
                 HashSet<string> institutions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 int borrowed = 0;
+                int addedThisMonth = 0;
 
                 while (reader.Read())
                 {
@@ -457,15 +495,21 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
                     string status = Convert.ToString(reader["Status"]) ?? "In Stock";
                     string library = Convert.ToString(reader["LibraryName"]) ?? "Unknown School";
 
-                    dgvBooks.Rows.Add(
-                        bookId,
-                        title + "|cover",
-                        category,
-                        library + "|Admin: " + recordedBy,
-                        status
-                    );
+                    DateTime? createdAt = null;
+                    if (reader["CreatedAt"] != DBNull.Value)
+                        createdAt = Convert.ToDateTime(reader["CreatedAt"]);
 
-                    total++;
+                    allBooks.Add(new BookCatalogItem
+                    {
+                        BookId = bookId,
+                        Title = title,
+                        Category = category,
+                        Library = library,
+                        RecordedBy = recordedBy,
+                        Status = status,
+                        CreatedAt = createdAt
+                    });
+
                     institutions.Add(library);
 
                     if (status.Equals("Borrowed", StringComparison.OrdinalIgnoreCase) ||
@@ -473,10 +517,23 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
                     {
                         borrowed++;
                     }
+
+                    if (createdAt.HasValue &&
+                        createdAt.Value.Month == DateTime.Today.Month &&
+                        createdAt.Value.Year == DateTime.Today.Year)
+                    {
+                        addedThisMonth++;
+                    }
                 }
+
+                int total = allBooks.Count;
 
                 lblTotalValue.Text = total.ToString("N0");
                 lblInstitutionValue.Text = institutions.Count.ToString("N0");
+
+                Label? trend = cardTotal.Controls["TotalTrend"] as Label;
+                if (trend != null)
+                    trend.Text = $"↗  +{addedThisMonth:N0} this month";
 
                 int rate = total == 0 ? 0 : (int)Math.Round((double)borrowed / total * 100);
                 lblRateValue.Text = rate + "%";
@@ -484,16 +541,93 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
                 if (circulationTrack.Controls.Count > 0)
                     circulationTrack.Controls[0].Width = (int)(176 * Math.Min(100, rate) / 100.0);
 
-                lblFooterInfo.Text = total == 0
-                    ? "Showing 0 of 0 entries"
-                    : $"Showing 1 to {total:N0} of {total:N0} entries";
+                currentPage = 1;
+                totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)PageSize));
 
+                RenderCurrentPage();
                 dgvBooks.ClearSelection();
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Global catalog could not be loaded.\\n\\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Global catalog could not be loaded.\n\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ChangePage(int page)
+        {
+            if (page < 1 || page > totalPages)
+                return;
+
+            currentPage = page;
+            RenderCurrentPage();
+        }
+
+        private void RenderCurrentPage()
+        {
+            dgvBooks.Rows.Clear();
+
+            List<BookCatalogItem> pageItems = allBooks
+                .Skip((currentPage - 1) * PageSize)
+                .Take(PageSize)
+                .ToList();
+
+            foreach (BookCatalogItem book in pageItems)
+            {
+                dgvBooks.Rows.Add(
+                    book.BookId,
+                    book.Title + "|cover",
+                    book.Category,
+                    book.Library + "|Admin: " + book.RecordedBy,
+                    book.Status
+                );
+            }
+
+            int total = allBooks.Count;
+            int start = total == 0 ? 0 : ((currentPage - 1) * PageSize) + 1;
+            int end = Math.Min(currentPage * PageSize, total);
+
+            lblFooterInfo.Text = total == 0
+                ? "Showing 0 of 0 entries"
+                : $"Showing {start} to {end} of {total:N0} entries";
+
+            UpdatePagerButtons();
+            dgvBooks.ClearSelection();
+        }
+
+        private void UpdatePagerButtons()
+        {
+            btnPrev.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+
+            btnPage1.Visible = totalPages >= 1;
+            btnPage2.Visible = totalPages >= 2;
+            btnPage3.Visible = totalPages >= 3;
+            lblEllipsis.Visible = totalPages > 4;
+            btnPageLast.Visible = totalPages > 3;
+
+            btnPageLast.Text = totalPages.ToString();
+            btnPageLast.Width = totalPages.ToString().Length > 2 ? 54 : 34;
+
+            Button[] pageButtons = { btnPage1, btnPage2, btnPage3 };
+
+            for (int i = 0; i < pageButtons.Length; i++)
+            {
+                int pageNumber = i + 1;
+                Button btn = pageButtons[i];
+
+                bool active = currentPage == pageNumber;
+                btn.BackColor = active ? AccentDeep : Color.Transparent;
+                btn.ForeColor = active ? Color.White : OnSurface;
+            }
+
+            bool lastActive = currentPage == totalPages && totalPages > 3;
+            btnPageLast.BackColor = lastActive ? AccentDeep : Color.Transparent;
+            btnPageLast.ForeColor = lastActive ? Color.White : OnSurface;
+
+            btnPrev.ForeColor = btnPrev.Enabled ? OnSurface : SecondaryText;
+            btnNext.ForeColor = btnNext.Enabled ? OnSurface : SecondaryText;
+
+            AdjustLayout();
         }
 
         private void EnsureGlobalCatalogSchema(SqlConnection conn)
@@ -506,7 +640,10 @@ IF COL_LENGTH('dbo.Books', 'RecordedBy') IS NULL
     ALTER TABLE dbo.Books ADD RecordedBy NVARCHAR(150) NULL;
 
 IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
-    ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_IsArchived_Global DEFAULT 0;";
+    ALTER TABLE dbo.Books ADD IsArchived BIT NOT NULL CONSTRAINT DF_Books_IsArchived_Global DEFAULT 0;
+
+IF COL_LENGTH('dbo.Books', 'CreatedAt') IS NULL
+    ALTER TABLE dbo.Books ADD CreatedAt DATETIME2 NULL;";
 
             using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.ExecuteNonQuery();
@@ -519,9 +656,11 @@ IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
 
         private void AdjustLayout()
         {
-            int margin = 34;
+            if (ClientSize.Width <= 0 || ClientSize.Height <= 0) return;
+
+            int margin = ClientSize.Width < 1000 ? 24 : 40;
             int gap = 24;
-            int width = ClientSize.Width - (margin * 2);
+            int width = Math.Max(640, ClientSize.Width - (margin * 2));
 
             lblTitle.Location = new Point(margin, 34);
             lblSubTitle.Location = new Point(margin, 84);
@@ -552,15 +691,57 @@ IF COL_LENGTH('dbo.Books', 'IsArchived') IS NULL
                 cardRate.Bounds = new Rectangle(cardInstitutions.Right + gap, cardTotal.Bottom + gap, half, 180);
             }
 
-            lblFooterInfo.Location = new Point(24, 22);
+            if (tableOuter != null)
+            {
+                tableOuter.Padding = new Padding(margin, 0, margin, 44);
+            }
 
-            btnNext.Location = new Point(footerPanel.Width - 34, 15);
-            btnPageLast.Location = new Point(btnNext.Left - btnPageLast.Width - 6, 15);
-            lblEllipsis.Location = new Point(btnPageLast.Left - 26, 22);
-            btnPage3.Location = new Point(lblEllipsis.Left - btnPage3.Width - 6, 15);
-            btnPage2.Location = new Point(btnPage3.Left - btnPage2.Width - 6, 15);
-            btnPage1.Location = new Point(btnPage2.Left - btnPage1.Width - 6, 15);
-            btnPrev.Location = new Point(btnPage1.Left - btnPrev.Width - 6, 15);
+            // Keep footer controls high enough so the pagination will not be cut.
+            int pagerY = 14;
+            int footerTextY = 26;
+
+            lblFooterInfo.Location = new Point(24, footerTextY);
+
+            int x = footerPanel.Width - 26;
+
+            btnNext.Location = new Point(x - btnNext.Width, pagerY);
+            x = btnNext.Left - 8;
+
+            if (btnPageLast.Visible)
+            {
+                btnPageLast.Location = new Point(x - btnPageLast.Width, pagerY);
+                x = btnPageLast.Left - 8;
+            }
+
+            if (lblEllipsis.Visible)
+            {
+                lblEllipsis.Location = new Point(x - 22, pagerY + 7);
+                x = lblEllipsis.Left - 8;
+            }
+
+            if (btnPage3.Visible)
+            {
+                btnPage3.Location = new Point(x - btnPage3.Width, pagerY);
+                x = btnPage3.Left - 8;
+            }
+
+            if (btnPage2.Visible)
+            {
+                btnPage2.Location = new Point(x - btnPage2.Width, pagerY);
+                x = btnPage2.Left - 8;
+            }
+
+            if (btnPage1.Visible)
+            {
+                btnPage1.Location = new Point(x - btnPage1.Width, pagerY);
+                x = btnPage1.Left - 8;
+            }
+
+            btnPrev.Location = new Point(x - btnPrev.Width, pagerY);
+
+            // Give enough scrollable page height for smaller screens.
+            int neededHeight = headerPanel.Height + statsPanel.Height + 520;
+            AutoScrollMinSize = new Size(0, neededHeight);
         }
 
         private void dgvBooks_CellPainting(object? sender, DataGridViewCellPaintingEventArgs e)

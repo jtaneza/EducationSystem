@@ -610,23 +610,40 @@ WHERE ClientID = @ClientID;";
 
                 using SqlDataReader reader = cmd.ExecuteReader();
 
-                if (!reader.Read())
-                    return;
+                if (reader.Read())
+                {
+                    portalSettings.DailyLateFee = ReadDecimal(reader["DailyLateFee"], 2.50m);
+                    portalSettings.MaximumTotalFee = ReadDecimal(reader["MaximumTotalFee"], 100.00m);
+                    portalSettings.HoursMonFri = ReadText(reader["LibraryHoursMonFri"], "08:00 - 22:00");
+                    portalSettings.HoursSaturday = ReadText(reader["LibraryHoursSaturday"], "10:00 - 18:00");
+                    portalSettings.HoursSunday = ReadText(reader["LibraryHoursSunday"], "Closed");
+                    portalSettings.BranchName = ReadText(reader["LibraryBranchName"], "Main Library Branch");
+                    portalSettings.BranchLocation = ReadText(reader["LibraryBranchLocation"], "Davao City, Davao del Sur, Philippines");
+                }
 
-                portalSettings.DailyLateFee = ReadDecimal(reader["DailyLateFee"], 2.50m);
-                portalSettings.MaximumTotalFee = ReadDecimal(reader["MaximumTotalFee"], 100.00m);
-                portalSettings.HoursMonFri = ReadText(reader["LibraryHoursMonFri"], "08:00 - 22:00");
-                portalSettings.HoursSaturday = ReadText(reader["LibraryHoursSaturday"], "10:00 - 18:00");
-                portalSettings.HoursSunday = ReadText(reader["LibraryHoursSunday"], "Closed");
-                portalSettings.BranchName = ReadText(reader["LibraryBranchName"], "Main Library Branch");
-                portalSettings.BranchLocation = ReadText(reader["LibraryBranchLocation"], "Davao City, Davao del Sur, Philippines");
+                reader.Close();
+
+                string fineQuery = @"
+SELECT TOP 1 DefaultAmount
+FROM dbo.FinePolicies
+WHERE ClientID = @ClientID
+AND UPPER(FineType) IN ('LATE RETURN', 'OVERDUE')
+AND ISNULL(IsArchived, 0) = 0
+ORDER BY PolicyID DESC;";
+
+                using SqlCommand fineCmd = new SqlCommand(fineQuery, conn);
+                fineCmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
+
+                object? result = fineCmd.ExecuteScalar();
+
+                if (result != null && result != DBNull.Value)
+                    portalSettings.DailyLateFee = Convert.ToDecimal(result);
             }
             catch
             {
-                // Keep safe defaults when setup rows are not available.
+                // keep defaults
             }
         }
-
         private int GetCurrentClientId()
         {
             object? value =

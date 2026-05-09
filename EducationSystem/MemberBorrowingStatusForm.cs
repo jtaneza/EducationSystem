@@ -604,23 +604,42 @@ WHERE ClientID = @ClientID;";
 
                 using SqlDataReader reader = cmd.ExecuteReader();
 
-                if (!reader.Read())
-                    return;
+                if (reader.Read())
+                {
+                    portalSettings.DailyLateFee = ReadDecimal(reader["DailyLateFee"], 2.50m);
+                    portalSettings.MaximumTotalFee = ReadDecimal(reader["MaximumTotalFee"], 100.00m);
+                    portalSettings.HoursMonFri = ReadText(reader["LibraryHoursMonFri"], "08:00 - 22:00");
+                    portalSettings.HoursSaturday = ReadText(reader["LibraryHoursSaturday"], "10:00 - 18:00");
+                    portalSettings.HoursSunday = ReadText(reader["LibraryHoursSunday"], "Closed");
+                    portalSettings.BranchName = ReadText(reader["LibraryBranchName"], "Main Library Branch");
+                    portalSettings.BranchLocation = ReadText(reader["LibraryBranchLocation"], "Davao City");
+                }
 
-                portalSettings.DailyLateFee = ReadDecimal(reader["DailyLateFee"], 2.50m);
-                portalSettings.MaximumTotalFee = ReadDecimal(reader["MaximumTotalFee"], 100.00m);
-                portalSettings.HoursMonFri = ReadText(reader["LibraryHoursMonFri"], "08:00 - 22:00");
-                portalSettings.HoursSaturday = ReadText(reader["LibraryHoursSaturday"], "10:00 - 18:00");
-                portalSettings.HoursSunday = ReadText(reader["LibraryHoursSunday"], "Closed");
-                portalSettings.BranchName = ReadText(reader["LibraryBranchName"], "Main Library Branch");
-                portalSettings.BranchLocation = ReadText(reader["LibraryBranchLocation"], "Davao City, Davao del Sur, Philippines");
+                reader.Close();
+
+                // LOAD LATE RETURN POLICY FROM ADMIN
+                string fineQuery = @"
+SELECT TOP 1 DefaultAmount
+FROM dbo.FinePolicies
+WHERE ClientID = @ClientID
+AND FineType = 'LATE RETURN'
+AND ISNULL(IsArchived,0)=0";
+
+                using SqlCommand fineCmd = new SqlCommand(fineQuery, conn);
+                fineCmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
+
+                object result = fineCmd.ExecuteScalar();
+
+                if (result != null && result != DBNull.Value)
+                {
+                    portalSettings.DailyLateFee = Convert.ToDecimal(result);
+                }
             }
             catch
             {
-                // Keep defaults.
+                // keep defaults
             }
         }
-
         private int GetCurrentClientId()
         {
             object? value =
@@ -667,7 +686,10 @@ WHERE ClientID = @ClientID;";
         private decimal CalculateOverdueFine(DateTime dueDate)
         {
             int daysLate = Math.Max(0, (DateTime.Today - dueDate.Date).Days);
-            decimal fine = daysLate * portalSettings.DailyLateFee;
+
+            decimal policyRate = portalSettings.DailyLateFee;
+
+            decimal fine = daysLate * policyRate;
 
             if (portalSettings.MaximumTotalFee > 0)
                 fine = Math.Min(fine, portalSettings.MaximumTotalFee);
@@ -1345,7 +1367,9 @@ WHERE ClientID = @ClientID;";
             Panel period = CreateRuleItem("Loan Period", $"Duration: {portalSettings.LoanPeriodDays} days per item", "▣", ColorTranslator.FromHtml("#B7EBD7"), AccentDeep);
             period.Name = "RulePeriod";
 
-            Panel penalty = CreateRuleItem("Overdue Penalty", $"{FormatPeso(portalSettings.DailyLateFee)} charge per day delayed", "!", ColorTranslator.FromHtml("#FFDDD8"), ColorTranslator.FromHtml("#A03F30"));
+            Panel penalty = CreateRuleItem(
+    "Overdue Penalty",
+    $"{FormatPeso(portalSettings.DailyLateFee)} fine policy from admin settings", "!", ColorTranslator.FromHtml("#FFDDD8"), ColorTranslator.FromHtml("#A03F30"));
             penalty.Name = "RulePenalty";
 
             card.Controls.Add(accent);

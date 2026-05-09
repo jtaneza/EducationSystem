@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
@@ -8,16 +9,36 @@ namespace EducationSystem
 {
     public partial class ProfileForm : Form
     {
+        private readonly Color PageBack = ColorTranslator.FromHtml("#FBF7F7");
+        private readonly Color Navy = ColorTranslator.FromHtml("#081D38");
+        private readonly Color Accent = ColorTranslator.FromHtml("#00B894");
+        private readonly Color AccentDark = ColorTranslator.FromHtml("#006B55");
+        private readonly Color Border = ColorTranslator.FromHtml("#DDE4E6");
+        private readonly Color FieldBack = ColorTranslator.FromHtml("#EEF5F7");
+        private readonly Color TextDark = ColorTranslator.FromHtml("#161D1F");
+        private readonly Color TextMuted = ColorTranslator.FromHtml("#64748B");
+
         private Panel cardPanel = null!;
         private Panel topCardPanel = null!;
-        private Panel bottomCardPanel = null!;
+        private Panel formPanel = null!;
 
         private PictureBox picProfile = null!;
+        private Button btnUploadImage = null!;
+
         private Label lblDisplayName = null!;
         private Label lblUsername = null!;
 
-        private LinkLabel lnkEditProfile = null!;
-        private LinkLabel lnkChangePassword = null!;
+        private TextBox txtFullName = null!;
+        private TextBox txtUsername = null!;
+        private TextBox txtEmail = null!;
+        private TextBox txtCurrentPassword = null!;
+        private TextBox txtNewPassword = null!;
+        private TextBox txtConfirmPassword = null!;
+
+        private Button btnSaveProfile = null!;
+        private Button btnChangePassword = null!;
+
+        private string selectedImagePath = "";
 
         public ProfileForm()
         {
@@ -28,111 +49,236 @@ namespace EducationSystem
 
         private void BuildProfileUI()
         {
-            BackColor = Color.Snow;
+            BackColor = PageBack;
             FormBorderStyle = FormBorderStyle.None;
             TopLevel = false;
             Dock = DockStyle.Fill;
+            AutoScroll = true;
 
-            cardPanel = new Panel();
-            cardPanel.Size = new Size(380, 255);
-            cardPanel.Location = new Point(35, 25);
-            cardPanel.BackColor = Color.White;
-            cardPanel.BorderStyle = BorderStyle.FixedSingle;
+            cardPanel = new Panel
+            {
+                Size = new Size(720, 760),
+                BackColor = Color.White,
+                BorderStyle = BorderStyle.None
+            };
+            cardPanel.Paint += CardPanel_Paint;
 
-            topCardPanel = new Panel();
-            topCardPanel.Dock = DockStyle.Top;
-            topCardPanel.Height = 178;
-            topCardPanel.BackColor = Color.FromArgb(8, 29, 56);
+            topCardPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 230,
+                BackColor = Navy
+            };
 
-            picProfile = new PictureBox();
-            picProfile.Size = new Size(78, 78);
-            picProfile.Location = new Point((topCardPanel.Width - 78) / 2, 40);
-            picProfile.SizeMode = PictureBoxSizeMode.Zoom;
-            picProfile.BackColor = Color.Transparent;
-            picProfile.Anchor = AnchorStyles.Top;
+            picProfile = new PictureBox
+            {
+                Size = new Size(96, 96),
+                Location = new Point((cardPanel.Width - 96) / 2, 28),
+                SizeMode = PictureBoxSizeMode.Zoom,
+                BackColor = Color.Transparent,
+                Anchor = AnchorStyles.Top
+            };
             picProfile.Paint += PicProfile_Paint;
 
-            lblDisplayName = new Label();
-            lblDisplayName.Text = "Admin";
-            lblDisplayName.Font = new Font("Segoe UI", 16, FontStyle.Regular);
-            lblDisplayName.ForeColor = Color.White;
-            lblDisplayName.AutoSize = false;
-            lblDisplayName.TextAlign = ContentAlignment.MiddleCenter;
-            lblDisplayName.Size = new Size(300, 32);
-            lblDisplayName.Location = new Point(40, 118);
+            lblDisplayName = new Label
+            {
+                Text = "Super Admin",
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
+                ForeColor = Color.White,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(420, 34),
+                Location = new Point((cardPanel.Width - 420) / 2, 128)
+            };
 
-            lblUsername = new Label();
-            lblUsername.Text = "@admin";
-            lblUsername.Font = new Font("Segoe UI", 12, FontStyle.Regular);
-            lblUsername.ForeColor = Color.Gainsboro;
-            lblUsername.AutoSize = false;
-            lblUsername.TextAlign = ContentAlignment.MiddleCenter;
-            lblUsername.Size = new Size(300, 26);
-            lblUsername.Location = new Point(40, 146);
+            lblUsername = new Label
+            {
+                Text = "@superadmin",
+                Font = new Font("Segoe UI", 11F, FontStyle.Regular),
+                ForeColor = Color.Gainsboro,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(420, 24),
+                Location = new Point((cardPanel.Width - 420) / 2, 160)
+            };
+
+            btnUploadImage = CreateButton("Upload Image", Accent, Color.White, 140, 34);
+            btnUploadImage.Location = new Point((cardPanel.Width - btnUploadImage.Width) / 2, 190);
+            btnUploadImage.Click += BtnUploadImage_Click;
 
             topCardPanel.Controls.Add(picProfile);
             topCardPanel.Controls.Add(lblDisplayName);
             topCardPanel.Controls.Add(lblUsername);
+            topCardPanel.Controls.Add(btnUploadImage);
 
-            bottomCardPanel = new Panel();
-            bottomCardPanel.Dock = DockStyle.Fill;
-            bottomCardPanel.BackColor = Color.White;
+            formPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.White
+            };
 
-            lnkEditProfile = new LinkLabel();
-            lnkEditProfile.Text = "✎ Edit Profile";
-            lnkEditProfile.Location = new Point(16, 14);
-            lnkEditProfile.Size = new Size(120, 22);
-            lnkEditProfile.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            lnkEditProfile.LinkColor = Color.DimGray;
-            lnkEditProfile.ActiveLinkColor = Color.Maroon;
-            lnkEditProfile.VisitedLinkColor = Color.DimGray;
-            lnkEditProfile.LinkBehavior = LinkBehavior.HoverUnderline;
-            lnkEditProfile.Click += LnkEditProfile_Click;
+            Label heading = CreateLabel("Profile Settings", 20F, FontStyle.Bold, TextDark, 44, 30);
+            Label sub = CreateLabel("Update your profile image, name, username, email, and password.", 10.5F, FontStyle.Regular, TextMuted, 44, 63);
 
-            lnkChangePassword = new LinkLabel();
-            lnkChangePassword.Text = "🔒 Change Password";
-            lnkChangePassword.Location = new Point(16, 42);
-            lnkChangePassword.Size = new Size(160, 22);
-            lnkChangePassword.Font = new Font("Segoe UI", 9, FontStyle.Regular);
-            lnkChangePassword.LinkColor = Color.DimGray;
-            lnkChangePassword.ActiveLinkColor = Color.Maroon;
-            lnkChangePassword.VisitedLinkColor = Color.DimGray;
-            lnkChangePassword.LinkBehavior = LinkBehavior.HoverUnderline;
-            lnkChangePassword.Click += LnkChangePassword_Click;
+            Label fullNameLabel = CreateLabel("FULL NAME", 8.8F, FontStyle.Bold, TextDark, 44, 112);
+            txtFullName = CreateTextBox(44, 136, 292);
 
-            bottomCardPanel.Controls.Add(lnkEditProfile);
-            bottomCardPanel.Controls.Add(lnkChangePassword);
+            Label usernameLabel = CreateLabel("USERNAME", 8.8F, FontStyle.Bold, TextDark, 384, 112);
+            txtUsername = CreateTextBox(384, 136, 292);
 
-            cardPanel.Controls.Add(bottomCardPanel);
+            Label emailLabel = CreateLabel("EMAIL ADDRESS", 8.8F, FontStyle.Bold, TextDark, 44, 190);
+            txtEmail = CreateTextBox(44, 214, 632);
+
+            btnSaveProfile = CreateButton("Save Profile Changes", Accent, Color.White, 224, 44);
+            btnSaveProfile.Location = new Point(44, 276);
+            btnSaveProfile.Click += BtnSaveProfile_Click;
+
+            Panel divider = new Panel
+            {
+                BackColor = Border,
+                Location = new Point(44, 348),
+                Size = new Size(632, 1)
+            };
+
+            Label passHeading = CreateLabel("Change Password", 18F, FontStyle.Bold, TextDark, 44, 374);
+            Label passSub = CreateLabel("Use a strong password to protect your account.", 10F, FontStyle.Regular, TextMuted, 44, 405);
+
+            Label currentLabel = CreateLabel("CURRENT PASSWORD", 8.8F, FontStyle.Bold, TextDark, 44, 448);
+            txtCurrentPassword = CreatePasswordBox(44, 472, 632);
+
+            Label newLabel = CreateLabel("NEW PASSWORD", 8.8F, FontStyle.Bold, TextDark, 44, 526);
+            txtNewPassword = CreatePasswordBox(44, 550, 292);
+
+            Label confirmLabel = CreateLabel("CONFIRM PASSWORD", 8.8F, FontStyle.Bold, TextDark, 384, 526);
+            txtConfirmPassword = CreatePasswordBox(384, 550, 292);
+
+            btnChangePassword = CreateButton("Change Password", Navy, Color.White, 204, 44);
+            btnChangePassword.Location = new Point(44, 622);
+            btnChangePassword.Click += BtnChangePassword_Click;
+
+            formPanel.Controls.Add(heading);
+            formPanel.Controls.Add(sub);
+            formPanel.Controls.Add(fullNameLabel);
+            formPanel.Controls.Add(txtFullName);
+            formPanel.Controls.Add(usernameLabel);
+            formPanel.Controls.Add(txtUsername);
+            formPanel.Controls.Add(emailLabel);
+            formPanel.Controls.Add(txtEmail);
+            formPanel.Controls.Add(btnSaveProfile);
+            formPanel.Controls.Add(divider);
+            formPanel.Controls.Add(passHeading);
+            formPanel.Controls.Add(passSub);
+            formPanel.Controls.Add(currentLabel);
+            formPanel.Controls.Add(txtCurrentPassword);
+            formPanel.Controls.Add(newLabel);
+            formPanel.Controls.Add(txtNewPassword);
+            formPanel.Controls.Add(confirmLabel);
+            formPanel.Controls.Add(txtConfirmPassword);
+            formPanel.Controls.Add(btnChangePassword);
+
+            cardPanel.Controls.Add(formPanel);
             cardPanel.Controls.Add(topCardPanel);
-
             Controls.Add(cardPanel);
 
             topCardPanel.Resize += TopCardPanel_Resize;
+            Resize += (s, e) => CenterCard();
+            CenterCard();
+        }
+
+        private Button CreateButton(string text, Color back, Color fore, int width, int height)
+        {
+            Button btn = new Button
+            {
+                Text = text,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                Size = new Size(width, height),
+                BackColor = back,
+                ForeColor = fore,
+                FlatStyle = FlatStyle.Flat,
+                Cursor = Cursors.Hand
+            };
+
+            btn.FlatAppearance.BorderSize = 0;
+            return btn;
+        }
+
+        private Label CreateLabel(string text, float size, FontStyle style, Color color, int x, int y)
+        {
+            return new Label
+            {
+                Text = text,
+                Font = new Font("Segoe UI", size, style),
+                ForeColor = color,
+                AutoSize = true,
+                Location = new Point(x, y),
+                BackColor = Color.Transparent
+            };
+        }
+
+        private TextBox CreateTextBox(int x, int y, int width)
+        {
+            return new TextBox
+            {
+                Location = new Point(x, y),
+                Size = new Size(width, 34),
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = FieldBack,
+                ForeColor = TextDark,
+                Font = new Font("Segoe UI", 10.5F)
+            };
+        }
+
+        private TextBox CreatePasswordBox(int x, int y, int width)
+        {
+            TextBox box = CreateTextBox(x, y, width);
+            box.UseSystemPasswordChar = true;
+            return box;
+        }
+
+        private void CardPanel_Paint(object? sender, PaintEventArgs e)
+        {
+            using Pen border = new Pen(Border, 1);
+            e.Graphics.DrawRectangle(border, 0, 0, cardPanel.Width - 1, cardPanel.Height - 1);
+        }
+
+        private void CenterCard()
+        {
+            if (cardPanel == null) return;
+
+            int x = Math.Max(40, (ClientSize.Width - cardPanel.Width) / 2);
+            int y = Math.Max(25, (ClientSize.Height - cardPanel.Height) / 2);
+            cardPanel.Location = new Point(x, y);
+
+            AutoScrollMinSize = new Size(0, cardPanel.Bottom + 40);
         }
 
         private void TopCardPanel_Resize(object? sender, EventArgs e)
         {
-            picProfile.Location = new Point((topCardPanel.Width - picProfile.Width) / 2, 40);
-            lblDisplayName.Location = new Point((topCardPanel.Width - lblDisplayName.Width) / 2, 118);
-            lblUsername.Location = new Point((topCardPanel.Width - lblUsername.Width) / 2, 146);
+            picProfile.Location = new Point((topCardPanel.Width - picProfile.Width) / 2, 28);
+            lblDisplayName.Location = new Point((topCardPanel.Width - lblDisplayName.Width) / 2, 128);
+            lblUsername.Location = new Point((topCardPanel.Width - lblUsername.Width) / 2, 160);
+            btnUploadImage.Location = new Point((topCardPanel.Width - btnUploadImage.Width) / 2, 190);
         }
 
         private void LoadProfileData()
         {
-            lblDisplayName.Text = string.IsNullOrWhiteSpace(UserSession.Role) ? "Admin" : UserSession.Role;
+            string username = string.IsNullOrWhiteSpace(UserSession.Username) ? "superadmin" : UserSession.Username;
+            string role = string.IsNullOrWhiteSpace(UserSession.Role) ? "Super Admin" : UserSession.Role;
 
-            string uname = string.IsNullOrWhiteSpace(UserSession.Username) ? "admin" : UserSession.Username;
-            lblUsername.Text = "@" + uname.Replace(" ", "").ToLower();
+            lblDisplayName.Text = role;
+            lblUsername.Text = "@" + username.Replace(" ", "").ToLower();
+
+            txtFullName.Text = role;
+            txtUsername.Text = username;
+            txtEmail.Text = GetCurrentEmail();
 
             try
             {
                 if (!string.IsNullOrWhiteSpace(UserSession.ImagePath) && File.Exists(UserSession.ImagePath))
                 {
-                    using (var bmpTemp = new Bitmap(UserSession.ImagePath))
-                    {
-                        picProfile.Image = new Bitmap(bmpTemp);
-                    }
+                    using Bitmap bmpTemp = new Bitmap(UserSession.ImagePath);
+                    picProfile.Image = new Bitmap(bmpTemp);
+                    selectedImagePath = UserSession.ImagePath;
                 }
                 else
                 {
@@ -147,6 +293,187 @@ namespace EducationSystem
             MakePictureCircular();
         }
 
+        private string GetCurrentEmail()
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                string query = @"
+SELECT TOP 1 Email
+FROM dbo.Users
+WHERE Username = @Username
+   OR FullName = @Username;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@Username", UserSession.Username ?? "");
+
+                object? result = cmd.ExecuteScalar();
+                return result == null || result == DBNull.Value ? "" : Convert.ToString(result) ?? "";
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private void BtnUploadImage_Click(object? sender, EventArgs e)
+        {
+            using OpenFileDialog dialog = new OpenFileDialog
+            {
+                Title = "Choose Profile Image",
+                Filter = "Image Files|*.jpg;*.jpeg;*.png;*.bmp"
+            };
+
+            if (dialog.ShowDialog() != DialogResult.OK)
+                return;
+
+            selectedImagePath = dialog.FileName;
+
+            using Bitmap bmpTemp = new Bitmap(selectedImagePath);
+            picProfile.Image = new Bitmap(bmpTemp);
+            MakePictureCircular();
+        }
+
+        private void BtnSaveProfile_Click(object? sender, EventArgs e)
+        {
+            string fullName = txtFullName.Text.Trim();
+            string username = txtUsername.Text.Trim();
+            string email = txtEmail.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                MessageBox.Show("Username is required.");
+                return;
+            }
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureUserProfileColumns(conn);
+
+                string query = @"
+UPDATE dbo.Users
+SET
+    FullName = CASE WHEN @FullName = '' THEN FullName ELSE @FullName END,
+    Username = @Username,
+    Email = @Email,
+    ImagePath = @ImagePath,
+    UpdatedAt = SYSDATETIME()
+WHERE Username = @OldUsername OR FullName = @OldUsername;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@FullName", fullName);
+                cmd.Parameters.AddWithValue("@Username", username);
+                cmd.Parameters.AddWithValue("@Email", email);
+                cmd.Parameters.AddWithValue("@ImagePath", selectedImagePath);
+                cmd.Parameters.AddWithValue("@OldUsername", UserSession.Username ?? "");
+
+                int affected = cmd.ExecuteNonQuery();
+
+                if (affected == 0)
+                {
+                    MessageBox.Show("No matching user record was found. Make sure the logged-in username exists in Users table.");
+                    return;
+                }
+
+                UserSession.Username = username;
+                UserSession.ImagePath = selectedImagePath;
+
+                lblDisplayName.Text = string.IsNullOrWhiteSpace(fullName) ? UserSession.Role : fullName;
+                lblUsername.Text = "@" + username.Replace(" ", "").ToLower();
+
+                MessageBox.Show("Profile updated successfully.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to update profile.\n\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void BtnChangePassword_Click(object? sender, EventArgs e)
+        {
+            string currentPassword = txtCurrentPassword.Text;
+            string newPassword = txtNewPassword.Text;
+            string confirmPassword = txtConfirmPassword.Text;
+
+            if (string.IsNullOrWhiteSpace(newPassword))
+            {
+                MessageBox.Show("New password is required.");
+                return;
+            }
+
+            if (newPassword != confirmPassword)
+            {
+                MessageBox.Show("New password and confirm password do not match.");
+                return;
+            }
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                string verifyQuery = @"
+SELECT COUNT(*)
+FROM dbo.Users
+WHERE (Username = @Username OR FullName = @Username)
+  AND PasswordText = @CurrentPassword;";
+
+                using SqlCommand verifyCmd = new SqlCommand(verifyQuery, conn);
+                verifyCmd.Parameters.AddWithValue("@Username", UserSession.Username ?? "");
+                verifyCmd.Parameters.AddWithValue("@CurrentPassword", currentPassword);
+
+                int match = Convert.ToInt32(verifyCmd.ExecuteScalar());
+
+                if (match == 0)
+                {
+                    MessageBox.Show("Current password is incorrect.");
+                    return;
+                }
+
+                string updateQuery = @"
+UPDATE dbo.Users
+SET PasswordText = @NewPassword,
+    UpdatedAt = SYSDATETIME()
+WHERE Username = @Username OR FullName = @Username;";
+
+                using SqlCommand updateCmd = new SqlCommand(updateQuery, conn);
+                updateCmd.Parameters.AddWithValue("@NewPassword", newPassword);
+                updateCmd.Parameters.AddWithValue("@Username", UserSession.Username ?? "");
+                updateCmd.ExecuteNonQuery();
+
+                txtCurrentPassword.Clear();
+                txtNewPassword.Clear();
+                txtConfirmPassword.Clear();
+
+                MessageBox.Show("Password changed successfully.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to change password.\n\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void EnsureUserProfileColumns(SqlConnection conn)
+        {
+            string query = @"
+IF COL_LENGTH('dbo.Users', 'Username') IS NULL
+    ALTER TABLE dbo.Users ADD Username NVARCHAR(100) NULL;
+
+IF COL_LENGTH('dbo.Users', 'ImagePath') IS NULL
+    ALTER TABLE dbo.Users ADD ImagePath NVARCHAR(255) NULL;
+
+IF COL_LENGTH('dbo.Users', 'UpdatedAt') IS NULL
+    ALTER TABLE dbo.Users ADD UpdatedAt DATETIME2 NULL;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
+        }
+
         private void MakePictureCircular()
         {
             GraphicsPath path = new GraphicsPath();
@@ -156,31 +483,9 @@ namespace EducationSystem
 
         private void PicProfile_Paint(object? sender, PaintEventArgs e)
         {
-            using Pen pen = new Pen(Color.FromArgb(180, 60, 255), 2);
+            using Pen pen = new Pen(Color.FromArgb(160, 109, 250, 210), 2);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.DrawEllipse(pen, 1, 1, picProfile.Width - 3, picProfile.Height - 3);
-        }
-
-        private void LnkEditProfile_Click(object? sender, EventArgs e)
-        {
-            Form? parentForm = this.Parent?.FindForm();
-
-            if (parentForm is DashboardForm dashboard)
-            {
-                dashboard.LoadContentForm(new SettingsForm());
-            }
-        }
-
-        private void LnkChangePassword_Click(object? sender, EventArgs e)
-        {
-            Form? parentForm = this.Parent?.FindForm();
-
-            if (parentForm is DashboardForm dashboard)
-            {
-                SettingsForm settings = new SettingsForm();
-                settings.OpenPasswordSection();
-                dashboard.LoadContentForm(settings);
-            }
         }
     }
 }
