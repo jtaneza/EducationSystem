@@ -239,13 +239,10 @@ namespace EducationSystem
             LayoutSidebarBranding(true);
         }
 
-
         private void LayoutSidebarBranding(bool showText)
         {
-            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 260;
-
             sidebarBrandPanel.Width = Sidebar.Width;
-            sidebarBrandPanel.Height = showText ? (compact ? 88 : 104) : 64;
+            sidebarBrandPanel.Height = showText ? 104 : 72;
 
             if (showText)
             {
@@ -253,21 +250,16 @@ namespace EducationSystem
                 label1.Visible = true;
                 sidebarSubTitleLabel.Visible = true;
 
-                pictureBox1.Size = compact ? new Size(30, 30) : new Size(38, 38);
-                pictureBox1.Location = compact ? new Point(18, 20) : new Point(18, 22);
+                pictureBox1.Size = new Size(38, 38);
+                pictureBox1.Location = new Point(18, 22);
 
                 label1.AutoSize = true;
                 label1.Text = "LibraFlow ERP";
-                label1.Font = new Font("Segoe UI", compact ? 11F : 12F, FontStyle.Bold);
+                label1.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
                 label1.ForeColor = AccentMint;
-                label1.Location = compact ? new Point(60, 18) : new Point(64, 24);
+                label1.Location = new Point(64, 24);
 
-                sidebarSubTitleLabel.AutoSize = true;
-                sidebarSubTitleLabel.Text = "Super Admin Dashboard";
-                sidebarSubTitleLabel.Font = new Font("Segoe UI", compact ? 8F : 9F, FontStyle.Regular);
-                sidebarSubTitleLabel.ForeColor = Color.FromArgb(190, 203, 210);
-                sidebarSubTitleLabel.BackColor = SidebarBack;
-                sidebarSubTitleLabel.Location = compact ? new Point(60, 43) : new Point(64, 50);
+                sidebarSubTitleLabel.Location = new Point(64, 50);
             }
             else
             {
@@ -275,14 +267,10 @@ namespace EducationSystem
                 label1.Visible = false;
                 sidebarSubTitleLabel.Visible = false;
 
-                pictureBox1.Size = new Size(30, 30);
-                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 16);
+                pictureBox1.Size = new Size(34, 34);
+                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 18);
             }
         }
-
-
-
-
 
         private void BuildSuperAdminSidebar()
         {
@@ -557,39 +545,42 @@ namespace EducationSystem
 
         private void LayoutSubMenuButtons()
         {
-            if (userSubMenuPanel == null || circulationSubMenuPanel == null)
-                return;
+            if (userSubMenuPanel != null)
+            {
+                int top = 0;
 
-            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 260;
-            int left = compact ? 10 : 18;
-            int gap = compact ? 1 : 3;
+                navClient.Location = new Point(18, top);
+                navClient.Width = userSubMenuPanel.Width - 18;
 
-            int top = 0;
-            navClient.Location = new Point(left, top);
-            navClient.Width = Math.Max(40, userSubMenuPanel.Width - left);
+                top += navClient.Height + 4;
 
-            top += navClient.Height + gap;
-            navLibrarian.Location = new Point(left, top);
-            navLibrarian.Width = Math.Max(40, userSubMenuPanel.Width - left);
+                navLibrarian.Location = new Point(18, top);
+                navLibrarian.Width = userSubMenuPanel.Width - 18;
 
-            top += navLibrarian.Height + gap;
-            navMember.Location = new Point(left, top);
-            navMember.Width = Math.Max(40, userSubMenuPanel.Width - left);
+                top += navLibrarian.Height + 4;
 
-            top = 0;
-            navBorrowing.Location = new Point(left, top);
-            navBorrowing.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
+                navMember.Location = new Point(18, top);
+                navMember.Width = userSubMenuPanel.Width - 18;
+            }
 
-            top += navBorrowing.Height + gap;
-            navReturns.Location = new Point(left, top);
-            navReturns.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
+            if (circulationSubMenuPanel != null)
+            {
+                int top = 0;
 
-            top += navReturns.Height + gap;
-            navFines.Location = new Point(left, top);
-            navFines.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
+                navBorrowing.Location = new Point(18, top);
+                navBorrowing.Width = circulationSubMenuPanel.Width - 18;
+
+                top += navBorrowing.Height + 4;
+
+                navReturns.Location = new Point(18, top);
+                navReturns.Width = circulationSubMenuPanel.Width - 18;
+
+                top += navReturns.Height + 4;
+
+                navFines.Location = new Point(18, top);
+                navFines.Width = circulationSubMenuPanel.Width - 18;
+            }
         }
-
-
 
 
         private void LayoutMainNavButton(Button btn, string icon, string text, int width, bool compact, bool hasArrow = false, bool expanded = false)
@@ -1139,40 +1130,21 @@ namespace EducationSystem
         }
 
 
-
         private void ApplyResponsiveLayout()
         {
             int w = ClientSize.Width;
-            int h = ClientSize.Height;
-            bool compact = h <= 760;
 
-            if (w >= 1450)
-                Sidebar.Width = compact ? 255 : 270;
-            else if (w >= 1200)
-                Sidebar.Width = compact ? 230 : 250;
-            else if (w >= 1000)
-                Sidebar.Width = compact ? 215 : 235;
+            if (w >= 1320)
+                ApplyDesktopLayout();
+            else if (w >= 980)
+                ApplyLaptopLayout();
             else
-                Sidebar.Width = 88;
+                ApplyCompactLayout();
 
-            topbar.Height = compact ? 64 : 68;
-            panel1.Height = 40;
-
-            LayoutSidebarBranding(Sidebar.Width > 120);
+            PositionResponsiveHeader();
             LayoutSidebar();
-
-            if (dashboardScrollHost.Visible)
-                LayoutDashboardHome();
-
-            panelContent.AutoScroll = true;
-            panelContent.AutoScrollMargin = new Size(0, 120);
-            panelContent.HorizontalScroll.Enabled = false;
-            panelContent.HorizontalScroll.Visible = false;
+            LayoutDashboardHome();
         }
-
-
-
-
 
 
         private void ApplyDesktopLayout()
@@ -1211,113 +1183,67 @@ namespace EducationSystem
         }
 
 
-
         private void LayoutSidebar()
         {
-            bool expanded = Sidebar.Width > 120;
-            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 260;
+            bool compact = Sidebar.Width <= 90;
 
-            LayoutSidebarBranding(expanded);
-
-            int sidePadding = expanded ? (compact ? 8 : 14) : 6;
-            int navHeight = expanded ? (compact ? 40 : 48) : 42;
-            int navGap = compact ? 2 : 5;
-            int fontSize = compact ? 9 : 10;
-
-            int subHeight = expanded ? (compact ? 28 : 32) : 0;
-            int subGap = compact ? 1 : 3;
+            LayoutSidebarBranding(!compact);
 
             if (superAdminMenuHost != null)
             {
                 superAdminMenuHost.Width = Sidebar.Width;
-                superAdminMenuHost.Padding = new Padding(sidePadding, compact ? 8 : 14, sidePadding, compact ? 6 : 10);
-                superAdminMenuHost.AutoScroll = true;
+                superAdminMenuHost.AutoScroll = false;
                 superAdminMenuHost.HorizontalScroll.Enabled = false;
                 superAdminMenuHost.HorizontalScroll.Visible = false;
+                superAdminMenuHost.VerticalScroll.Enabled = false;
+                superAdminMenuHost.VerticalScroll.Visible = false;
+                superAdminMenuHost.Padding = compact ? new Padding(8, 10, 8, 10) : new Padding(14, 10, 14, 10);
 
-                int navWidth = Math.Max(44, Sidebar.Width - (sidePadding * 2));
+                int navWidth = Sidebar.Width - (compact ? 16 : 28);
 
-                Button[] mainButtons =
-                {
-                    navDashboard,
-                    navManageClients,
-                    navMonitorSystem,
-                    navConfigureModules,
-                    navViewBookCatalog,
-                    navViewUser,
-                    navViewCirculation,
-                    navViewReports,
-                    navArchive
-                };
+                LayoutMainNavButton(navDashboard, "▦", "Dashboard", navWidth, compact);
+                LayoutMainNavButton(navManageClients, "✦", "Manage Client Libraries", navWidth, compact);
+                LayoutMainNavButton(navMonitorSystem, "◉", "Monitor System", navWidth, compact);
+                LayoutMainNavButton(navConfigureModules, "⚙", "Configure Modules", navWidth, compact);
+                LayoutMainNavButton(navViewBookCatalog, "📖", "View Book Catalog", navWidth, compact);
+                LayoutMainNavButton(navViewUser, "👥", "View User", navWidth, compact, true, userMenuExpanded);
+                LayoutMainNavButton(navViewCirculation, "⇄", "View Circulation", navWidth, compact, true, circulationMenuExpanded);
+                LayoutMainNavButton(navViewReports, "〽", "View Reports", navWidth, compact);
+                LayoutMainNavButton(navArchive, "🗂", "Archive", navWidth, compact);
 
-                foreach (Button btn in mainButtons)
-                {
-                    btn.Width = navWidth;
-                    btn.Height = navHeight;
-                    btn.Margin = new Padding(0, 0, 0, navGap);
-                    btn.Font = new Font("Segoe UI", fontSize, FontStyle.Regular);
-                    btn.Padding = new Padding(expanded ? (compact ? 12 : 18) : 0, 0, 0, 0);
-                    btn.TextAlign = expanded ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter;
-                }
-
-                navDashboard.Text = expanded ? "▦  Dashboard" : "▦";
-                navManageClients.Text = expanded ? "✦  Manage Client Libraries" : "✦";
-                navMonitorSystem.Text = expanded ? "◉  Monitor System" : "◉";
-                navConfigureModules.Text = expanded ? "⚙  Configure Modules" : "⚙";
-                navViewBookCatalog.Text = expanded ? "📖  View Book Catalog" : "📖";
-                navViewUser.Text = expanded
-                    ? (userMenuExpanded ? "👥  View User        ▾" : "👥  View User        ▸")
-                    : "👥";
-                navViewCirculation.Text = expanded
-                    ? (circulationMenuExpanded ? "⇄  View Circulation        ▾" : "⇄  View Circulation        ▸")
-                    : "⇄";
-                navViewReports.Text = expanded ? "〽  View Reports" : "〽";
-                navArchive.Text = expanded ? "🗂  Archive" : "🗂";
+                userSubMenuPanel.Visible = !compact && userMenuExpanded;
+                circulationSubMenuPanel.Visible = !compact && circulationMenuExpanded;
 
                 userSubMenuPanel.Width = navWidth;
                 circulationSubMenuPanel.Width = navWidth;
 
-                userSubMenuPanel.Visible = expanded && userMenuExpanded;
-                circulationSubMenuPanel.Visible = expanded && circulationMenuExpanded;
-
-                userSubMenuPanel.Height = userSubMenuPanel.Visible
-                    ? (subHeight * 3) + (subGap * 2) + (compact ? 2 : 4)
-                    : 0;
-
-                circulationSubMenuPanel.Height = circulationSubMenuPanel.Visible
-                    ? (subHeight * 3) + (subGap * 2) + (compact ? 2 : 4)
-                    : 0;
-
-                foreach (Button subBtn in new[] { navClient, navLibrarian, navMember, navBorrowing, navReturns, navFines })
-                {
-                    subBtn.Height = subHeight;
-                    subBtn.Font = new Font("Segoe UI", compact ? 8.2F : 9F, FontStyle.Regular);
-                    subBtn.Padding = new Padding(compact ? 20 : 28, 0, 0, 0);
-                    subBtn.Margin = new Padding(compact ? 10 : 18, 0, 0, subGap);
-                }
+                navClient.Width = Math.Max(1, navWidth - 18);
+                navLibrarian.Width = Math.Max(1, navWidth - 18);
+                navMember.Width = Math.Max(1, navWidth - 18);
+                navBorrowing.Width = Math.Max(1, navWidth - 18);
+                navReturns.Width = Math.Max(1, navWidth - 18);
+                navFines.Width = Math.Max(1, navWidth - 18);
 
                 LayoutSubMenuButtons();
+
+                userSubMenuPanel.Height = (!compact && userMenuExpanded) ? 110 : 0;
+                circulationSubMenuPanel.Height = (!compact && circulationMenuExpanded) ? 110 : 0;
             }
 
             if (sidebarBottomPanel != null)
             {
                 sidebarBottomPanel.Width = Sidebar.Width;
-                sidebarBottomPanel.Height = compact ? 70 : 84;
-                sidebarBottomPanel.Padding = new Padding(sidePadding, compact ? 8 : 12, sidePadding, compact ? 10 : 14);
+                sidebarBottomPanel.Height = 72;
+                sidebarBottomPanel.Padding = compact ? new Padding(8, 12, 8, 14) : new Padding(14, 12, 14, 14);
 
-                navSignOut.Width = Math.Max(44, Sidebar.Width - (sidePadding * 2));
-                navSignOut.Height = compact ? 42 : 48;
-                navSignOut.Location = new Point(sidePadding, compact ? 8 : 12);
-                navSignOut.Font = new Font("Segoe UI", compact ? 9F : 10F, FontStyle.Regular);
-                navSignOut.Padding = new Padding(expanded ? (compact ? 12 : 16) : 0, 0, 0, 0);
-                navSignOut.TextAlign = expanded ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter;
-                navSignOut.Text = expanded ? "⏻  Sign Out" : "⏻";
+                navSignOut.Width = Sidebar.Width - (compact ? 16 : 28);
+                navSignOut.Height = 44;
+                navSignOut.Location = new Point(compact ? 8 : 14, 14);
+                navSignOut.Text = compact ? "⏻" : "⏻  Sign Out";
+                navSignOut.TextAlign = compact ? ContentAlignment.MiddleCenter : ContentAlignment.MiddleLeft;
+                navSignOut.Padding = compact ? new Padding(0) : new Padding(16, 0, 16, 0);
             }
         }
-
-
-
-
 
 
         private void LayoutDashboardHome()
@@ -1325,16 +1251,13 @@ namespace EducationSystem
             if (!label4.Visible) return;
 
             int viewWidth = dashboardScrollHost.ClientSize.Width;
-            int viewHeight = dashboardScrollHost.ClientSize.Height;
-
+            bool compact = viewWidth < 1050;
             bool narrow = viewWidth < 760;
-            bool laptop = viewWidth < 1180;
-            bool compactHeight = ClientSize.Height <= 760;
 
-            int left = narrow ? 18 : laptop ? 24 : 30;
-            int top = compactHeight ? 18 : 24;
+            int left = narrow ? 18 : compact ? 24 : 30;
+            int top = compact ? 20 : 24;
             int width = Math.Max(360, viewWidth - (left * 2) - 8);
-            int gap = laptop ? 16 : 20;
+            int gap = compact ? 16 : 20;
 
             label4.Location = new Point(left, top);
             label4.Text = "Dashboard";
@@ -1346,54 +1269,46 @@ namespace EducationSystem
             dashboardSubTitle.Text = "Admin Dashboard";
             dashboardSubTitle.Visible = true;
 
-            int heroTop = dashboardSubTitle.Bottom + (compactHeight ? 16 : 22);
+            int heroTop = dashboardSubTitle.Bottom + (compact ? 18 : 22);
 
             if (narrow)
             {
-                int cardH = 130;
+                int cardH = 138;
                 heroLibrariesCard.Bounds = new Rectangle(left, heroTop, width, cardH);
                 heroUsersCard.Bounds = new Rectangle(left, heroLibrariesCard.Bottom + gap, width, cardH);
                 heroAlertsCard.Bounds = new Rectangle(left, heroUsersCard.Bottom + gap, width, cardH);
             }
+            else if (compact)
+            {
+                int cardW = (width - gap) / 2;
+                heroLibrariesCard.Bounds = new Rectangle(left, heroTop, width, 150);
+                heroUsersCard.Bounds = new Rectangle(left, heroLibrariesCard.Bottom + gap, cardW, 145);
+                heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroLibrariesCard.Bottom + gap, width - cardW - gap, 145);
+            }
             else
             {
-                int cardH = compactHeight ? 135 : 160;
+                int librariesW = (int)(width * 0.47);
+                int usersW = (int)(width * 0.22);
+                int alertsW = width - librariesW - usersW - (gap * 2);
 
-                if (laptop)
-                {
-                    int librariesW = (int)(width * 0.48);
-                    int usersW = (int)(width * 0.23);
-                    int alertsW = width - librariesW - usersW - (gap * 2);
-
-                    heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, cardH);
-                    heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + gap, heroTop, usersW, cardH);
-                    heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroTop, alertsW, cardH);
-                }
-                else
-                {
-                    int librariesW = (int)(width * 0.47);
-                    int usersW = (int)(width * 0.22);
-                    int alertsW = width - librariesW - usersW - (gap * 2);
-
-                    heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, cardH);
-                    heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + gap, heroTop, usersW, cardH);
-                    heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroTop, alertsW, cardH);
-                }
+                heroLibrariesCard.Bounds = new Rectangle(left, heroTop, librariesW, 160);
+                heroUsersCard.Bounds = new Rectangle(heroLibrariesCard.Right + gap, heroTop, usersW, 160);
+                heroAlertsCard.Bounds = new Rectangle(heroUsersCard.Right + gap, heroTop, alertsW, 160);
             }
 
             LayoutHeroCards();
 
-            int speedTop = Math.Max(heroLibrariesCard.Bottom, Math.Max(heroUsersCard.Bottom, heroAlertsCard.Bottom)) + (compactHeight ? 18 : 26);
-            speedPanel.Bounds = new Rectangle(left, speedTop, width, compactHeight ? 300 : 390);
+            int speedTop = Math.Max(heroLibrariesCard.Bottom, Math.Max(heroUsersCard.Bottom, heroAlertsCard.Bottom)) + (compact ? 20 : 26);
+            speedPanel.Bounds = new Rectangle(left, speedTop, width, compact ? 330 : 390);
             LayoutSpeedPanel();
 
             int bottomTop = speedPanel.Bottom + 22;
-            int bottomPanelsHeight = compactHeight ? 340 : 420;
+            int bottomPanelsHeight = compact ? 380 : 420;
 
-            if (narrow)
+            if (compact)
             {
                 librariesPanel.Bounds = new Rectangle(left, bottomTop, width, bottomPanelsHeight);
-                eventsPanel.Bounds = new Rectangle(left, librariesPanel.Bottom + 18, width, 320);
+                eventsPanel.Bounds = new Rectangle(left, librariesPanel.Bottom + 20, width, 350);
             }
             else
             {
@@ -1420,8 +1335,6 @@ namespace EducationSystem
 
             panel1.BringToFront();
         }
-
-
 
 
         private void LayoutHeroCards()
