@@ -83,15 +83,35 @@ namespace EducationSystem
 
             BuildInterface();
             AdjustLayout();
+            ResetCanvasScrollToTop();
 
             Load += async (s, e) =>
             {
                 await LoadBookDataAsync();
                 AdjustLayout();
-                ClearGridSelection();
+                BeginInvoke(new Action(() =>
+                {
+                    ResetCanvasScrollToTop();
+                    AdjustLayout();
+                    ClearGridSelection();
+                }));
             };
 
             Resize += (s, e) => AdjustLayout();
+            VisibleChanged += (s, e) =>
+            {
+                if (Visible)
+                    BeginInvoke(new Action(() =>
+                    {
+                        ResetCanvasScrollToTop();
+                        AdjustLayout();
+                    }));
+            };
+            ParentChanged += (s, e) => BeginInvoke(new Action(() =>
+            {
+                ResetCanvasScrollToTop();
+                AdjustLayout();
+            }));
         }
 
         private void BuildInterface()
@@ -100,7 +120,9 @@ namespace EducationSystem
             {
                 Dock = DockStyle.Fill,
                 BackColor = FormBack,
-                AutoScroll = true
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 0),
+                AutoScrollMinSize = new Size(0, 0)
             };
             canvas.HorizontalScroll.Enabled = false;
             canvas.HorizontalScroll.Visible = false;
@@ -863,30 +885,48 @@ WHERE ClientID = @ClientID
         private DialogResult ShowBookDialogWithOverlay(AddBookDialog dialog)
         {
             Form? owner = FindForm();
-            if (owner == null)
-                return dialog.ShowDialog(this);
-
-            using Form overlay = new Form
-            {
-                FormBorderStyle = FormBorderStyle.None,
-                StartPosition = FormStartPosition.Manual,
-                Bounds = owner.Bounds,
-                BackColor = Color.Black,
-                Opacity = 0.34,
-                ShowInTaskbar = false,
-                TopMost = false
-            };
-
-            overlay.Show(owner);
-            overlay.BringToFront();
 
             dialog.StartPosition = FormStartPosition.Manual;
-            dialog.Location = new Point(
-                overlay.Left + Math.Max(0, (overlay.Width - dialog.Width) / 2),
-                overlay.Top + Math.Max(0, (overlay.Height - dialog.Height) / 2)
-            );
+            dialog.ShowInTaskbar = false;
+            dialog.TopMost = false;
 
-            return dialog.ShowDialog(overlay);
+            void CenterDialog()
+            {
+                Rectangle area;
+
+                // Center inside the dashboard content area, not over the sidebar.
+                Control? host = Parent;
+                while (host != null &&
+                       !string.Equals(host.Name, "panelContent", StringComparison.OrdinalIgnoreCase))
+                {
+                    host = host.Parent;
+                }
+
+                if (host != null)
+                {
+                    area = host.RectangleToScreen(host.ClientRectangle);
+                }
+                else if (owner != null)
+                {
+                    area = owner.RectangleToScreen(owner.ClientRectangle);
+                }
+                else
+                {
+                    area = Screen.FromControl(this).WorkingArea;
+                }
+
+                int x = area.Left + Math.Max(0, (area.Width - dialog.Width) / 2);
+                int y = area.Top + Math.Max(0, (area.Height - dialog.Height) / 2);
+
+                dialog.Location = new Point(x, y);
+            }
+
+            CenterDialog();
+
+            // Center again after WinForms applies DPI/autoscale.
+            dialog.Shown += (s, e) => CenterDialog();
+
+            return owner == null ? dialog.ShowDialog(this) : dialog.ShowDialog(owner);
         }
 
         private (Rectangle Edit, Rectangle Archive) GetActionIconBounds(Rectangle cellBounds)
@@ -1136,53 +1176,131 @@ WHERE ClientID = @ClientID
 
         private void AdjustLayout()
         {
-            int margin = 20;
-            int gap = 24;
+            if (canvas == null || canvas.ClientSize.Width <= 0)
+                return;
 
-            int usableWidth = Math.Max(1080, canvas.ClientSize.Width - (margin * 2));
+            int availableWidth = canvas.ClientSize.Width;
+            int margin = availableWidth < 900 ? 16 : 20;
+            int gap = availableWidth < 900 ? 14 : 24;
+            int usableWidth = Math.Max(320, availableWidth - (margin * 2));
 
+            // Fixed top position. Do not calculate this from AutoScrollPosition.
+            // AutoScrollPosition becomes negative after scrolling and causes the big blank space.
             lblTitle.Location = new Point(margin, 28);
             lblSubTitle.Location = new Point(margin, 72);
 
             int cardsTop = 118;
-            int cardWidth = (usableWidth - (gap * 2)) / 3;
             int cardHeight = 155;
 
-            cardAllBooks.Bounds = new Rectangle(margin, cardsTop, cardWidth, cardHeight);
-            cardBorrowed.Bounds = new Rectangle(cardAllBooks.Right + gap, cardsTop, cardWidth, cardHeight);
-            cardLowStock.Bounds = new Rectangle(cardBorrowed.Right + gap, cardsTop, cardWidth, cardHeight);
+            if (usableWidth >= 900)
+            {
+                int cardWidth = Math.Max(1, (usableWidth - (gap * 2)) / 3);
+
+                cardAllBooks.Bounds = new Rectangle(margin, cardsTop, cardWidth, cardHeight);
+                cardBorrowed.Bounds = new Rectangle(cardAllBooks.Right + gap, cardsTop, cardWidth, cardHeight);
+                cardLowStock.Bounds = new Rectangle(cardBorrowed.Right + gap, cardsTop, cardWidth, cardHeight);
+            }
+            else
+            {
+                int cardWidth = usableWidth;
+
+                cardAllBooks.Bounds = new Rectangle(margin, cardsTop, cardWidth, cardHeight);
+                cardBorrowed.Bounds = new Rectangle(margin, cardAllBooks.Bottom + gap, cardWidth, cardHeight);
+                cardLowStock.Bounds = new Rectangle(margin, cardBorrowed.Bottom + gap, cardWidth, cardHeight);
+            }
 
             LayoutMetricCards();
 
-            int tableTop = cardAllBooks.Bottom + 28;
-            tableCard.Bounds = new Rectangle(margin, tableTop, usableWidth, 640);
+            int tableTop = cardLowStock.Bottom + 28;
+            int tableWidth = usableWidth;
 
-            btnAddBook.Bounds = new Rectangle(tableCard.Width - 190 - 22, 18, 190, 42);
+            // Keep table visible and allow only downward scrolling if needed.
+            int tableHeight = Math.Max(560, canvas.ClientSize.Height - tableTop - 30);
+            tableCard.Bounds = new Rectangle(margin, tableTop, tableWidth, tableHeight);
 
-            int searchGap = 10;
-            int searchWidth = 420;
-            int searchX = btnAddBook.Left - searchGap - searchWidth;
+            int headerPadding = 22;
+            int buttonWidth = Math.Min(190, Math.Max(150, tableCard.Width - (headerPadding * 2)));
 
-            searchPanel.Bounds = new Rectangle(searchX, 19, searchWidth, 38);
+            btnAddBook.Bounds = new Rectangle(
+                tableCard.Width - buttonWidth - headerPadding,
+                18,
+                buttonWidth,
+                42
+            );
+
+            int searchWidth;
+            int searchX;
+
+            if (tableCard.Width >= 720)
+            {
+                searchWidth = Math.Min(420, Math.Max(250, btnAddBook.Left - headerPadding - 12));
+                searchX = btnAddBook.Left - 12 - searchWidth;
+            }
+            else
+            {
+                searchWidth = Math.Max(180, tableCard.Width - (headerPadding * 2));
+                searchX = headerPadding;
+                btnAddBook.Bounds = new Rectangle(headerPadding, 66, buttonWidth, 42);
+            }
+
             searchPanel.Bounds = new Rectangle(searchX, 19, searchWidth, 38);
 
             if (searchPanel.Controls.Count > 0)
-            {
                 searchPanel.Controls[0].Location = new Point(12, 7);
-            }
 
             txtSearch.Location = new Point(40, 9);
-            txtSearch.Width = searchPanel.Width - 50;
+            txtSearch.Width = Math.Max(80, searchPanel.Width - 50);
 
-            dgvBooks.Location = new Point(0, 78);
-            dgvBooks.Size = new Size(tableCard.Width, 414);
+            int gridTop = tableCard.Width >= 720 ? 78 : 122;
+            int footerHeight = 70;
+            int footerTop = tableCard.Height - footerHeight;
+
+            dgvBooks.Location = new Point(0, gridTop);
+            dgvBooks.Size = new Size(
+                tableCard.Width,
+                Math.Max(240, footerTop - gridTop)
+            );
 
             ApplyColumnWidths();
 
-            lblFooter.Location = new Point(20, 574);
-            pagerPanel.Location = new Point(tableCard.Width - pagerPanel.Width - 20, 566);
+            lblFooter.Location = new Point(20, footerTop + 25);
+            pagerPanel.Location = new Point(
+                Math.Max(20, tableCard.Width - pagerPanel.Width - 20),
+                footerTop + 17
+            );
 
-            canvas.AutoScrollMinSize = new Size(0, tableCard.Bottom + 24);
+            canvas.AutoScrollMinSize = new Size(0, tableCard.Bottom + 30);
+            canvas.HorizontalScroll.Enabled = false;
+            canvas.HorizontalScroll.Visible = false;
+        }
+
+        private void ResetCanvasScrollToTop()
+        {
+            try
+            {
+                if (canvas != null)
+                {
+                    canvas.AutoScrollPosition = new Point(0, 0);
+                    canvas.VerticalScroll.Value = 0;
+                }
+
+                Control? p = Parent;
+                while (p != null)
+                {
+                    if (p is ScrollableControl scrollable)
+                    {
+                        scrollable.AutoScrollPosition = new Point(0, 0);
+                        scrollable.VerticalScroll.Value = 0;
+                    }
+
+                    p = p.Parent;
+                }
+            }
+            catch
+            {
+                if (canvas != null)
+                    canvas.AutoScrollPosition = new Point(0, 0);
+            }
         }
 
         private void ApplyColumnWidths()
@@ -1192,15 +1310,22 @@ WHERE ClientID = @ClientID
 
             dgvBooks.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-            dgvBooks.Columns["BookId"].FillWeight = 10;
-            dgvBooks.Columns["TitleAuthor"].FillWeight = 18;
-            dgvBooks.Columns["Category"].FillWeight = 10;
+            bool compact = dgvBooks.Width < 900;
+
+            dgvBooks.Columns["BookId"].FillWeight = compact ? 12 : 10;
+            dgvBooks.Columns["TitleAuthor"].FillWeight = compact ? 30 : 18;
+            dgvBooks.Columns["Category"].FillWeight = compact ? 13 : 10;
+            // Do NOT set FillWeight to 0. DataGridView requires FillWeight > 0.
+            dgvBooks.Columns["Genre"].Visible = !compact;
+            dgvBooks.Columns["Group"].Visible = !compact;
+            dgvBooks.Columns["Year"].Visible = !compact;
+
             dgvBooks.Columns["Genre"].FillWeight = 10;
             dgvBooks.Columns["Group"].FillWeight = 10;
             dgvBooks.Columns["Year"].FillWeight = 10;
-            dgvBooks.Columns["Qty"].FillWeight = 10;
-            dgvBooks.Columns["Status"].FillWeight = 11;
-            dgvBooks.Columns["Actions"].FillWeight = 11;
+            dgvBooks.Columns["Qty"].FillWeight = compact ? 8 : 10;
+            dgvBooks.Columns["Status"].FillWeight = compact ? 18 : 11;
+            dgvBooks.Columns["Actions"].FillWeight = compact ? 14 : 11;
 
             dgvBooks.Columns["BookId"].DefaultCellStyle.Padding = new Padding(0);
             dgvBooks.Columns["TitleAuthor"].DefaultCellStyle.Padding = new Padding(6, 0, 0, 0);

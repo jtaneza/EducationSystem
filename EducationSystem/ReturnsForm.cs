@@ -409,30 +409,23 @@ namespace EducationSystem
         {
             Form? owner = FindForm();
 
+            dialog.StartPosition = FormStartPosition.CenterParent;
+            dialog.ShowInTaskbar = false;
+            dialog.TopMost = false;
+
             if (owner == null)
-                return dialog.ShowDialog(this);
-
-            using Form overlay = new Form
             {
-                FormBorderStyle = FormBorderStyle.None,
-                StartPosition = FormStartPosition.Manual,
-                Bounds = owner.Bounds,
-                BackColor = Color.Black,
-                Opacity = 0.58,
-                ShowInTaskbar = false,
-                TopMost = false
-            };
+                Rectangle screen = Screen.FromControl(this).WorkingArea;
+                dialog.StartPosition = FormStartPosition.Manual;
+                dialog.Location = new Point(
+                    screen.Left + Math.Max(0, (screen.Width - dialog.Width) / 2),
+                    screen.Top + Math.Max(0, (screen.Height - dialog.Height) / 2)
+                );
 
-            overlay.Show(owner);
-            overlay.BringToFront();
+                return dialog.ShowDialog(this);
+            }
 
-            dialog.StartPosition = FormStartPosition.Manual;
-            dialog.Location = new Point(
-                overlay.Left + Math.Max(0, (overlay.Width - dialog.Width) / 2),
-                overlay.Top + Math.Max(0, (overlay.Height - dialog.Height) / 2)
-            );
-
-            return dialog.ShowDialog(overlay);
+            return dialog.ShowDialog(owner);
         }
 
         private void LoadReturnData()

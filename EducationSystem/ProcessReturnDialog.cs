@@ -77,9 +77,10 @@ namespace EducationSystem
             this.existingReturn = existingReturn;
 
             Text = existingReturn == null ? "Process Book Return" : "Edit Book Return";
-            ClientSize = new Size(720, 735);
+            ClientSize = new Size(640, 610);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterParent;
+            AutoScaleMode = AutoScaleMode.None;
             BackColor = CardBack;
             ShowInTaskbar = false;
             DoubleBuffered = true;
@@ -94,7 +95,7 @@ namespace EducationSystem
             Panel header = new Panel
             {
                 BackColor = HeaderBack,
-                Bounds = new Rectangle(0, 0, ClientSize.Width, 118),
+                Bounds = new Rectangle(0, 0, ClientSize.Width, 100),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -103,17 +104,17 @@ namespace EducationSystem
                 20F,
                 FontStyle.Bold,
                 PrimaryText);
-            title.Location = new Point(42, 32);
+            title.Location = new Point(36, 24);
 
             Label subtitle = CreateLabel("ABC School Library - Returns Management", 10F, FontStyle.Regular, SecondaryText);
-            subtitle.Location = new Point(42, 66);
+            subtitle.Location = new Point(36, 58);
 
             Label close = new Label
             {
                 Text = "x",
                 AutoSize = false,
                 Size = new Size(34, 34),
-                Location = new Point(ClientSize.Width - 62, 34),
+                Location = new Point(ClientSize.Width - 56, 26),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Font = new Font("Segoe UI", 16F, FontStyle.Regular),
                 ForeColor = SecondaryText,
@@ -132,11 +133,11 @@ namespace EducationSystem
             header.Controls.Add(close);
             Controls.Add(header);
 
-            int left = 42;
-            int top = 148;
-            int fieldWidth = 304;
+            int left = 36;
+            int top = 122;
+            int fieldWidth = 265;
             int fieldHeight = 30;
-            int gap = 30;
+            int gap = 28;
             int right = left + fieldWidth + gap;
 
             AddLabel("MEMBER NAME / ID", left, top);
@@ -158,7 +159,7 @@ namespace EducationSystem
             txtBookTitle.Bounds = new Rectangle(right, top + 28, fieldWidth, fieldHeight);
             Controls.Add(txtBookTitle);
 
-            top += 108;
+            top += 92;
 
             AddLabel("RETURN DATE", left, top);
             dtpReturnDate = new DateTimePicker
@@ -192,7 +193,7 @@ namespace EducationSystem
             Panel summary = new Panel
             {
                 BackColor = SoftBack,
-                Bounds = new Rectangle(left, 392, ClientSize.Width - 84, 150)
+                Bounds = new Rectangle(left, 326, ClientSize.Width - 72, 150)
             };
             summary.Paint += RoundedPanelPaint;
 
@@ -200,7 +201,7 @@ namespace EducationSystem
             {
                 Text = "!",
                 AutoSize = false,
-                Bounds = new Rectangle(28, 24, 44, 44),
+                Bounds = new Rectangle(28, 28, 44, 44),
                 TextAlign = ContentAlignment.MiddleCenter,
                 BackColor = ColorTranslator.FromHtml("#B7EBD7"),
                 ForeColor = AccentDeep,
@@ -208,28 +209,28 @@ namespace EducationSystem
             };
 
             Label summaryTitle = CreateLabel("Fine Summary", 15F, FontStyle.Bold, PrimaryText);
-            summaryTitle.Location = new Point(92, 26);
+            summaryTitle.Location = new Point(92, 28);
 
             Label daysLabel = CreateLabel("Days Overdue", 10.5F, FontStyle.Regular, SecondaryText);
-            daysLabel.Location = new Point(92, 56);
+            daysLabel.Location = new Point(92, 60);
 
             lblDaysOverdue = CreateLabel("0 days", 10.5F, FontStyle.Bold, PrimaryText);
             lblDaysOverdue.AutoSize = false;
             lblDaysOverdue.TextAlign = ContentAlignment.MiddleRight;
-            lblDaysOverdue.Bounds = new Rectangle(summary.Width - 185, 52, 150, 24);
+            lblDaysOverdue.Bounds = new Rectangle(summary.Width - 170, 56, 138, 24);
 
             Label amountLabel = CreateLabel("Estimated Fine", 10.5F, FontStyle.Regular, SecondaryText);
-            amountLabel.Location = new Point(92, 86);
+            amountLabel.Location = new Point(92, 94);
 
             lblFineAmount = CreateLabel("₱0.00", 10.5F, FontStyle.Bold, AccentDeep);
             lblFineAmount.AutoSize = false;
             lblFineAmount.TextAlign = ContentAlignment.MiddleRight;
-            lblFineAmount.Bounds = new Rectangle(summary.Width - 185, 82, 150, 24);
+            lblFineAmount.Bounds = new Rectangle(summary.Width - 170, 104, 138, 24);
 
-            lblFineReason = CreateLabel("No fine", 9.5F, FontStyle.Bold, AccentDeep);
+            lblFineReason = CreateLabel("Reason: No fine", 9.5F, FontStyle.Bold, AccentDeep);
             lblFineReason.AutoSize = false;
             lblFineReason.TextAlign = ContentAlignment.MiddleLeft;
-            lblFineReason.Bounds = new Rectangle(92, 116, summary.Width - 285, 24);
+            lblFineReason.Bounds = new Rectangle(92, 122, summary.Width - 265, 24);
 
             summary.Controls.Add(summaryIcon);
             summary.Controls.Add(summaryTitle);
@@ -243,15 +244,15 @@ namespace EducationSystem
             Panel footer = new Panel
             {
                 BackColor = HeaderBack,
-                Bounds = new Rectangle(0, ClientSize.Height - 90, ClientSize.Width, 90),
+                Bounds = new Rectangle(0, ClientSize.Height - 78, ClientSize.Width, 78),
                 Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
             };
 
             Button btnCancel = new Button
             {
                 Text = "Cancel",
-                Size = new Size(120, 46),
-                Location = new Point(ClientSize.Width - 42 - 188 - 16 - 120, 22),
+                Size = new Size(112, 42),
+                Location = new Point(ClientSize.Width - 36 - 170 - 14 - 112, 18),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = HeaderBack,
                 ForeColor = SecondaryText,
@@ -269,8 +270,8 @@ namespace EducationSystem
             btnComplete = new Button
             {
                 Text = existingReturn == null ? "Complete Return" : "Save Changes",
-                Size = new Size(188, 50),
-                Location = new Point(ClientSize.Width - 42 - 188, 20),
+                Size = new Size(170, 42),
+                Location = new Point(ClientSize.Width - 36 - 170, 18),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = AccentEmerald,
                 ForeColor = Color.FromArgb(0, 66, 51),

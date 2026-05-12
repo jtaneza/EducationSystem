@@ -87,8 +87,12 @@ namespace EducationSystem
             {
                 Dock = DockStyle.Fill,
                 BackColor = FormBack,
-                AutoScroll = true
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 0),
+                AutoScrollMinSize = new Size(0, 0)
             };
+            canvas.HorizontalScroll.Enabled = false;
+            canvas.HorizontalScroll.Visible = false;
             Controls.Add(canvas);
 
             lblKicker = new Label
@@ -645,9 +649,12 @@ namespace EducationSystem
 
         private void AdjustLayout()
         {
-            int margin = 40;
-            int gap = 28;
-            int usableWidth = Math.Max(1180, canvas.ClientSize.Width - (margin * 2));
+            if (canvas == null || canvas.ClientSize.Width <= 0)
+                return;
+
+            int margin = canvas.ClientSize.Width < 900 ? 18 : 40;
+            int gap = canvas.ClientSize.Width < 900 ? 18 : 28;
+            int usableWidth = Math.Max(320, canvas.ClientSize.Width - (margin * 2));
 
             lblKicker.Location = new Point(margin, 28);
             lblTitle.Location = new Point(margin, 54);
@@ -655,27 +662,56 @@ namespace EducationSystem
             lblSubTitle.Size = new Size(Math.Min(920, usableWidth), 84);
 
             int topCardsY = 202;
-            int leftWidth = (int)(usableWidth * 0.56);
-            int rightWidth = usableWidth - leftWidth - gap;
 
-            int topCardHeight = 338;
-            brandingCard.Bounds = new Rectangle(margin, topCardsY, leftWidth, topCardHeight);
-            hoursCard.Bounds = new Rectangle(brandingCard.Right + gap, topCardsY, rightWidth, topCardHeight);
+            /*
+             * Laptop fix:
+             * The previous responsive version stacked the cards too early.
+             * Most laptops still have enough content width to keep the PC-style layout:
+             * Branding + Hours on top, Location + Rules below.
+             */
+            bool desktopStyle = usableWidth >= 960;
 
-            int bottomY = topCardsY + topCardHeight + 30;
-            int bottomLeftWidth = (int)(usableWidth * 0.64);
-            int bottomRightWidth = usableWidth - bottomLeftWidth - gap;
+            if (desktopStyle)
+            {
+                int leftWidth = (int)(usableWidth * 0.56);
+                int rightWidth = usableWidth - leftWidth - gap;
 
-            int lowerCardHeight = 520;
-            locationCard.Bounds = new Rectangle(margin, bottomY, bottomLeftWidth, lowerCardHeight);
-            rulesCard.Bounds = new Rectangle(locationCard.Right + gap, bottomY, bottomRightWidth, lowerCardHeight);
+                int topCardHeight = leftWidth < 620 ? 430 : 338;
+                brandingCard.Bounds = new Rectangle(margin, topCardsY, leftWidth, topCardHeight);
+                hoursCard.Bounds = new Rectangle(brandingCard.Right + gap, topCardsY, rightWidth, topCardHeight);
+
+                int bottomY = topCardsY + topCardHeight + 30;
+                int bottomLeftWidth = (int)(usableWidth * 0.64);
+                int bottomRightWidth = usableWidth - bottomLeftWidth - gap;
+
+                int lowerCardHeight = 520;
+                locationCard.Bounds = new Rectangle(margin, bottomY, bottomLeftWidth, lowerCardHeight);
+                rulesCard.Bounds = new Rectangle(locationCard.Right + gap, bottomY, bottomRightWidth, lowerCardHeight);
+            }
+            else
+            {
+                int fullWidth = usableWidth;
+                int topCardHeight = 338;
+                int lowerCardHeight = 520;
+
+                brandingCard.Bounds = new Rectangle(margin, topCardsY, fullWidth, topCardHeight);
+                hoursCard.Bounds = new Rectangle(margin, brandingCard.Bottom + gap, fullWidth, topCardHeight);
+
+                int bottomY = hoursCard.Bottom + gap;
+                int compactLocationHeight = fullWidth < 820 ? 920 : lowerCardHeight;
+                locationCard.Bounds = new Rectangle(margin, bottomY, fullWidth, compactLocationHeight);
+                rulesCard.Bounds = new Rectangle(margin, locationCard.Bottom + gap, fullWidth, lowerCardHeight);
+            }
 
             LayoutBrandingCard();
             LayoutHoursCard();
             LayoutLocationCard();
             LayoutRulesCard();
 
-            canvas.AutoScrollMinSize = new Size(0, rulesCard.Bottom + 80);
+            int bottom = Math.Max(rulesCard.Bottom, locationCard.Bottom);
+            canvas.AutoScrollMinSize = new Size(0, bottom + 80);
+            canvas.HorizontalScroll.Enabled = false;
+            canvas.HorizontalScroll.Visible = false;
         }
 
         private void LayoutBrandingCard()
@@ -695,13 +731,27 @@ namespace EducationSystem
             valueName.Bounds = new Rectangle(32, 148, brandingCard.Width - 64, 50);
 
             int halfGap = 20;
-            int halfWidth = (brandingCard.Width - 64 - halfGap) / 2;
 
-            lblEmail.Location = new Point(32, 232);
-            valueEmail.Bounds = new Rectangle(32, 258, halfWidth, 50);
+            if (brandingCard.Width >= 620)
+            {
+                int halfWidth = (brandingCard.Width - 64 - halfGap) / 2;
 
-            lblPhone.Location = new Point(32 + halfWidth + halfGap, 232);
-            valuePhone.Bounds = new Rectangle(32 + halfWidth + halfGap, 258, halfWidth, 50);
+                lblEmail.Location = new Point(32, 232);
+                valueEmail.Bounds = new Rectangle(32, 258, halfWidth, 50);
+
+                lblPhone.Location = new Point(32 + halfWidth + halfGap, 232);
+                valuePhone.Bounds = new Rectangle(32 + halfWidth + halfGap, 258, halfWidth, 50);
+            }
+            else
+            {
+                int fullWidth = brandingCard.Width - 64;
+
+                lblEmail.Location = new Point(32, 220);
+                valueEmail.Bounds = new Rectangle(32, 246, fullWidth, 46);
+
+                lblPhone.Location = new Point(32, 308);
+                valuePhone.Bounds = new Rectangle(32, 334, fullWidth, 46);
+            }
         }
 
         private void LayoutHoursCard()
@@ -757,41 +807,61 @@ namespace EducationSystem
             Panel map = (Panel)c[12];
             Panel badge = (Panel)c[13];
 
-            int gap = 34;
-            int formWidth = Math.Max(470, (int)(locationCard.Width * 0.53));
-            int mapX = formWidth + gap;
-            int mapWidth = Math.Max(260, locationCard.Width - mapX);
+            // Keep the PC-style left form + right map as long as there is enough room.
+            bool compact = locationCard.Width < 620;
+
+            int formWidth = compact
+                ? locationCard.Width
+                : Math.Max(390, (int)(locationCard.Width * 0.54));
 
             c[0].Location = new Point(32, 34); // title
             c[1].Location = new Point(32, 70); // subtitle
-            ((Label)c[1]).MaximumSize = new Size(formWidth - 64, 0);
+            ((Label)c[1]).MaximumSize = new Size(Math.Max(260, formWidth - 64), 0);
+
+            int inputWidth = Math.Max(220, formWidth - 64);
 
             lblBlock.Location = new Point(32, 128);
-            valueBlock.Bounds = new Rectangle(32, 154, formWidth - 64, 42);
+            valueBlock.Bounds = new Rectangle(32, 154, inputWidth, 42);
 
             lblWing.Location = new Point(32, 214);
-            valueWing.Bounds = new Rectangle(32, 240, formWidth - 64, 42);
+            valueWing.Bounds = new Rectangle(32, 240, inputWidth, 42);
 
             lblZip.Location = new Point(32, 300);
-            valueZip.Bounds = new Rectangle(32, 326, formWidth - 64, 42);
+            valueZip.Bounds = new Rectangle(32, 326, inputWidth, 42);
 
             lblMapTitle.Location = new Point(32, 386);
-            valueMapTitle.Bounds = new Rectangle(32, 412, formWidth - 64, 42);
+            valueMapTitle.Bounds = new Rectangle(32, 412, inputWidth, 42);
 
             lblMapAddress.Location = new Point(32, 472);
-            valueMapAddress.Bounds = new Rectangle(32, 498, formWidth - 64, 42);
+            valueMapAddress.Bounds = new Rectangle(32, 498, inputWidth, 42);
 
-            map.Bounds = new Rectangle(mapX, 0, mapWidth, locationCard.Height);
+            if (compact)
+            {
+                map.Bounds = new Rectangle(
+                    32,
+                    558,
+                    Math.Max(260, locationCard.Width - 64),
+                    Math.Max(300, locationCard.Height - 590)
+                );
+            }
+            else
+            {
+                int gap = 24;
+                int mapX = formWidth + gap;
+                int mapWidth = Math.Max(240, locationCard.Width - mapX);
+
+                map.Bounds = new Rectangle(mapX, 0, mapWidth, locationCard.Height);
+            }
 
             badge.Bounds = new Rectangle(
                 42,
-                map.Height - 96,
-                Math.Min(380, Math.Max(260, map.Width - 84)),
+                Math.Max(20, map.Height - 96),
+                Math.Min(380, Math.Max(220, map.Width - 84)),
                 68
             );
 
             lblMapBadge.Location = new Point(54, 8);
-            lblMapBadge.Size = new Size(badge.Width - 70, 52);
+            lblMapBadge.Size = new Size(Math.Max(120, badge.Width - 70), 52);
 
             UpdateMapBadge();
         }

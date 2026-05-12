@@ -95,7 +95,8 @@ namespace EducationSystem
             settingsToolStripMenuItem.Click += settingsToolStripMenuItem_Click;
 
             Resize += ClientDashboardForm_Resize;
-            topbar.Resize += (s, e) => PositionResponsiveHeader();
+            topbar.Resize += (s, e) => AdjustLayout();
+            Resize += (s, e) => PositionResponsiveHeader();
             Sidebar.Resize += (s, e) => LayoutSidebar();
         }
 
@@ -724,34 +725,102 @@ namespace EducationSystem
             if (pageTitle == null || pageTitle.Parent != panelContent)
                 return;
 
-            int left = 42;
+            int panelWidth = panelContent.ClientSize.Width > 0 ? panelContent.ClientSize.Width : panelContent.Width;
+            int panelHeight = panelContent.ClientSize.Height > 0 ? panelContent.ClientSize.Height : panelContent.Height;
+
+            int left = panelWidth < 1000 ? 22 : 42;
             int top = 34;
-            int gap = 24;
-            int width = panelContent.Width - 84;
-            int cardWidth = (width - (gap * 3)) / 4;
-            int cardHeight = 168;
+            int gap = panelWidth < 1000 ? 14 : 24;
+            int width = Math.Max(320, panelWidth - (left * 2));
 
             pageTitle.Location = new Point(left, top);
             pageSubTitle.Location = new Point(left, top + 54);
+            pageSubTitle.MaximumSize = new Size(width, 0);
 
             int cardsTop = top + 112;
+            int cardHeight = panelHeight < 760 ? 150 : 168;
 
-            card1.Bounds = new Rectangle(left, cardsTop, cardWidth, cardHeight);
-            card2.Bounds = new Rectangle(card1.Right + gap, cardsTop, cardWidth, cardHeight);
-            card3.Bounds = new Rectangle(card2.Right + gap, cardsTop, cardWidth, cardHeight);
-            card4.Bounds = new Rectangle(card3.Right + gap, cardsTop, cardWidth, cardHeight);
+            Panel[] cards = { card1, card2, card3, card4 };
 
-            tableCard.Bounds = new Rectangle(left, card1.Bottom + 34, width, 390);
+            int columns;
+            if (width >= 920)
+                columns = 4;
+            else if (width >= 640)
+                columns = 2;
+            else
+                columns = 1;
+
+            int cardWidth = Math.Max(200, (width - (gap * (columns - 1))) / columns);
+
+            for (int i = 0; i < cards.Length; i++)
+            {
+                int row = i / columns;
+                int col = i % columns;
+
+                cards[i].Bounds = new Rectangle(
+                    left + (col * (cardWidth + gap)),
+                    cardsTop + (row * (cardHeight + gap)),
+                    cardWidth,
+                    cardHeight
+                );
+            }
+
+            int tableTop = cards[cards.Length - 1].Bottom + 28;
+            int visibleHeight = panelHeight - tableTop - 70;
+            int tableHeight = Math.Max(520, visibleHeight);
+
+            tableCard.Bounds = new Rectangle(left, tableTop, width, tableHeight);
 
             recentTitleLabel.Location = new Point(36, 22);
             recentViewAllLink.Location = new Point(
-                tableCard.Width - recentViewAllLink.PreferredWidth - 32,
+                Math.Max(36, tableCard.Width - recentViewAllLink.PreferredWidth - 32),
                 28
             );
 
             dgvRecent.Location = new Point(0, 74);
-            dgvRecent.Size = new Size(tableCard.Width, tableCard.Height - 74);
+            dgvRecent.Size = new Size(tableCard.Width, Math.Max(360, tableCard.Height - 74));
+
+            panelContent.AutoScroll = true;
+            panelContent.AutoScrollMargin = new Size(0, 120);
+            panelContent.AutoScrollMinSize = new Size(0, tableCard.Bottom + 150);
+            panelContent.HorizontalScroll.Enabled = false;
+            panelContent.HorizontalScroll.Visible = false;
         }
+
+
+
+
+
+        private void AdjustLayout()
+        {
+            if (activeContentForm == null)
+            {
+                LayoutDashboardHome();
+
+                if (panelContent != null)
+                {
+                    panelContent.AutoScroll = true;
+                    panelContent.AutoScrollMargin = new Size(0, 120);
+                    panelContent.HorizontalScroll.Enabled = false;
+                    panelContent.HorizontalScroll.Visible = false;
+                }
+            }
+            else
+            {
+                if (panelContent != null)
+                {
+                    panelContent.AutoScroll = false;
+                    panelContent.AutoScrollMinSize = Size.Empty;
+                    panelContent.AutoScrollMargin = Size.Empty;
+                    panelContent.Padding = Padding.Empty;
+                    panelContent.HorizontalScroll.Enabled = false;
+                    panelContent.HorizontalScroll.Visible = false;
+                    panelContent.VerticalScroll.Enabled = false;
+                    panelContent.VerticalScroll.Visible = false;
+                }
+            }
+        }
+
 
 
         private void LoadDashboardDataFromDatabase()
@@ -1055,8 +1124,36 @@ END;";
 
             LayoutSidebarBranding(Sidebar.Width > 120);
             LayoutSidebar();
-            LayoutDashboardHome();
+
+            if (activeContentForm == null)
+            {
+                LayoutDashboardHome();
+
+                if (panelContent != null)
+                {
+                    panelContent.AutoScroll = true;
+                    panelContent.AutoScrollMargin = new Size(0, 120);
+                    panelContent.HorizontalScroll.Enabled = false;
+                    panelContent.HorizontalScroll.Visible = false;
+                }
+            }
+            else
+            {
+                if (panelContent != null)
+                {
+                    panelContent.AutoScroll = false;
+                    panelContent.AutoScrollMinSize = Size.Empty;
+                    panelContent.AutoScrollMargin = Size.Empty;
+                    panelContent.Padding = Padding.Empty;
+                    panelContent.HorizontalScroll.Enabled = false;
+                    panelContent.HorizontalScroll.Visible = false;
+                    panelContent.VerticalScroll.Enabled = false;
+                    panelContent.VerticalScroll.Visible = false;
+                }
+            }
         }
+
+
 
         private void LayoutSidebar()
         {
@@ -1235,31 +1332,34 @@ END;";
 
         private void ShowDashboardHome()
         {
-            if (activeContentForm != null)
-            {
-                try
-                {
-                    activeContentForm.Hide();
-                    activeContentForm.Dispose();
-                }
-                catch
-                {
-                }
+            activeContentForm?.Close();
+            activeContentForm = null;
 
-                activeContentForm = null;
-            }
-
-            panelContent.SuspendLayout();
             panelContent.Controls.Clear();
-            panelContent.BackColor = FormBack;
+
+            // Dashboard home uses panelContent scrolling.
+            panelContent.AutoScroll = true;
+            panelContent.AutoScrollMargin = new Size(0, 120);
+            panelContent.AutoScrollMinSize = new Size(0, 0);
+            panelContent.Padding = new Padding(0, 0, 0, 120);
+            panelContent.HorizontalScroll.Enabled = false;
+            panelContent.HorizontalScroll.Visible = false;
 
             SetupDashboardHome();
-
-            panelContent.Visible = true;
-            panelContent.BringToFront();
+            LoadDashboardDataFromDatabase();
             LayoutDashboardHome();
-            panelContent.ResumeLayout();
+
+            try
+            {
+                panelContent.AutoScrollPosition = new Point(0, 0);
+            }
+            catch
+            {
+                // Keep dashboard visible even if scroll reset fails.
+            }
         }
+
+
 
         public void LoadContentForm(Form form)
         {
@@ -1272,23 +1372,36 @@ END;";
                 }
                 catch
                 {
+                    // Ignore dispose issues.
                 }
-
-                activeContentForm = null;
             }
 
-            panelContent.SuspendLayout();
             panelContent.Controls.Clear();
+
+            // IMPORTANT:
+            // Child pages like LibrarySetupForm and BookManagementForm already have
+            // their own scrollable panels. Disable panelContent scrolling here to avoid
+            // the double scrollbar on the right side.
+            panelContent.AutoScroll = false;
+            panelContent.AutoScrollMinSize = Size.Empty;
+            panelContent.AutoScrollMargin = Size.Empty;
+            panelContent.Padding = Padding.Empty;
+            panelContent.HorizontalScroll.Enabled = false;
+            panelContent.HorizontalScroll.Visible = false;
+            panelContent.VerticalScroll.Enabled = false;
+            panelContent.VerticalScroll.Visible = false;
 
             activeContentForm = form;
             form.TopLevel = false;
             form.FormBorderStyle = FormBorderStyle.None;
             form.Dock = DockStyle.Fill;
+
             panelContent.Controls.Add(form);
             form.Show();
-
-            panelContent.ResumeLayout();
+            form.BringToFront();
         }
+
+
 
         private Button CreateSidebarNavButton(string icon, string text, bool hasArrow = false)
         {

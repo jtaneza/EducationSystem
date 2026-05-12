@@ -368,7 +368,7 @@ ORDER BY COALESCE(br.CreatedAt, CAST(br.IssueDate AS DATETIME2), SYSUTCDATETIME(
                         issueDate.ToString("MMM dd, yyyy"),
                         dueDate.ToString("MMM dd, yyyy"),
                         isOverdue,
-                        isOverdue ? "Overdue" : rawStatus == "RETURNED" ? "Returned Today" : "In Progress",
+                        isOverdue ? "Overdue" : rawStatus == "RETURNED" ? "Returned" : "In Progress",
                         isOverdue ? "#F7816D" : rawStatus == "RETURNED" ? "#DDE4E6" : "#B7EBD7",
                         isOverdue ? "#6E1B0F" : rawStatus == "RETURNED" ? "#3C4A44" : "#3B6B5C"));
                 }

@@ -65,11 +65,12 @@ namespace EducationSystem
 
             Text = "Issue New Book";
             StartPosition = FormStartPosition.CenterParent;
+            AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = FormBack;
-            ClientSize = new Size(800, 650);
+            ClientSize = new Size(660, 570);
 
             BuildUI();
 
@@ -88,7 +89,7 @@ namespace EducationSystem
                 AutoSize = true,
                 Font = new Font("Segoe UI", 24F, FontStyle.Bold),
                 ForeColor = PrimaryText,
-                Location = new Point(55, 55)
+                Location = new Point(44, 32)
             };
 
             lblSubtitle = new Label
@@ -97,37 +98,37 @@ namespace EducationSystem
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10.5F),
                 ForeColor = SecondaryText,
-                Location = new Point(58, 103)
+                Location = new Point(46, 74)
             };
 
-            lblMember = CreateFieldLabel("MEMBER DETAILS", 58, 155);
-            cboMember = CreateComboBox(58, 188, 684);
+            lblMember = CreateFieldLabel("MEMBER DETAILS", 46, 116);
+            cboMember = CreateComboBox(46, 144, 568);
 
-            lblBook = CreateFieldLabel("BOOK SELECTION", 58, 250);
-            cboBook = CreateComboBox(58, 283, 684);
+            lblBook = CreateFieldLabel("BOOK SELECTION", 46, 196);
+            cboBook = CreateComboBox(46, 224, 568);
 
-            lblIssueDate = CreateFieldLabel("ISSUE DATE", 58, 350);
+            lblIssueDate = CreateFieldLabel("ISSUE DATE", 46, 278);
             dtpIssueDate = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Short,
                 Font = new Font("Segoe UI", 10.5F),
-                Location = new Point(58, 383),
-                Size = new Size(270, 32),
+                Location = new Point(46, 306),
+                Size = new Size(250, 32),
                 Value = DateTime.Today
             };
 
-            lblDueDate = CreateFieldLabel("DUE DATE", 385, 350);
+            lblDueDate = CreateFieldLabel("DUE DATE", 340, 278);
             dtpDueDate = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Short,
                 Font = new Font("Segoe UI", 10.5F),
-                Location = new Point(385, 383),
-                Size = new Size(270, 32),
+                Location = new Point(340, 306),
+                Size = new Size(250, 32),
                 Value = DateTime.Today.AddDays(7)
             };
 
-            lblStatus = CreateFieldLabel("STATUS", 58, 450);
-            cboStatus = CreateComboBox(58, 483, 300);
+            lblStatus = CreateFieldLabel("STATUS", 46, 358);
+            cboStatus = CreateComboBox(46, 386, 280);
             cboStatus.Items.Add("ACTIVE");
             cboStatus.SelectedIndex = 0;
             cboStatus.Enabled = false;
@@ -136,7 +137,7 @@ namespace EducationSystem
             {
                 BackColor = FooterBack,
                 Dock = DockStyle.Bottom,
-                Height = 92
+                Height = 78
             };
 
             btnCancel = new Button
@@ -147,8 +148,8 @@ namespace EducationSystem
                 ForeColor = PrimaryText,
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Size = new Size(120, 44),
-                Location = new Point(470, 24)
+                Size = new Size(112, 42),
+                Location = new Point(ClientSize.Width - 46 - 150 - 16 - 112, 18)
             };
             btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) =>
@@ -165,8 +166,8 @@ namespace EducationSystem
                 ForeColor = Color.FromArgb(0, 66, 51),
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Size = new Size(160, 44),
-                Location = new Point(600, 24)
+                Size = new Size(150, 42),
+                Location = new Point(ClientSize.Width - 46 - 150, 18)
             };
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;

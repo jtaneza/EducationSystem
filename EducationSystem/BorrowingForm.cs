@@ -148,7 +148,25 @@ namespace EducationSystem
         {
             using IssueBorrowDialog dlg = new IssueBorrowDialog();
 
-            if (dlg.ShowDialog() == DialogResult.OK)
+            Form? owner = FindForm();
+            dlg.StartPosition = FormStartPosition.CenterParent;
+
+            if (owner == null)
+            {
+                Rectangle screen = Screen.FromControl(this).WorkingArea;
+                dlg.StartPosition = FormStartPosition.Manual;
+                dlg.Location = new Point(
+                    screen.Left + Math.Max(0, (screen.Width - dlg.Width) / 2),
+                    screen.Top + Math.Max(0, (screen.Height - dlg.Height) / 2)
+                );
+
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                    LoadBorrowingData();
+
+                return;
+            }
+
+            if (dlg.ShowDialog(owner) == DialogResult.OK)
                 LoadBorrowingData();
         }
 
@@ -444,11 +462,11 @@ ORDER BY b.IssueDate DESC, b.BorrowID DESC;";
             catch (Exception ex)
             {
                 MessageBox.Show(
-    "Failed to load borrowing records.\n\n" + ex.Message,
-    "Database Error",
-    MessageBoxButtons.OK,
-    MessageBoxIcon.Error
-);
+                    "Failed to load borrowing records.\n\n" + ex.Message,
+                    "Database Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
 
             ClearGridSelection();
