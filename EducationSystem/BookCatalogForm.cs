@@ -59,6 +59,8 @@ namespace EducationSystem
         private int currentPage = 1;
         private int totalPages = 1;
         private List<BookCatalogItem> allBooks = new List<BookCatalogItem>();
+        private string selectedCategoryFilter = "All Categories";
+        private ContextMenuStrip categoryMenu = null!;
 
         private sealed class BookCatalogItem
         {
@@ -115,7 +117,7 @@ namespace EducationSystem
             {
                 Text = "☰  Filter by Category  ▾",
                 Font = new Font("Segoe UI", 10F, FontStyle.Bold),
-                Size = new Size(220, 42),
+                Size = new Size(240, 44),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Surface,
                 ForeColor = OnSurface,
@@ -123,6 +125,9 @@ namespace EducationSystem
             };
             btnFilter.FlatAppearance.BorderColor = Outline;
             btnFilter.FlatAppearance.BorderSize = 1;
+            btnFilter.FlatAppearance.MouseOverBackColor = SurfaceLow;
+            btnFilter.FlatAppearance.MouseDownBackColor = SurfaceLow;
+            btnFilter.Click += BtnFilter_Click;
 
             btnAddEntry = new Button
             {
@@ -566,7 +571,17 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
         {
             dgvBooks.Rows.Clear();
 
-            List<BookCatalogItem> pageItems = allBooks
+            List<BookCatalogItem> filteredBooks = GetFilteredBooks();
+
+            totalPages = Math.Max(1, (int)Math.Ceiling(filteredBooks.Count / (double)PageSize));
+
+            if (currentPage > totalPages)
+                currentPage = totalPages;
+
+            if (currentPage < 1)
+                currentPage = 1;
+
+            List<BookCatalogItem> pageItems = filteredBooks
                 .Skip((currentPage - 1) * PageSize)
                 .Take(PageSize)
                 .ToList();
@@ -582,7 +597,7 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
                 );
             }
 
-            int total = allBooks.Count;
+            int total = filteredBooks.Count;
             int start = total == 0 ? 0 : ((currentPage - 1) * PageSize) + 1;
             int end = Math.Min(currentPage * PageSize, total);
 
@@ -592,6 +607,77 @@ ORDER BY cl.LibraryName ASC, b.BookTitle ASC;";
 
             UpdatePagerButtons();
             dgvBooks.ClearSelection();
+        }
+
+        private List<BookCatalogItem> GetFilteredBooks()
+        {
+            if (selectedCategoryFilter == "All Categories")
+                return new List<BookCatalogItem>(allBooks);
+
+            return allBooks
+                .Where(b => (string.IsNullOrWhiteSpace(b.Category) ? "Uncategorized" : b.Category)
+                .Equals(selectedCategoryFilter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        private void BtnFilter_Click(object? sender, EventArgs e)
+        {
+            BuildCategoryMenu();
+
+            // Make sure the dropdown has real height before showing.
+            categoryMenu.AutoSize = true;
+            categoryMenu.Show(btnFilter, new Point(0, btnFilter.Height + 2));
+        }
+
+        private void BuildCategoryMenu()
+        {
+            categoryMenu = new ContextMenuStrip
+            {
+                Font = new Font("Segoe UI", 10F),
+                BackColor = Surface,
+                ForeColor = OnSurface,
+                ShowImageMargin = false,
+                Padding = new Padding(6, 6, 6, 6),
+                AutoSize = true,
+                RenderMode = ToolStripRenderMode.System
+            };
+
+            AddCategoryMenuItem("All Categories");
+
+            foreach (string category in allBooks
+                .Select(b => string.IsNullOrWhiteSpace(b.Category) ? "Uncategorized" : b.Category)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(c => c))
+            {
+                AddCategoryMenuItem(category);
+            }
+        }
+
+        private void AddCategoryMenuItem(string category)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem(category)
+            {
+                Checked = selectedCategoryFilter.Equals(category, StringComparison.OrdinalIgnoreCase),
+                CheckOnClick = false,
+                AutoSize = false,
+                Width = btnFilter.Width - 12,
+                Height = 30,
+                BackColor = selectedCategoryFilter.Equals(category, StringComparison.OrdinalIgnoreCase) ? SurfaceLow : Surface,
+                ForeColor = selectedCategoryFilter.Equals(category, StringComparison.OrdinalIgnoreCase) ? AccentDeep : OnSurface
+            };
+
+            item.Click += (s, e) =>
+            {
+                selectedCategoryFilter = category;
+                btnFilter.Text = selectedCategoryFilter == "All Categories"
+                    ? "☰  Filter by Category  ▾"
+                    : $"☰  {selectedCategoryFilter}  ▾";
+
+                currentPage = 1;
+                RenderCurrentPage();
+            };
+
+            categoryMenu.Items.Add(item);
         }
 
         private void UpdatePagerButtons()
