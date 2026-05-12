@@ -102,8 +102,10 @@ namespace EducationSystem
             editMode = existingBook != null;
 
             Text = editMode ? "Edit Book" : "Add New Book";
-            ClientSize = new Size(760, 680);
-            MinimumSize = new Size(760, 680);
+            ClientSize = new Size(660, 560);
+            MinimumSize = new Size(620, 520);
+            MaximumSize = new Size(700, 600);
+            AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterParent;
             BackColor = frameBack;
@@ -122,7 +124,7 @@ namespace EducationSystem
             headerPanel = new Panel
             {
                 BackColor = headerBack,
-                Bounds = new Rectangle(1, 1, ClientSize.Width - 2, 86),
+                Bounds = new Rectangle(1, 1, ClientSize.Width - 2, 74),
                 Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right
             };
 
@@ -130,22 +132,22 @@ namespace EducationSystem
             {
                 Text = editMode ? "Edit Book Details" : "Add New Book to Catalog",
                 AutoSize = true,
-                Font = new Font("Segoe UI", 18F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 17F, FontStyle.Bold),
                 ForeColor = Color.White,
                 BackColor = Color.Transparent,
-                Location = new Point(36, 27)
+                Location = new Point(32, 22)
             };
 
             Button close = new Button
             {
                 Text = "x",
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(38, 38),
-                Location = new Point(headerPanel.Width - 54, 24),
+                Size = new Size(34, 34),
+                Location = new Point(headerPanel.Width - 48, 20),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
                 BackColor = headerBack,
                 ForeColor = ColorTranslator.FromHtml("#BBCAC3"),
-                Font = new Font("Segoe UI", 16F, FontStyle.Regular),
+                Font = new Font("Segoe UI", 14F, FontStyle.Regular),
                 Cursor = Cursors.Hand
             };
             close.FlatAppearance.BorderSize = 0;
@@ -158,19 +160,20 @@ namespace EducationSystem
             headerPanel.Controls.Add(title);
             headerPanel.Controls.Add(close);
 
-            bodyPanel = new Panel
-            {
-                BackColor = formBack,
-                Bounds = new Rectangle(1, headerPanel.Bottom, ClientSize.Width - 2, 496),
-                Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right,
-                Padding = new Padding(36, 30, 36, 30)
-            };
-
             footerPanel = new Panel
             {
                 BackColor = footerBack,
-                Bounds = new Rectangle(1, bodyPanel.Bottom, ClientSize.Width - 2, ClientSize.Height - bodyPanel.Bottom - 1),
+                Bounds = new Rectangle(1, ClientSize.Height - 70, ClientSize.Width - 2, 69),
                 Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
+            };
+
+            bodyPanel = new Panel
+            {
+                BackColor = formBack,
+                Bounds = new Rectangle(1, headerPanel.Bottom, ClientSize.Width - 2, footerPanel.Top - headerPanel.Bottom),
+                Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom,
+                Padding = new Padding(32, 22, 32, 22),
+                AutoScroll = false
             };
 
             Controls.Add(headerPanel);
@@ -183,93 +186,108 @@ namespace EducationSystem
 
         private void BuildBody(string bookId, string recordedBy)
         {
-            int left = 36;
-            int top = 24;
-            int gap = 30;
-            int colWidth = (ClientSize.Width - 72 - gap) / 2;
-            int fullWidth = ClientSize.Width - 72;
+            int left = 32;
+            int top = 20;
+            int gap = 26;
+            int fullWidth = bodyPanel.Width - 64;
+            int colWidth = (fullWidth - gap) / 2;
 
             txtBookId = CreateTextBox(bookId, true);
             txtRecordedBy = CreateTextBox(recordedBy, true);
-            AddLabeledControl(bodyPanel, "BOOK ID (SYSTEM GENERATED)", txtBookId, left, top, colWidth, 48);
-            AddLabeledControl(bodyPanel, "RECORDED BY", txtRecordedBy, left + colWidth + gap, top, colWidth, 48);
+            AddLabeledControl(bodyPanel, "BOOK ID (SYSTEM GENERATED)", txtBookId, left, top, colWidth, 42);
+            AddLabeledControl(bodyPanel, "RECORDED BY", txtRecordedBy, left + colWidth + gap, top, colWidth, 42);
 
-            top += 92;
+            top += 76;
             txtTitle = CreateTextBox("", false);
             txtTitle.PlaceholderText = "Enter full publication title...";
-            txtTitle.Font = new Font("Segoe UI", 13F, FontStyle.Bold);
-            AddLabeledControl(bodyPanel, "BOOK TITLE", txtTitle, left, top, fullWidth, 54);
+            txtTitle.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            AddLabeledControl(bodyPanel, "BOOK TITLE", txtTitle, left, top, fullWidth, 48);
 
-            top += 92;
+            top += 78;
             txtAuthor = CreateTextBox("", false);
             txtAuthor.PlaceholderText = "Full name of primary author...";
-            AddLabeledControl(bodyPanel, "AUTHOR NAME", txtAuthor, left, top, fullWidth, 50);
+            AddLabeledControl(bodyPanel, "AUTHOR NAME", txtAuthor, left, top, fullWidth, 46);
 
-            top += 88;
-            int selectWidth = (fullWidth - 40) / 3;
+            top += 76;
+            int selectWidth = (fullWidth - 32) / 3;
+
             cmbCategory = CreateComboBox();
             cmbGenre = CreateComboBox();
             cmbGroup = CreateComboBox();
 
-            AddLabeledControl(bodyPanel, "CATEGORY", cmbCategory, left, top, selectWidth, 46);
-            AddLabeledControl(bodyPanel, "GENRE", cmbGenre, left + selectWidth + 20, top, selectWidth, 46);
-            AddLabeledControl(bodyPanel, "GROUP", cmbGroup, left + (selectWidth + 20) * 2, top, selectWidth, 46);
+            AddLabeledControl(bodyPanel, "CATEGORY", cmbCategory, left, top, selectWidth, 42);
+            AddLabeledControl(bodyPanel, "GENRE", cmbGenre, left + selectWidth + 16, top, selectWidth, 42);
+            AddLabeledControl(bodyPanel, "GROUP", cmbGroup, left + (selectWidth + 16) * 2, top, selectWidth, 42);
 
-            top += 86;
+            top += 72;
+
             Panel inventoryPanel = new Panel
             {
                 BackColor = footerBack,
-                Bounds = new Rectangle(left, top, fullWidth, 98)
+                Bounds = new Rectangle(left, top, fullWidth, 74)
             };
             inventoryPanel.Paint += RoundedPanelPaint;
             bodyPanel.Controls.Add(inventoryPanel);
 
+            int inventoryLeft = 18;
+            int inventoryGap = 24;
+            int inventoryWidth = (inventoryPanel.Width - 36 - inventoryGap * 2) / 3;
+
+            Label lblYear = CreateFieldLabel("YEAR");
+            lblYear.Location = new Point(inventoryLeft, 14);
+
             numYear = new NumericUpDown
             {
                 Minimum = 0,
-                Maximum = DateTime.Today.Year + 5,
+                Maximum = DateTime.Now.Year + 1,
                 Value = 0,
-                BorderStyle = BorderStyle.None,
-                BackColor = Color.White,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                BackColor = formBack,
                 ForeColor = primaryText,
-                TextAlign = HorizontalAlignment.Center,
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
-                Location = new Point(18, 48),
-                Size = new Size(150, 34)
+                BorderStyle = BorderStyle.None,
+                Location = new Point(inventoryLeft, 38),
+                Size = new Size(inventoryWidth, 24),
+                TextAlign = HorizontalAlignment.Center
             };
+
+            int quantityX = inventoryLeft + inventoryWidth + inventoryGap;
+            Label lblQuantity = CreateFieldLabel("QUANTITY (QTY)");
+            lblQuantity.Location = new Point(quantityX, 14);
 
             numQuantity = new NumericUpDown
             {
-                Minimum = 1,
-                Maximum = 99999,
+                Minimum = 0,
+                Maximum = 100000,
                 Value = 1,
-                BorderStyle = BorderStyle.None,
-                BackColor = Color.White,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                BackColor = formBack,
                 ForeColor = primaryText,
-                TextAlign = HorizontalAlignment.Center,
-                Font = new Font("Segoe UI", 12F, FontStyle.Bold),
-                Location = new Point(192, 48),
-                Size = new Size(150, 34)
+                BorderStyle = BorderStyle.None,
+                Location = new Point(quantityX, 38),
+                Size = new Size(inventoryWidth, 24),
+                TextAlign = HorizontalAlignment.Center
             };
 
+            int statusX = inventoryLeft + (inventoryWidth + inventoryGap) * 2;
+            Label lblStatus = CreateFieldLabel("AVAILABILITY STATUS");
+            lblStatus.Location = new Point(statusX, 14);
+
             cmbStatus = CreateComboBox();
-            cmbStatus.Items.AddRange(new object[] { "In Stock", "Reserved", "On Order", "Restricted" });
+            cmbStatus.Location = new Point(statusX, 36);
+            cmbStatus.Size = new Size(inventoryWidth, 28);
+            cmbStatus.Items.AddRange(new object[] { "In Stock", "Low Stock", "Out of Stock" });
             cmbStatus.SelectedIndex = 0;
-            cmbStatus.Location = new Point(366, 46);
-            cmbStatus.Size = new Size(fullWidth - 386, 34);
 
-            Label yearLabel = CreateSectionLabel("YEAR", 18, 20);
-            Label qtyLabel = CreateSectionLabel("QUANTITY (QTY)", 192, 20);
-            Label statusLabel = CreateSectionLabel("AVAILABILITY STATUS", 366, 20);
-
-            inventoryPanel.Controls.Add(yearLabel);
-            inventoryPanel.Controls.Add(qtyLabel);
-            inventoryPanel.Controls.Add(statusLabel);
+            inventoryPanel.Controls.Add(lblYear);
             inventoryPanel.Controls.Add(numYear);
+            inventoryPanel.Controls.Add(lblQuantity);
             inventoryPanel.Controls.Add(numQuantity);
+            inventoryPanel.Controls.Add(lblStatus);
             inventoryPanel.Controls.Add(cmbStatus);
 
-            BindClassificationChoices();
+            LoadCategoryDropdowns();
+
+            cmbCategory.SelectedIndexChanged += (s, e) => ApplyCategorySelection();
         }
 
         private void BuildFooter()
@@ -279,12 +297,12 @@ namespace EducationSystem
                 Text = "Cancel",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = footerBack,
-                ForeColor = mutedText,
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                Size = new Size(112, 48),
+                ForeColor = primaryText,
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Location = new Point(ClientSize.Width - 36 - 210 - 18 - 112, 24),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Size = new Size(112, 40),
+                Location = new Point(footerPanel.Width - 292, 15),
+                Anchor = AnchorStyles.Right | AnchorStyles.Top
             };
             btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) =>
@@ -295,69 +313,77 @@ namespace EducationSystem
 
             btnSave = new Button
             {
-                Text = editMode ? "Update Book" : "Save Book",
+                Text = editMode ? "Save Changes" : "Save Book",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = primary,
                 ForeColor = Color.FromArgb(0, 66, 51),
-                Font = new Font("Segoe UI", 11F, FontStyle.Bold),
-                Size = new Size(210, 50),
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Location = new Point(ClientSize.Width - 36 - 210, 23),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Size = new Size(150, 40),
+                Location = new Point(footerPanel.Width - 168, 15),
+                Anchor = AnchorStyles.Right | AnchorStyles.Top
             };
             btnSave.FlatAppearance.BorderSize = 0;
-            btnSave.Click += Save_Click;
+            btnSave.Click += SaveClicked;
 
             footerPanel.Controls.Add(btnCancel);
             footerPanel.Controls.Add(btnSave);
-
-            AcceptButton = btnSave;
-            CancelButton = btnCancel;
         }
 
-        private void BindClassificationChoices()
+        private void LoadCategoryDropdowns()
         {
             cmbCategory.Items.Clear();
-            cmbCategory.Items.Add("Select Category");
-            cmbCategory.Items.AddRange(categoryOptions.Cast<object>().ToArray());
-            cmbCategory.SelectedIndex = 0;
+
+            foreach (BookCategoryOption option in categoryOptions)
+                cmbCategory.Items.Add(option);
+
+            if (cmbCategory.Items.Count > 0)
+                cmbCategory.SelectedIndex = 0;
+        }
+
+        private void ApplyCategorySelection()
+        {
+            if (cmbCategory.SelectedItem is not BookCategoryOption selected)
+                return;
 
             cmbGenre.Items.Clear();
-            cmbGenre.Items.Add("Select Genre");
-            cmbGenre.Items.AddRange(categoryOptions
+            cmbGroup.Items.Clear();
+
+            IEnumerable<BookCategoryOption> matches = categoryOptions
+                .Where(item => string.Equals(item.CategoryName, selected.CategoryName, StringComparison.OrdinalIgnoreCase));
+
+            foreach (string genre in matches
                 .Select(item => item.Genre)
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(value => value)
-                .Cast<object>()
-                .ToArray());
-            cmbGenre.SelectedIndex = 0;
+                .OrderBy(value => value))
+            {
+                cmbGenre.Items.Add(genre);
+            }
 
-            cmbGroup.Items.Clear();
-            cmbGroup.Items.Add("Select Group");
-            cmbGroup.Items.AddRange(categoryOptions
+            foreach (string groupName in matches
                 .Select(item => item.GroupName)
                 .Where(value => !string.IsNullOrWhiteSpace(value))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(value => value)
-                .Cast<object>()
-                .ToArray());
-            cmbGroup.SelectedIndex = 0;
-
-            cmbCategory.SelectedIndexChanged += (s, e) =>
+                .OrderBy(value => value))
             {
-                if (cmbCategory.SelectedItem is BookCategoryOption selected)
-                {
-                    SelectComboValue(cmbGenre, selected.Genre);
-                    SelectComboValue(cmbGroup, selected.GroupName);
-                }
-            };
+                cmbGroup.Items.Add(groupName);
+            }
+
+            if (cmbGenre.Items.Count > 0)
+                cmbGenre.SelectedIndex = 0;
+
+            if (cmbGroup.Items.Count > 0)
+                cmbGroup.SelectedIndex = 0;
         }
 
         private void LoadValues(BookDialogData? existingBook)
         {
             if (existingBook == null)
+            {
+                ApplyCategorySelection();
                 return;
+            }
 
             txtBookId.Text = existingBook.BookId;
             txtTitle.Text = existingBook.Title;
@@ -366,61 +392,83 @@ namespace EducationSystem
                 ? Math.Min(numYear.Maximum, Math.Max(numYear.Minimum, existingBook.PublishYear.Value))
                 : 0;
             numQuantity.Value = Math.Min(numQuantity.Maximum, Math.Max(numQuantity.Minimum, existingBook.Quantity));
-            SelectCategory(existingBook.Category, existingBook.Genre, existingBook.GroupName);
+
+            for (int i = 0; i < cmbCategory.Items.Count; i++)
+            {
+                if (cmbCategory.Items[i] is BookCategoryOption option &&
+                    string.Equals(option.CategoryName, existingBook.Category, StringComparison.OrdinalIgnoreCase))
+                {
+                    cmbCategory.SelectedIndex = i;
+                    break;
+                }
+            }
+
+            ApplyCategorySelection();
+
             SelectComboValue(cmbGenre, existingBook.Genre);
             SelectComboValue(cmbGroup, existingBook.GroupName);
             SelectComboValue(cmbStatus, existingBook.Status);
         }
 
-        private void SelectCategory(string category, string genre, string group)
-        {
-            for (int i = 0; i < cmbCategory.Items.Count; i++)
-            {
-                if (cmbCategory.Items[i] is BookCategoryOption item &&
-                    item.CategoryName.Equals(category, StringComparison.OrdinalIgnoreCase))
-                {
-                    cmbCategory.SelectedIndex = i;
-                    return;
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(category))
-            {
-                BookCategoryOption option = new BookCategoryOption(category, genre, group);
-                cmbCategory.Items.Insert(0, option);
-                cmbCategory.SelectedIndex = 0;
-            }
-        }
-
-        private void SelectComboValue(ComboBox comboBox, string value)
+        private static void SelectComboValue(ComboBox comboBox, string value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return;
 
             for (int i = 0; i < comboBox.Items.Count; i++)
             {
-                if (string.Equals(Convert.ToString(comboBox.Items[i]), value, StringComparison.OrdinalIgnoreCase))
+                string itemText = Convert.ToString(comboBox.Items[i]) ?? "";
+
+                if (string.Equals(itemText, value, StringComparison.OrdinalIgnoreCase))
                 {
                     comboBox.SelectedIndex = i;
                     return;
                 }
             }
 
-            comboBox.Items.Insert(0, value);
-            comboBox.SelectedIndex = 0;
+            comboBox.Items.Add(value);
+            comboBox.SelectedItem = value;
         }
 
-        private TextBox CreateTextBox(string text, bool readOnly)
+        private void SaveClicked(object? sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtTitle.Text))
+            {
+                MessageBox.Show("Please enter the book title.", "Missing Title", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtTitle.Focus();
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtAuthor.Text))
+            {
+                MessageBox.Show("Please enter the author name.", "Missing Author", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                txtAuthor.Focus();
+                return;
+            }
+
+            if (cmbCategory.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a category.", "Missing Category", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cmbCategory.Focus();
+                return;
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        private TextBox CreateTextBox(string value, bool readOnly)
         {
             return new TextBox
             {
-                Text = text,
+                Text = value,
                 ReadOnly = readOnly,
                 BorderStyle = BorderStyle.None,
-                BackColor = fieldBack,
+                Font = new Font("Segoe UI", 10F, readOnly ? FontStyle.Bold : FontStyle.Regular),
                 ForeColor = readOnly ? primaryDeep : primaryText,
-                Font = new Font("Segoe UI", 11F, readOnly ? FontStyle.Bold : FontStyle.Regular),
-                Multiline = true
+                BackColor = fieldBack,
+                Multiline = true,
+                Margin = Padding.Empty
             };
         }
 
@@ -430,15 +478,13 @@ namespace EducationSystem
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = footerBack,
-                ForeColor = primaryText,
-                Font = new Font("Segoe UI", 10.5F, FontStyle.Regular),
-                IntegralHeight = false,
-                DropDownHeight = 160
+                Font = new Font("Segoe UI", 9.5F),
+                BackColor = fieldBack,
+                ForeColor = primaryText
             };
         }
 
-        private Label CreateSectionLabel(string text, int x, int y)
+        private Label CreateFieldLabel(string text)
         {
             return new Label
             {
@@ -446,101 +492,45 @@ namespace EducationSystem
                 AutoSize = true,
                 Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
                 ForeColor = secondaryText,
-                BackColor = Color.Transparent,
-                Location = new Point(x, y)
+                BackColor = Color.Transparent
             };
         }
 
         private void AddLabeledControl(Control parent, string labelText, Control input, int x, int y, int width, int height)
         {
-            Label label = CreateSectionLabel(labelText, x, y);
-            Panel host = new Panel
-            {
-                BackColor = input is ComboBox ? footerBack : fieldBack,
-                Bounds = new Rectangle(x, y + 26, width, height)
-            };
-            host.Paint += RoundedPanelPaint;
-
-            input.Location = new Point(18, input is ComboBox ? 11 : height > 54 ? 17 : 14);
-            input.Size = new Size(width - 36, height - 18);
-            input.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
-
-            host.Controls.Add(input);
+            Label label = CreateFieldLabel(labelText);
+            label.Location = new Point(x, y);
             parent.Controls.Add(label);
-            parent.Controls.Add(host);
-        }
 
-        private void Save_Click(object? sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtTitle.Text))
-            {
-                ShowValidation("Please enter a book title.", txtTitle);
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtAuthor.Text))
-            {
-                ShowValidation("Please enter an author name.", txtAuthor);
-                return;
-            }
-
-            if (numYear.Value > 0 && numYear.Value < 1000)
-            {
-                ShowValidation("Please enter a valid publication year or leave it as 0.", numYear);
-                return;
-            }
-
-            if (cmbCategory.SelectedItem is not BookCategoryOption)
-            {
-                ShowValidation("Please select a category.", cmbCategory);
-                return;
-            }
-
-            if (cmbGenre.SelectedItem == null ||
-                string.Equals(Convert.ToString(cmbGenre.SelectedItem), "Select Genre", StringComparison.OrdinalIgnoreCase))
-            {
-                ShowValidation("Please select a genre.", cmbGenre);
-                return;
-            }
-
-            if (cmbGroup.SelectedItem == null ||
-                string.Equals(Convert.ToString(cmbGroup.SelectedItem), "Select Group", StringComparison.OrdinalIgnoreCase))
-            {
-                ShowValidation("Please select a group.", cmbGroup);
-                return;
-            }
-
-            DialogResult = DialogResult.OK;
-            Close();
-        }
-
-        private void ShowValidation(string message, Control focusTarget)
-        {
-            MessageBox.Show(message, "Missing Information", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            focusTarget.Focus();
+            input.Location = new Point(x, y + 24);
+            input.Size = new Size(width, height);
+            parent.Controls.Add(input);
         }
 
         private void RoundedPanelPaint(object? sender, PaintEventArgs e)
         {
-            if (sender is not Control control || control.Width <= 1 || control.Height <= 1)
+            if (sender is not Control control)
                 return;
 
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             using SolidBrush brush = new SolidBrush(control.BackColor);
-            using System.Drawing.Drawing2D.GraphicsPath path = GetRoundedRectPath(new Rectangle(0, 0, control.Width - 1, control.Height - 1), 9);
+            using System.Drawing.Drawing2D.GraphicsPath path = GetRoundedRectanglePath(
+                new Rectangle(0, 0, control.Width - 1, control.Height - 1),
+                14);
+
             e.Graphics.FillPath(brush, path);
         }
 
-        private static System.Drawing.Drawing2D.GraphicsPath GetRoundedRectPath(Rectangle rect, int radius)
+        private static System.Drawing.Drawing2D.GraphicsPath GetRoundedRectanglePath(Rectangle bounds, int radius)
         {
             int diameter = radius * 2;
             System.Drawing.Drawing2D.GraphicsPath path = new System.Drawing.Drawing2D.GraphicsPath();
 
-            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
-            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
-            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
             path.CloseFigure();
 
             return path;

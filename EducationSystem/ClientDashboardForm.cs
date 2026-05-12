@@ -122,14 +122,20 @@ namespace EducationSystem
             topbar.Dock = DockStyle.Top;
             panelContent.Dock = DockStyle.Fill;
 
-            Sidebar.Width = 308;
+            Sidebar.Width = 288;
             topbar.Height = 78;
 
-            MinimumSize = new Size(1280, 820);
+            // Laptop-friendly minimum size.
+            MinimumSize = new Size(1000, 700);
+
             BackColor = FormBack;
             panelContent.BackColor = FormBack;
             topbar.BackColor = TopBack;
+
+            Sidebar.AutoScroll = false;
         }
+
+
 
         private void SetupSidebarBranding()
         {
@@ -169,8 +175,10 @@ namespace EducationSystem
 
         private void LayoutSidebarBranding(bool showText)
         {
+            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 270;
+
             sidebarBrandPanel.Width = Sidebar.Width;
-            sidebarBrandPanel.Height = showText ? 104 : 72;
+            sidebarBrandPanel.Height = showText ? (compact ? 82 : 104) : 64;
 
             if (showText)
             {
@@ -178,16 +186,17 @@ namespace EducationSystem
                 label1.Visible = true;
                 sidebarSubTitleLabel.Visible = true;
 
-                pictureBox1.Size = new Size(38, 38);
-                pictureBox1.Location = new Point(18, 22);
+                pictureBox1.Size = compact ? new Size(30, 30) : new Size(38, 38);
+                pictureBox1.Location = compact ? new Point(14, 18) : new Point(18, 22);
 
                 label1.AutoSize = true;
                 label1.Text = "LibraFlow ERP";
-                label1.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+                label1.Font = new Font("Segoe UI", compact ? 10.5F : 12F, FontStyle.Bold);
                 label1.ForeColor = AccentMint;
-                label1.Location = new Point(64, 24);
+                label1.Location = compact ? new Point(54, 18) : new Point(64, 24);
 
-                sidebarSubTitleLabel.Location = new Point(64, 50);
+                sidebarSubTitleLabel.Font = new Font("Segoe UI", compact ? 8F : 9F, FontStyle.Regular);
+                sidebarSubTitleLabel.Location = compact ? new Point(54, 42) : new Point(64, 50);
             }
             else
             {
@@ -195,10 +204,12 @@ namespace EducationSystem
                 label1.Visible = false;
                 sidebarSubTitleLabel.Visible = false;
 
-                pictureBox1.Size = new Size(34, 34);
-                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 18);
+                pictureBox1.Size = new Size(30, 30);
+                pictureBox1.Location = new Point((Sidebar.Width - pictureBox1.Width) / 2, 17);
             }
         }
+
+
 
         private void BuildClientSidebar()
         {
@@ -216,9 +227,9 @@ namespace EducationSystem
             sidebarBottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 84,
+                Height = 76,
                 BackColor = SidebarBack,
-                Padding = new Padding(14, 12, 14, 14)
+                Padding = new Padding(10, 8, 10, 10)
             };
 
             clientMenuHost = new FlowLayoutPanel
@@ -228,8 +239,10 @@ namespace EducationSystem
                 AutoScroll = true,
                 BackColor = SidebarBack,
                 Dock = DockStyle.Fill,
-                Padding = new Padding(14, 14, 14, 10)
+                Padding = new Padding(10, 8, 10, 6)
             };
+            clientMenuHost.HorizontalScroll.Enabled = false;
+            clientMenuHost.HorizontalScroll.Visible = false;
 
             navDashboard = CreateSidebarNavButton("▦", "Dashboard");
             navLibrarySetup = CreateSidebarNavButton("⚙", "Library Setup");
@@ -1114,11 +1127,12 @@ END;";
         private void ApplyResponsiveLayout()
         {
             int w = ClientSize.Width;
+            int h = ClientSize.Height;
 
             if (w >= 1320)
-                Sidebar.Width = 308;
+                Sidebar.Width = h <= 760 ? 270 : 288;
             else if (w >= 1060)
-                Sidebar.Width = 250;
+                Sidebar.Width = h <= 760 ? 238 : 250;
             else
                 Sidebar.Width = 92;
 
@@ -1155,59 +1169,127 @@ END;";
 
 
 
+
+
         private void LayoutSidebar()
         {
-            LayoutSidebarBranding(Sidebar.Width > 120);
+            bool expanded = Sidebar.Width > 120;
+            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 270;
+
+            LayoutSidebarBranding(expanded);
+
+            int sidePadding = expanded ? (compact ? 10 : 14) : 8;
+            int navHeight = expanded ? (compact ? 40 : 48) : 44;
+            int navMarginBottom = expanded ? (compact ? 2 : 5) : 4;
+            int subHeight = expanded ? (compact ? 28 : 32) : 0;
+            int subGap = expanded ? (compact ? 1 : 3) : 0;
 
             if (clientMenuHost != null)
             {
                 clientMenuHost.Width = Sidebar.Width;
-                int navWidth = Sidebar.Width - 28;
+                clientMenuHost.Padding = new Padding(sidePadding, compact ? 8 : 14, sidePadding, compact ? 6 : 10);
+                clientMenuHost.AutoScroll = true;
+                clientMenuHost.HorizontalScroll.Enabled = false;
+                clientMenuHost.HorizontalScroll.Visible = false;
 
-                navDashboard.Width = navWidth;
-                navLibrarySetup.Width = navWidth;
-                navCategoryManagement.Width = navWidth;
-                navBookManagement.Width = navWidth;
-                navUserManagement.Width = navWidth;
-                navCirculation.Width = navWidth;
-                navGenerateReports.Width = navWidth;
-                navArchive.Width = navWidth;
+                int navWidth = Math.Max(44, Sidebar.Width - (sidePadding * 2));
+
+                Button[] mainButtons =
+                {
+                    navDashboard,
+                    navLibrarySetup,
+                    navCategoryManagement,
+                    navBookManagement,
+                    navUserManagement,
+                    navCirculation,
+                    navGenerateReports,
+                    navArchive
+                };
+
+                foreach (Button button in mainButtons)
+                {
+                    button.Width = navWidth;
+                    button.Height = navHeight;
+                    button.Margin = new Padding(0, 0, 0, navMarginBottom);
+                    button.Font = new Font("Segoe UI", compact ? 9F : 10F, FontStyle.Regular);
+                    button.Padding = new Padding(expanded ? (compact ? 12 : 16) : 0, 0, expanded ? 8 : 0, 0);
+                    button.TextAlign = expanded ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter;
+                }
+
+                navDashboard.Text = expanded ? "▦  Dashboard" : "▦";
+                navLibrarySetup.Text = expanded ? "⚙  Library Setup" : "⚙";
+                navCategoryManagement.Text = expanded ? "◫  Category Management" : "◫";
+                navBookManagement.Text = expanded ? "📖  Book Management" : "📖";
+                navUserManagement.Text = expanded ? "👥  User Management" : "👥";
+                navCirculation.Text = expanded
+                    ? (circulationMenuExpanded ? "⇄  Circulation        ▾" : "⇄  Circulation        ▸")
+                    : "⇄";
+                navGenerateReports.Text = expanded ? "〽  Generate Reports" : "〽";
+                navArchive.Text = expanded ? "🗂  Archive" : "🗂";
 
                 circulationSubMenuPanel.Width = navWidth;
+                circulationSubMenuPanel.Margin = new Padding(0, compact ? -1 : -2, 0, compact ? 2 : 5);
 
-                navBorrow.Width = navWidth - 18;
-                navReturn.Width = navWidth - 18;
-                navFine.Width = navWidth - 18;
+                navBorrow.Height = subHeight;
+                navReturn.Height = subHeight;
+                navFine.Height = subHeight;
+
+                foreach (Button subButton in new[] { navBorrow, navReturn, navFine })
+                {
+                    subButton.Font = new Font("Segoe UI", compact ? 8.2F : 9F, FontStyle.Regular);
+                    subButton.Padding = new Padding(compact ? 20 : 28, 0, 0, 0);
+                    subButton.Margin = new Padding(compact ? 10 : 18, 0, 0, subGap);
+                    subButton.Width = Math.Max(40, navWidth - (compact ? 10 : 18));
+                }
 
                 LayoutSubMenuButtons();
 
-                circulationSubMenuPanel.Height = circulationMenuExpanded ? 110 : 0;
+                circulationSubMenuPanel.Height = expanded && circulationMenuExpanded
+                    ? (subHeight * 3) + (subGap * 2) + (compact ? 2 : 4)
+                    : 0;
             }
 
             if (sidebarBottomPanel != null)
             {
                 sidebarBottomPanel.Width = Sidebar.Width;
-                navSignOut.Width = Sidebar.Width - 28;
-                navSignOut.Height = 48;
-                navSignOut.Location = new Point(14, 12);
+                sidebarBottomPanel.Height = compact ? 70 : 84;
+                sidebarBottomPanel.Padding = new Padding(sidePadding, compact ? 8 : 12, sidePadding, compact ? 10 : 14);
+
+                navSignOut.Width = Math.Max(44, Sidebar.Width - (sidePadding * 2));
+                navSignOut.Height = compact ? 42 : 48;
+                navSignOut.Location = new Point(sidePadding, compact ? 8 : 12);
+                navSignOut.Font = new Font("Segoe UI", compact ? 9F : 10F, FontStyle.Regular);
+                navSignOut.Padding = new Padding(expanded ? (compact ? 12 : 16) : 0, 0, 0, 0);
+                navSignOut.TextAlign = expanded ? ContentAlignment.MiddleLeft : ContentAlignment.MiddleCenter;
+                navSignOut.Text = expanded ? "⏻  Sign Out" : "⏻";
             }
         }
 
+
+
         private void LayoutSubMenuButtons()
         {
+            if (circulationSubMenuPanel == null)
+                return;
+
+            bool compact = ClientSize.Height <= 760 || Sidebar.Width <= 270;
+            int left = compact ? 10 : 18;
+            int gap = compact ? 1 : 3;
             int top = 0;
 
-            navBorrow.Location = new Point(18, top);
-            navBorrow.Width = circulationSubMenuPanel.Width - 18;
+            navBorrow.Location = new Point(left, top);
+            navBorrow.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
 
-            top += navBorrow.Height + 4;
-            navReturn.Location = new Point(18, top);
-            navReturn.Width = circulationSubMenuPanel.Width - 18;
+            top += navBorrow.Height + gap;
+            navReturn.Location = new Point(left, top);
+            navReturn.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
 
-            top += navReturn.Height + 4;
-            navFine.Location = new Point(18, top);
-            navFine.Width = circulationSubMenuPanel.Width - 18;
+            top += navReturn.Height + gap;
+            navFine.Location = new Point(left, top);
+            navFine.Width = Math.Max(40, circulationSubMenuPanel.Width - left);
         }
+
+
 
         public void LoadUserInfo()
         {
@@ -1408,15 +1490,15 @@ END;";
             Button btn = new Button
             {
                 Width = 220,
-                Height = 52,
+                Height = 48,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = SidebarBack,
                 ForeColor = Color.FromArgb(214, 222, 228),
                 Font = new Font("Segoe UI", 10F, FontStyle.Regular),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(16, 0, 16, 0),
+                Padding = new Padding(16, 0, 12, 0),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(0, 0, 0, 6),
+                Margin = new Padding(0, 0, 0, 5),
                 Tag = hasArrow
             };
 
@@ -1428,12 +1510,14 @@ END;";
             return btn;
         }
 
+
+
         private Button CreateSidebarSubButton(string text)
         {
             Button btn = new Button
             {
                 Width = 180,
-                Height = 34,
+                Height = 32,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = SidebarBack,
                 ForeColor = Color.FromArgb(172, 183, 191),
@@ -1441,7 +1525,7 @@ END;";
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(28, 0, 0, 0),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(18, 0, 0, 4),
+                Margin = new Padding(18, 0, 0, 3),
                 Text = text
             };
 
@@ -1452,6 +1536,8 @@ END;";
             return btn;
         }
 
+
+
         private Panel CreateSubMenuPanel()
         {
             return new Panel
@@ -1459,9 +1545,11 @@ END;";
                 Width = 220,
                 Height = 0,
                 BackColor = SidebarBack,
-                Margin = new Padding(0, -2, 0, 6)
+                Margin = new Padding(0, -2, 0, 5)
             };
         }
+
+
 
         private void UpdateParentArrow(Button btn, bool expanded)
         {
