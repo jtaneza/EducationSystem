@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace EducationSystem
 {
@@ -45,6 +46,7 @@ namespace EducationSystem
         private int currentPage = 1;
         private int totalPages = 1;
         private List<ClientDbItem> currentClients = new List<ClientDbItem>();
+        private readonly Dictionary<int, string> clientSubscriptionPlans = new Dictionary<int, string>();
 
         public ClientsForm()
         {
@@ -215,15 +217,17 @@ namespace EducationSystem
 
             dgvClients.Columns.Add("SchoolName", "SCHOOL NAME");
             dgvClients.Columns.Add("Email", "EMAIL");
+            dgvClients.Columns.Add("SubscriptionPlan", "SUBSCRIPTION PLAN");
             dgvClients.Columns.Add("UserCount", "USER COUNT");
             dgvClients.Columns.Add("Status", "STATUS");
             dgvClients.Columns.Add("Actions", "ACTIONS");
 
-            dgvClients.Columns["SchoolName"].FillWeight = 34;
-            dgvClients.Columns["Email"].FillWeight = 24;
-            dgvClients.Columns["UserCount"].FillWeight = 14;
-            dgvClients.Columns["Status"].FillWeight = 14;
-            dgvClients.Columns["Actions"].FillWeight = 14;
+            dgvClients.Columns["SchoolName"].FillWeight = 30;
+            dgvClients.Columns["Email"].FillWeight = 22;
+            dgvClients.Columns["SubscriptionPlan"].FillWeight = 18;
+            dgvClients.Columns["UserCount"].FillWeight = 11;
+            dgvClients.Columns["Status"].FillWeight = 11;
+            dgvClients.Columns["Actions"].FillWeight = 8;
 
             foreach (DataGridViewColumn col in dgvClients.Columns)
                 col.SortMode = DataGridViewColumnSortMode.NotSortable;
@@ -366,6 +370,9 @@ namespace EducationSystem
 
         private void LoadClientsToGrid()
         {
+            EnsureClientSubscriptionSchema();
+            LoadClientSubscriptionPlans();
+
             string searchText = "";
             if (txtSearch != null &&
                 !string.IsNullOrWhiteSpace(txtSearch.Text) &&
@@ -412,8 +419,9 @@ namespace EducationSystem
                     client.DbClientID,
                     schoolCell,
                     client.Email,
+                    GetCachedSubscriptionPlan(client.DbClientID),
                     client.UserCount.ToString("N0"),
-                    client.Status,
+                    NormalizeClientStatus(client.Status),
                     ""
                 );
             }
@@ -461,6 +469,142 @@ namespace EducationSystem
             AdjustResponsiveLayout();
         }
 
+
+        private void EnsureClientSubscriptionSchema()
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                string query = @"
+IF COL_LENGTH('dbo.ClientLibraries', 'SubscriptionPlan') IS NULL
+BEGIN
+    ALTER TABLE dbo.ClientLibraries
+    ADD SubscriptionPlan NVARCHAR(50) NOT NULL
+        CONSTRAINT DF_ClientLibraries_SubscriptionPlan DEFAULT 'One-Time Payment';
+END;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                // The grid can still load even if the column cannot be created.
+            }
+        }
+
+        private void LoadClientSubscriptionPlans()
+        {
+            clientSubscriptionPlans.Clear();
+
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureClientSubscriptionSchema();
+
+                string query = @"
+SELECT ClientID, ISNULL(NULLIF(SubscriptionPlan, ''), 'One-Time Payment') AS SubscriptionPlan
+FROM dbo.ClientLibraries;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                while (reader.Read())
+                {
+                    int clientId = Convert.ToInt32(reader["ClientID"]);
+                    string plan = Convert.ToString(reader["SubscriptionPlan"]) ?? "One-Time Payment";
+                    clientSubscriptionPlans[clientId] = NormalizeSubscriptionPlan(plan);
+                }
+            }
+            catch
+            {
+                // Keep defaults if database read fails.
+            }
+        }
+
+        private string GetCachedSubscriptionPlan(int dbClientId)
+        {
+            if (clientSubscriptionPlans.TryGetValue(dbClientId, out string? plan))
+                return NormalizeSubscriptionPlan(plan);
+
+            return "One-Time Payment";
+        }
+
+        private string NormalizeSubscriptionPlan(string? plan)
+        {
+            if (string.Equals(plan, "Yearly Subscription", StringComparison.OrdinalIgnoreCase))
+                return "Yearly Subscription";
+
+            return "One-Time Payment";
+        }
+
+        private void UpdateClientSubscriptionPlan(int dbClientId, string subscriptionPlan)
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureClientSubscriptionSchema();
+
+                string query = @"
+UPDATE dbo.ClientLibraries
+SET SubscriptionPlan = @SubscriptionPlan
+WHERE ClientID = @ClientID;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@SubscriptionPlan", NormalizeSubscriptionPlan(subscriptionPlan));
+                cmd.Parameters.AddWithValue("@ClientID", dbClientId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Subscription plan could not be saved.\n\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UpdateClientSubscriptionPlanByLibraryCode(string libraryCode, string subscriptionPlan)
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureClientSubscriptionSchema();
+
+                string query = @"
+UPDATE dbo.ClientLibraries
+SET SubscriptionPlan = @SubscriptionPlan
+WHERE LibraryCode = @LibraryCode;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@SubscriptionPlan", NormalizeSubscriptionPlan(subscriptionPlan));
+                cmd.Parameters.AddWithValue("@LibraryCode", libraryCode);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Subscription plan could not be saved.\n\n" + ex.Message, "Database Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
+        private string NormalizeClientStatus(string? status)
+        {
+            if (string.Equals(status, "Inactive", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(status, "Disabled", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(status, "0", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(status, "False", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Inactive";
+            }
+
+            return "Active";
+        }
+
         private string GetInitials(string libraryName)
         {
             string[] words = libraryName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -486,6 +630,8 @@ namespace EducationSystem
                         dialog.PasswordValue,
                         dialog.StatusValue
                     );
+
+                    UpdateClientSubscriptionPlanByLibraryCode(dialog.ClientIDValue, dialog.SubscriptionPlanValue);
 
                     MessageBox.Show("Client saved successfully.");
                     LoadClientsToGrid();
@@ -513,7 +659,7 @@ namespace EducationSystem
                 Status = client.Status
             };
 
-            using ClientDialogForm dialog = new ClientDialogForm("Edit Client", libraryCode, editItem);
+            using ClientDialogForm dialog = new ClientDialogForm("Edit Client", libraryCode, editItem, GetCachedSubscriptionPlan(dbClientId));
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
@@ -526,6 +672,8 @@ namespace EducationSystem
                         dialog.PasswordValue,
                         dialog.StatusValue
                     );
+
+                    UpdateClientSubscriptionPlan(dbClientId, dialog.SubscriptionPlanValue);
 
                     MessageBox.Show("Client updated successfully.");
                     LoadClientsToGrid();
@@ -544,7 +692,8 @@ namespace EducationSystem
 
             if (client == null) return;
 
-            string newStatus = client.Status.Equals("Active", StringComparison.OrdinalIgnoreCase)
+            string currentStatus = NormalizeClientStatus(client.Status);
+            string newStatus = currentStatus.Equals("Active", StringComparison.OrdinalIgnoreCase)
                 ? "Inactive"
                 : "Active";
 
@@ -559,13 +708,13 @@ namespace EducationSystem
 
             try
             {
-                ClientService.UpdateClientWithAdmin(
-                    dbClientId,
-                    client.LibraryName,
-                    client.Email,
-                    client.PasswordText,
-                    newStatus
-                );
+                UpdateClientStatusOnly(dbClientId, newStatus);
+
+                if (dgvClients.CurrentCell != null && dgvClients.Columns[dgvClients.CurrentCell.ColumnIndex].Name == "Status")
+                {
+                    dgvClients.Rows[dgvClients.CurrentCell.RowIndex].Cells["Status"].Value = newStatus;
+                    dgvClients.InvalidateCell(dgvClients.CurrentCell);
+                }
 
                 MessageBox.Show("Client status updated successfully.");
                 LoadClientsToGrid();
@@ -574,6 +723,45 @@ namespace EducationSystem
             {
                 MessageBox.Show("Error updating client status:\n\n" + ex.Message);
             }
+        }
+
+
+
+        private void UpdateClientStatusOnly(int dbClientId, string newStatus)
+        {
+            using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+            conn.Open();
+
+            string ensureQuery = @"
+IF COL_LENGTH('dbo.ClientLibraries', 'Status') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD Status NVARCHAR(50) NOT NULL CONSTRAINT DF_ClientLibraries_Status DEFAULT 'Active';
+
+IF COL_LENGTH('dbo.ClientLibraries', 'IsActive') IS NULL
+    ALTER TABLE dbo.ClientLibraries ADD IsActive BIT NOT NULL CONSTRAINT DF_ClientLibraries_IsActive DEFAULT 1;";
+
+            using (SqlCommand ensureCmd = new SqlCommand(ensureQuery, conn))
+                ensureCmd.ExecuteNonQuery();
+
+            bool isActive = newStatus.Equals("Active", StringComparison.OrdinalIgnoreCase);
+
+            string updateQuery = @"
+UPDATE dbo.ClientLibraries
+SET
+    Status = @Status,
+    IsActive = @IsActive
+WHERE ClientID = @ClientID;
+
+UPDATE dbo.Users
+SET
+    Status = @Status,
+    IsActive = @IsActive
+WHERE ClientID = @ClientID;";
+
+            using SqlCommand cmd = new SqlCommand(updateQuery, conn);
+            cmd.Parameters.AddWithValue("@Status", newStatus);
+            cmd.Parameters.AddWithValue("@IsActive", isActive);
+            cmd.Parameters.AddWithValue("@ClientID", dbClientId);
+            cmd.ExecuteNonQuery();
         }
 
         private void ArchiveClient(int dbClientId, string libraryName)
@@ -717,12 +905,41 @@ namespace EducationSystem
 
                 e.Handled = true;
             }
+            else if (columnName == "SubscriptionPlan")
+            {
+                e.PaintBackground(e.CellBounds, true);
+
+                string plan = e.FormattedValue?.ToString() ?? "One-Time Payment";
+                bool yearly = plan.Equals("Yearly Subscription", StringComparison.OrdinalIgnoreCase);
+
+                int badgeWidth = yearly ? 145 : 130;
+                Rectangle badge = new Rectangle(
+                    e.CellBounds.X + 12,
+                    e.CellBounds.Y + (e.CellBounds.Height - 28) / 2,
+                    Math.Min(badgeWidth, e.CellBounds.Width - 24),
+                    28
+                );
+
+                using (SolidBrush brush = new SolidBrush(yearly ? Color.FromArgb(224, 245, 240) : Color.FromArgb(232, 239, 241)))
+                    e.Graphics.FillRectangle(brush, badge);
+
+                TextRenderer.DrawText(
+                    e.Graphics,
+                    plan,
+                    new Font("Segoe UI", 8.5F, FontStyle.Bold),
+                    badge,
+                    yearly ? AccentDeep : OnSurface,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis
+                );
+
+                e.Handled = true;
+            }
             else if (columnName == "Status")
             {
                 e.PaintBackground(e.CellBounds, true);
 
                 string text = e.FormattedValue?.ToString() ?? "";
-                bool isActive = text.Equals("Active", StringComparison.OrdinalIgnoreCase);
+                bool isActive = NormalizeClientStatus(text).Equals("Active", StringComparison.OrdinalIgnoreCase);
 
                 Rectangle track = new Rectangle(e.CellBounds.X + 12, e.CellBounds.Y + (e.CellBounds.Height - 24) / 2, 40, 22);
                 Rectangle knob = isActive

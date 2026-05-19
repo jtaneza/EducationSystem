@@ -507,17 +507,15 @@ WHERE ClientID = @ClientID
   AND DueDate < CAST(GETDATE() AS DATE);", clientId);
 
                 const string loanQuery = @"
-SELECT TOP 5
-    b.BorrowID,
+SELECT TOP 8
     b.BookID,
     b.BookTitle,
     ISNULL(book.Author, '') AS Author,
-    ISNULL(book.PublishYear, '') AS PublishYear,
+    ISNULL(book.PublishYear, YEAR(GETDATE())) AS PublishYear,
     ISNULL(book.Category, 'General') AS Category,
     ISNULL(book.Genre, '') AS Genre,
-    COALESCE(NULLIF(b.MemberName, ''), u.FullName, 'Unknown Member') AS MemberName,
+    ISNULL(u.FullName, b.MemberName) AS MemberName,
     ISNULL(CAST(b.MemberID AS NVARCHAR(20)), '') AS MemberID,
-    b.IssueDate,
     b.DueDate,
     ISNULL(b.Status, 'ACTIVE') AS Status
 FROM dbo.BorrowingRecords b
@@ -529,7 +527,7 @@ LEFT JOIN dbo.Books book
 WHERE b.ClientID = @ClientID
   AND ISNULL(b.IsArchived, 0) = 0
   AND UPPER(ISNULL(b.Status, 'ACTIVE')) IN ('ACTIVE', 'BORROWED', 'IN PROGRESS')
-ORDER BY b.IssueDate DESC, b.BorrowID DESC;";
+ORDER BY b.DueDate ASC, b.BorrowID DESC;";
 
                 using SqlCommand cmd = new SqlCommand(loanQuery, conn);
                 cmd.Parameters.AddWithValue("@ClientID", clientId);
@@ -795,7 +793,7 @@ END;";
                 Name = "IssuanceLegend",
                 Text = "●  Issuances",
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#00E6A8"),
+                ForeColor = AccentEmerald,
                 BackColor = TableBack,
                 AutoSize = true
             };
@@ -805,7 +803,7 @@ END;";
                 Name = "ReturnsLegend",
                 Text = "●  Returns",
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
-                ForeColor = ColorTranslator.FromHtml("#1F6F5F"),
+                ForeColor = ColorTranslator.FromHtml("#334155"),
                 BackColor = TableBack,
                 AutoSize = true
             };
@@ -1281,50 +1279,86 @@ END;";
             int w = chartControl.Width;
             int h = chartControl.Height;
 
-            Rectangle plot = new Rectangle(54, 118, Math.Max(260, w - 108), Math.Max(135, h - 174));
-
-            Color neonGreen = ColorTranslator.FromHtml("#6DFAD2");
-            Color neonEmerald = ColorTranslator.FromHtml("#00E6A8");
-            Color neonGlow = ColorTranslator.FromHtml("#A7FFE8");
-            Color deepLine = ColorTranslator.FromHtml("#1F6F5F");
-            Color darkGlow = ColorTranslator.FromHtml("#6DFAD2");
-
-            using LinearGradientBrush backgroundGlow = new LinearGradientBrush(
-                plot,
-                Color.FromArgb(46, neonGlow),
-                Color.FromArgb(0, neonGlow),
-                LinearGradientMode.Vertical);
-            e.Graphics.FillRectangle(backgroundGlow, plot);
-
-            using Pen grid = new Pen(Color.FromArgb(32, 0, 184, 148), 1);
-            using Pen gridStrong = new Pen(Color.FromArgb(65, 0, 184, 148), 1);
-            for (int i = 0; i <= 4; i++)
-            {
-                int y = plot.Top + (plot.Height * i / 4);
-                e.Graphics.DrawLine(i == 4 ? gridStrong : grid, plot.Left, y, plot.Right, y);
-            }
+            Color issueColor = AccentEmerald;
+            Color returnColor = ColorTranslator.FromHtml("#334155");
+            Color gridColor = ColorTranslator.FromHtml("#DDE7EA");
+            Color axisColor = ColorTranslator.FromHtml("#94A3B8");
+            Color labelColor = ColorTranslator.FromHtml("#475569");
+            Color chartBack = Color.White;
 
             int[] issuanceValues = GetIssuanceData();
             int[] returnValues = GetReturnData();
 
-            int minValue = Math.Min(issuanceValues.Min(), returnValues.Min()) - 2;
-            int maxValue = Math.Max(issuanceValues.Max(), returnValues.Max()) + 3;
+            int maxValue = Math.Max(issuanceValues.Max(), returnValues.Max());
+            int roundedMax = GetRoundedChartMax(maxValue);
+            int ySteps = 4;
 
-            Point[] line1 = BuildChartPoints(issuanceValues, plot, minValue, maxValue);
-            Point[] line2 = BuildChartPoints(returnValues, plot, minValue, maxValue);
+            Rectangle plot = new Rectangle(
+                78,
+                135,
+                Math.Max(260, w - 126),
+                Math.Max(130, h - 198)
+            );
 
-            DrawSmoothArea(e.Graphics, line1, plot, Color.FromArgb(55, neonGreen), Color.FromArgb(0, neonGreen));
-            DrawSmoothArea(e.Graphics, line2, plot, Color.FromArgb(34, deepLine), Color.FromArgb(0, deepLine));
+            Rectangle chartBackRect = new Rectangle(
+                plot.Left - 42,
+                plot.Top - 34,
+                plot.Width + 64,
+                plot.Height + 72
+            );
 
-            DrawNeonCurve(e.Graphics, line1, neonEmerald, neonGlow, 4.2F);
-            DrawNeonCurve(e.Graphics, line2, deepLine, darkGlow, 3.4F);
+            using (SolidBrush backBrush = new SolidBrush(chartBack))
+                e.Graphics.FillRectangle(backBrush, chartBackRect);
 
-            DrawNeonDots(e.Graphics, line1, neonEmerald, neonGlow, TableBack);
-            DrawNeonDots(e.Graphics, line2, deepLine, darkGlow, TableBack);
+            using Font axisFont = new Font("Segoe UI", 8.5F, FontStyle.Bold);
+            using SolidBrush axisBrush = new SolidBrush(labelColor);
+            using Pen gridPen = new Pen(gridColor, 1);
+            using Pen axisPen = new Pen(axisColor, 1.2F);
+
+            for (int i = 0; i <= ySteps; i++)
+            {
+                int value = roundedMax - (roundedMax * i / ySteps);
+                int y = plot.Top + (plot.Height * i / ySteps);
+
+                e.Graphics.DrawLine(gridPen, plot.Left, y, plot.Right, y);
+
+                string text = value.ToString("N0");
+                SizeF textSize = e.Graphics.MeasureString(text, axisFont);
+                e.Graphics.DrawString(text, axisFont, axisBrush, plot.Left - textSize.Width - 12, y - textSize.Height / 2);
+            }
+
+            e.Graphics.DrawLine(axisPen, plot.Left, plot.Top, plot.Left, plot.Bottom);
+            e.Graphics.DrawLine(axisPen, plot.Left, plot.Bottom, plot.Right, plot.Bottom);
+
+            Point[] line1 = BuildChartPoints(issuanceValues, plot, 0, roundedMax);
+            Point[] line2 = BuildChartPoints(returnValues, plot, 0, roundedMax);
+
+            using Pen issuePen = new Pen(issueColor, 3F)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+
+            using Pen returnPen = new Pen(returnColor, 3F)
+            {
+                StartCap = LineCap.Round,
+                EndCap = LineCap.Round,
+                LineJoin = LineJoin.Round
+            };
+
+            if (line1.Length > 1)
+                e.Graphics.DrawLines(issuePen, line1);
+
+            if (line2.Length > 1)
+                e.Graphics.DrawLines(returnPen, line2);
+
+            DrawCleanChartDots(e.Graphics, line1, issueColor, chartBack);
+            DrawCleanChartDots(e.Graphics, line2, returnColor, chartBack);
 
             string[] labels = GetChartLabels();
             using Font labelFont = new Font("Segoe UI", 8.5F, FontStyle.Bold);
-            using SolidBrush labelBrush = new SolidBrush(ColorTranslator.FromHtml("#46635C"));
+            using SolidBrush labelBrush = new SolidBrush(labelColor);
 
             for (int i = 0; i < labels.Length; i++)
             {
@@ -1333,81 +1367,40 @@ END;";
                     : plot.Left + (plot.Width * i / (labels.Length - 1));
 
                 SizeF size = e.Graphics.MeasureString(labels[i], labelFont);
-                e.Graphics.DrawString(labels[i], labelFont, labelBrush, x - size.Width / 2, plot.Bottom + 18);
+                e.Graphics.DrawString(labels[i], labelFont, labelBrush, x - size.Width / 2, plot.Bottom + 14);
             }
+
+            using Font axisTitleFont = new Font("Segoe UI", 8F, FontStyle.Regular);
+            using SolidBrush mutedBrush = new SolidBrush(SecondaryText);
+            e.Graphics.DrawString("Number of transactions", axisTitleFont, mutedBrush, plot.Left, plot.Top - 34);
         }
 
-        private void DrawNeonCurve(Graphics graphics, Point[] points, Color lineColor, Color glowColor, float width)
+        private static int GetRoundedChartMax(int maxValue)
         {
-            if (points.Length < 2)
-                return;
+            if (maxValue <= 10)
+                return 10;
 
-            using Pen glowWide = new Pen(Color.FromArgb(55, glowColor), width + 9)
-            {
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
+            int magnitude = (int)Math.Pow(10, Math.Max(0, maxValue.ToString().Length - 2));
+            int rounded = (int)Math.Ceiling(maxValue / (double)magnitude) * magnitude;
 
-            using Pen glowMid = new Pen(Color.FromArgb(90, glowColor), width + 4)
-            {
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
-
-            using Pen main = new Pen(lineColor, width)
-            {
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
-
-            using Pen highlight = new Pen(Color.FromArgb(210, Color.White), 1.2F)
-            {
-                StartCap = LineCap.Round,
-                EndCap = LineCap.Round,
-                LineJoin = LineJoin.Round
-            };
-
-            graphics.DrawCurve(glowWide, points, 0.45F);
-            graphics.DrawCurve(glowMid, points, 0.45F);
-            graphics.DrawCurve(main, points, 0.45F);
-
-            Point[] highlightPoints = points.Select(p => new Point(p.X, p.Y - 1)).ToArray();
-            graphics.DrawCurve(highlight, highlightPoints, 0.45F);
+            return Math.Max(rounded, maxValue + 1);
         }
 
-        private void DrawNeonDots(Graphics graphics, Point[] points, Color dotColor, Color glowColor, Color innerColor)
+        private static void DrawCleanChartDots(Graphics graphics, Point[] points, Color color, Color innerColor)
         {
+            using Pen border = new Pen(color, 2F);
+            using SolidBrush inner = new SolidBrush(innerColor);
+            using SolidBrush center = new SolidBrush(color);
+
             foreach (Point pt in points)
             {
-                using SolidBrush glow = new SolidBrush(Color.FromArgb(72, glowColor));
-                using SolidBrush outer = new SolidBrush(dotColor);
-                using SolidBrush inner = new SolidBrush(innerColor);
-                using Pen ring = new Pen(Color.FromArgb(235, Color.White), 1.4F);
-
-                graphics.FillEllipse(glow, pt.X - 9, pt.Y - 9, 18, 18);
-                graphics.FillEllipse(outer, pt.X - 5, pt.Y - 5, 10, 10);
-                graphics.FillEllipse(inner, pt.X - 2, pt.Y - 2, 4, 4);
-                graphics.DrawEllipse(ring, pt.X - 5, pt.Y - 5, 10, 10);
+                graphics.FillEllipse(inner, pt.X - 5, pt.Y - 5, 10, 10);
+                graphics.DrawEllipse(border, pt.X - 5, pt.Y - 5, 10, 10);
+                graphics.FillEllipse(center, pt.X - 2, pt.Y - 2, 4, 4);
             }
         }
 
-        private void DrawSmoothArea(Graphics graphics, Point[] points, Rectangle plot, Color topColor, Color bottomColor)
-        {
-            if (points.Length < 2)
-                return;
 
-            using GraphicsPath path = new GraphicsPath();
-            path.AddCurve(points, 0.45F);
-            path.AddLine(points[^1].X, points[^1].Y, points[^1].X, plot.Bottom);
-            path.AddLine(points[^1].X, plot.Bottom, points[0].X, plot.Bottom);
-            path.CloseFigure();
-
-            using LinearGradientBrush brush = new LinearGradientBrush(plot, topColor, bottomColor, LinearGradientMode.Vertical);
-            graphics.FillPath(brush, path);
-        }
 
         private void LoadContentForm(Form form, Button activeButton)
         {

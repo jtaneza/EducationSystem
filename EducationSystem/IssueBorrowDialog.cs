@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Data;
 using System.Drawing;
 using System.Windows.Forms;
@@ -9,6 +11,7 @@ namespace EducationSystem
     public partial class IssueBorrowDialog : Form
     {
         private readonly Color FormBack = Color.White;
+        private readonly Color HeaderBack = ColorTranslator.FromHtml("#2B3234");
         private readonly Color FooterBack = ColorTranslator.FromHtml("#EEF5F7");
         private readonly Color FieldBack = ColorTranslator.FromHtml("#E8EFF1");
         private readonly Color AccentEmerald = ColorTranslator.FromHtml("#00B894");
@@ -17,22 +20,31 @@ namespace EducationSystem
 
         private Label lblTitle = null!;
         private Label lblSubtitle = null!;
+
         private Label lblMember = null!;
         private ComboBox cboMember = null!;
+
         private Label lblBook = null!;
-        private ComboBox cboBook = null!;
+        private CheckedListBox clbBooks = null!;
+        private Label lblBookHint = null!;
+
         private Label lblIssueDate = null!;
         private DateTimePicker dtpIssueDate = null!;
+
         private Label lblDueDate = null!;
         private DateTimePicker dtpDueDate = null!;
+
         private Label lblStatus = null!;
         private ComboBox cboStatus = null!;
+
         private Panel footer = null!;
         private Button btnCancel = null!;
         private Button btnSave = null!;
 
         private int editingBorrowId = 0;
         private string originalBookId = "";
+        private int maxBooksPerUser = 5;
+        private int defaultLoanDays = 7;
 
         private sealed class MemberOption
         {
@@ -65,17 +77,17 @@ namespace EducationSystem
 
             Text = "Issue New Book";
             StartPosition = FormStartPosition.CenterParent;
-            AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = FormBack;
-            ClientSize = new Size(660, 570);
+            ClientSize = new Size(800, 735);
 
             BuildUI();
 
             Load += (s, e) =>
             {
+                LoadBorrowingPreferences();
                 LoadMembers();
                 LoadAvailableBooks();
             };
@@ -89,7 +101,7 @@ namespace EducationSystem
                 AutoSize = true,
                 Font = new Font("Segoe UI", 24F, FontStyle.Bold),
                 ForeColor = PrimaryText,
-                Location = new Point(44, 32)
+                Location = new Point(55, 55)
             };
 
             lblSubtitle = new Label
@@ -98,37 +110,57 @@ namespace EducationSystem
                 AutoSize = true,
                 Font = new Font("Segoe UI", 10.5F),
                 ForeColor = SecondaryText,
-                Location = new Point(46, 74)
+                Location = new Point(58, 103)
             };
 
-            lblMember = CreateFieldLabel("MEMBER DETAILS", 46, 116);
-            cboMember = CreateComboBox(46, 144, 568);
+            lblMember = CreateFieldLabel("MEMBER DETAILS", 58, 155);
+            cboMember = CreateComboBox(58, 188, 684);
 
-            lblBook = CreateFieldLabel("BOOK SELECTION", 46, 196);
-            cboBook = CreateComboBox(46, 224, 568);
+            lblBook = CreateFieldLabel("BOOK SELECTION", 58, 250);
 
-            lblIssueDate = CreateFieldLabel("ISSUE DATE", 46, 278);
+            lblBookHint = new Label
+            {
+                Text = "Check one or more books for this borrowing transaction.",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 8.5F),
+                ForeColor = SecondaryText,
+                Location = new Point(58, 272)
+            };
+
+            clbBooks = new CheckedListBox
+            {
+                CheckOnClick = true,
+                Font = new Font("Segoe UI", 10F),
+                BackColor = FieldBack,
+                ForeColor = PrimaryText,
+                BorderStyle = BorderStyle.FixedSingle,
+                Location = new Point(58, 295),
+                Size = new Size(684, 145),
+                IntegralHeight = false
+            };
+
+            lblIssueDate = CreateFieldLabel("ISSUE DATE", 58, 465);
             dtpIssueDate = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Short,
                 Font = new Font("Segoe UI", 10.5F),
-                Location = new Point(46, 306),
-                Size = new Size(250, 32),
+                Location = new Point(58, 498),
+                Size = new Size(270, 32),
                 Value = DateTime.Today
             };
 
-            lblDueDate = CreateFieldLabel("DUE DATE", 340, 278);
+            lblDueDate = CreateFieldLabel("DUE DATE", 385, 465);
             dtpDueDate = new DateTimePicker
             {
                 Format = DateTimePickerFormat.Short,
                 Font = new Font("Segoe UI", 10.5F),
-                Location = new Point(340, 306),
-                Size = new Size(250, 32),
+                Location = new Point(385, 498),
+                Size = new Size(270, 32),
                 Value = DateTime.Today.AddDays(7)
             };
 
-            lblStatus = CreateFieldLabel("STATUS", 46, 358);
-            cboStatus = CreateComboBox(46, 386, 280);
+            lblStatus = CreateFieldLabel("STATUS", 58, 560);
+            cboStatus = CreateComboBox(58, 593, 300);
             cboStatus.Items.Add("ACTIVE");
             cboStatus.SelectedIndex = 0;
             cboStatus.Enabled = false;
@@ -137,7 +169,7 @@ namespace EducationSystem
             {
                 BackColor = FooterBack,
                 Dock = DockStyle.Bottom,
-                Height = 78
+                Height = 92
             };
 
             btnCancel = new Button
@@ -148,8 +180,8 @@ namespace EducationSystem
                 ForeColor = PrimaryText,
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Size = new Size(112, 42),
-                Location = new Point(ClientSize.Width - 46 - 150 - 16 - 112, 18)
+                Size = new Size(120, 44),
+                Location = new Point(470, 24)
             };
             btnCancel.FlatAppearance.BorderSize = 0;
             btnCancel.Click += (s, e) =>
@@ -166,8 +198,8 @@ namespace EducationSystem
                 ForeColor = Color.FromArgb(0, 66, 51),
                 Font = new Font("Segoe UI", 10.5F, FontStyle.Bold),
                 Cursor = Cursors.Hand,
-                Size = new Size(150, 42),
-                Location = new Point(ClientSize.Width - 46 - 150, 18)
+                Size = new Size(160, 44),
+                Location = new Point(600, 24)
             };
             btnSave.FlatAppearance.BorderSize = 0;
             btnSave.Click += BtnSave_Click;
@@ -180,7 +212,8 @@ namespace EducationSystem
             Controls.Add(lblMember);
             Controls.Add(cboMember);
             Controls.Add(lblBook);
-            Controls.Add(cboBook);
+            Controls.Add(lblBookHint);
+            Controls.Add(clbBooks);
             Controls.Add(lblIssueDate);
             Controls.Add(dtpIssueDate);
             Controls.Add(lblDueDate);
@@ -215,14 +248,6 @@ namespace EducationSystem
             };
         }
 
-        private int GetCurrentClientId()
-        {
-            if (int.TryParse(ClientSession.ClientId.ToString(), out int clientId))
-                return clientId;
-
-            return 0;
-        }
-
         private void LoadMembers()
         {
             cboMember.Items.Clear();
@@ -231,8 +256,6 @@ namespace EducationSystem
             {
                 using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
                 conn.Open();
-
-                EnsureBorrowingSchema(conn);
 
                 const string query = @"
 SELECT UserID, FullName, Role
@@ -245,7 +268,6 @@ ORDER BY FullName ASC;";
 
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
-
                 using SqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
@@ -270,14 +292,12 @@ ORDER BY FullName ASC;";
 
         private void LoadAvailableBooks()
         {
-            cboBook.Items.Clear();
+            clbBooks.Items.Clear();
 
             try
             {
                 using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
                 conn.Open();
-
-                EnsureBorrowingSchema(conn);
 
                 const string query = @"
 SELECT BookID, BookTitle, Author, Quantity
@@ -290,12 +310,11 @@ ORDER BY BookTitle ASC;";
 
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
-
                 using SqlDataReader reader = cmd.ExecuteReader();
 
                 while (reader.Read())
                 {
-                    cboBook.Items.Add(new BookOption
+                    clbBooks.Items.Add(new BookOption
                     {
                         BookId = Convert.ToString(reader["BookID"]) ?? "",
                         BookTitle = Convert.ToString(reader["BookTitle"]) ?? "",
@@ -304,8 +323,7 @@ ORDER BY BookTitle ASC;";
                     });
                 }
 
-                if (cboBook.Items.Count > 0)
-                    cboBook.SelectedIndex = 0;
+                // Do not auto-check a book. The librarian must choose the books to issue.
             }
             catch (Exception ex)
             {
@@ -329,12 +347,10 @@ ORDER BY BookTitle ASC;";
                 const string query = @"
 SELECT BorrowID, MemberID, BookID, BookTitle, IssueDate, DueDate, Status
 FROM dbo.BorrowingRecords
-WHERE BorrowID = @BorrowID
-  AND ClientID = @ClientID;";
+WHERE BorrowID = @BorrowID;";
 
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@BorrowID", borrowId);
-                cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
 
                 using SqlDataReader reader = cmd.ExecuteReader();
 
@@ -358,14 +374,16 @@ WHERE BorrowID = @BorrowID
                     }
                 }
 
-                for (int i = 0; i < cboBook.Items.Count; i++)
+                for (int i = 0; i < clbBooks.Items.Count; i++)
                 {
-                    if (cboBook.Items[i] is BookOption book && book.BookId == originalBookId)
+                    if (clbBooks.Items[i] is BookOption book && book.BookId == originalBookId)
                     {
-                        cboBook.SelectedIndex = i;
+                        clbBooks.SetItemChecked(i, true);
                         break;
                     }
                 }
+
+                lblBookHint.Text = "Editing mode: select only one replacement book for this record.";
             }
             catch (Exception ex)
             {
@@ -383,9 +401,18 @@ WHERE BorrowID = @BorrowID
                 return;
             }
 
-            if (cboBook.SelectedItem is not BookOption book)
+            List<BookOption> selectedBooks = GetSelectedBooks();
+
+            if (selectedBooks.Count == 0)
             {
-                MessageBox.Show("Please select an available book.", "Missing Book",
+                MessageBox.Show("Please select at least one available book.", "Missing Book",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (editingBorrowId != 0 && selectedBooks.Count > 1)
+            {
+                MessageBox.Show("Editing an existing borrowing record can only use one selected book.", "Too Many Books",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -410,26 +437,34 @@ WHERE BorrowID = @BorrowID
                 {
                     if (editingBorrowId == 0)
                     {
-                        InsertBorrow(conn, tx, member, book);
-                        DecreaseBookQuantity(conn, tx, book.BookId);
+                        string batchId = Guid.NewGuid().ToString("N");
+
+                        foreach (BookOption selectedBook in selectedBooks)
+                        {
+                            InsertBorrow(conn, tx, member, selectedBook, batchId);
+                            DecreaseBookQuantity(conn, tx, selectedBook.BookId);
+                            UpdateBookStockStatus(conn, tx, selectedBook.BookId);
+                        }
                     }
                     else
                     {
-                        UpdateBorrow(conn, tx, member, book);
+                        BookOption selectedBook = selectedBooks[0];
 
-                        if (!string.Equals(originalBookId, book.BookId, StringComparison.OrdinalIgnoreCase))
+                        UpdateBorrow(conn, tx, member, selectedBook);
+
+                        if (!string.Equals(originalBookId, selectedBook.BookId, StringComparison.OrdinalIgnoreCase))
                         {
                             IncreaseBookQuantity(conn, tx, originalBookId);
-                            DecreaseBookQuantity(conn, tx, book.BookId);
+                            DecreaseBookQuantity(conn, tx, selectedBook.BookId);
                         }
-                    }
 
-                    UpdateBookStockStatus(conn, tx, book.BookId);
+                        UpdateBookStockStatus(conn, tx, selectedBook.BookId);
 
-                    if (!string.IsNullOrWhiteSpace(originalBookId) &&
-                        !string.Equals(originalBookId, book.BookId, StringComparison.OrdinalIgnoreCase))
-                    {
-                        UpdateBookStockStatus(conn, tx, originalBookId);
+                        if (!string.IsNullOrWhiteSpace(originalBookId) &&
+                            !string.Equals(originalBookId, selectedBook.BookId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            UpdateBookStockStatus(conn, tx, originalBookId);
+                        }
                     }
 
                     tx.Commit();
@@ -450,16 +485,99 @@ WHERE BorrowID = @BorrowID
             }
         }
 
-        private void InsertBorrow(SqlConnection conn, SqlTransaction tx, MemberOption member, BookOption book)
+        private List<BookOption> GetSelectedBooks()
+        {
+            return clbBooks.CheckedItems
+                .Cast<BookOption>()
+                .ToList();
+        }
+
+        private int GetCurrentClientId()
+        {
+            if (ClientSession.ClientId != null && int.TryParse(ClientSession.ClientId.ToString(), out int clientId))
+                return clientId;
+
+            return 1;
+        }
+
+        private void LoadBorrowingPreferences()
+        {
+            try
+            {
+                using SqlConnection conn = new SqlConnection(DbConfig.ConnectionString);
+                conn.Open();
+
+                EnsureBorrowingSchema(conn);
+
+                const string query = @"
+SELECT TOP 1
+    ISNULL(DefaultLoanDays, 7) AS DefaultLoanDays,
+    ISNULL(MaxBooksPerUser, 5) AS MaxBooksPerUser
+FROM dbo.ClientLibraries
+WHERE ClientID = @ClientID;";
+
+                using SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
+
+                using SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    defaultLoanDays = Math.Max(1, Convert.ToInt32(reader["DefaultLoanDays"]));
+                    object maxObj = reader["MaxBooksPerUser"];
+                    maxBooksPerUser = maxObj == DBNull.Value ? 0 : Convert.ToInt32(maxObj);
+                }
+
+                dtpDueDate.Value = dtpIssueDate.Value.Date.AddDays(defaultLoanDays);
+                lblBookHint.Text = maxBooksPerUser <= 0
+                    ? $"Check books for this transaction. Default loan period: {defaultLoanDays} days. Limit: Unlimited."
+                    : $"Check up to {maxBooksPerUser} book(s). Default loan period: {defaultLoanDays} days.";
+            }
+            catch
+            {
+                defaultLoanDays = 7;
+                maxBooksPerUser = 5;
+                dtpDueDate.Value = dtpIssueDate.Value.Date.AddDays(defaultLoanDays);
+            }
+        }
+
+        private void ClbBooks_ItemCheck(object? sender, ItemCheckEventArgs e)
+        {
+            if (e.NewValue != CheckState.Checked || maxBooksPerUser <= 0)
+                return;
+
+            int checkedCount = clbBooks.CheckedItems.Count;
+
+            if (e.CurrentValue != CheckState.Checked)
+                checkedCount++;
+
+            if (checkedCount > maxBooksPerUser)
+            {
+                e.NewValue = e.CurrentValue;
+                BeginInvoke(new Action(() =>
+                {
+                    MessageBox.Show(
+                        $"Borrow limit reached. This library allows only {maxBooksPerUser} book(s) per user.",
+                        "Borrow Limit",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }));
+            }
+        }
+
+
+
+        private void InsertBorrow(SqlConnection conn, SqlTransaction tx, MemberOption member, BookOption book, string batchId)
         {
             const string query = @"
 INSERT INTO dbo.BorrowingRecords
-    (ClientID, MemberID, MemberName, BookID, BookTitle, IssueDate, DueDate, Status, CreatedAt, IsArchived)
+    (ClientID, MemberID, MemberName, BookID, BookTitle, IssueDate, DueDate, Status, BorrowBatchID, CreatedAt, IsArchived)
 VALUES
-    (@ClientID, @MemberID, @MemberName, @BookID, @BookTitle, @IssueDate, @DueDate, @Status, SYSUTCDATETIME(), 0);";
+    (@ClientID, @MemberID, @MemberName, @BookID, @BookTitle, @IssueDate, @DueDate, @Status, @BorrowBatchID, SYSUTCDATETIME(), 0);";
 
             using SqlCommand cmd = new SqlCommand(query, conn, tx);
             AddBorrowParameters(cmd, member, book);
+            cmd.Parameters.AddWithValue("@BorrowBatchID", batchId);
             cmd.ExecuteNonQuery();
         }
 
@@ -468,14 +586,12 @@ VALUES
             const string query = @"
 UPDATE dbo.BorrowingRecords
 SET MemberID = @MemberID,
-    MemberName = @MemberName,
     BookID = @BookID,
     BookTitle = @BookTitle,
     IssueDate = @IssueDate,
     DueDate = @DueDate,
     Status = @Status
-WHERE BorrowID = @BorrowID
-  AND ClientID = @ClientID;";
+WHERE BorrowID = @BorrowID;";
 
             using SqlCommand cmd = new SqlCommand(query, conn, tx);
             AddBorrowParameters(cmd, member, book);
@@ -502,18 +618,16 @@ UPDATE dbo.Books
 SET Quantity = Quantity - 1,
     UpdatedAt = SYSUTCDATETIME()
 WHERE BookID = @BookID
-  AND ClientID = @ClientID
   AND Quantity > 0
   AND ISNULL(IsArchived, 0) = 0;";
 
             using SqlCommand cmd = new SqlCommand(query, conn, tx);
             cmd.Parameters.AddWithValue("@BookID", bookId);
-            cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
 
             int affected = cmd.ExecuteNonQuery();
 
             if (affected == 0)
-                throw new InvalidOperationException("This book has no available stock for this school.");
+                throw new InvalidOperationException("This book has no available stock.");
         }
 
         private void IncreaseBookQuantity(SqlConnection conn, SqlTransaction tx, string bookId)
@@ -526,12 +640,10 @@ UPDATE dbo.Books
 SET Quantity = Quantity + 1,
     UpdatedAt = SYSUTCDATETIME()
 WHERE BookID = @BookID
-  AND ClientID = @ClientID
   AND ISNULL(IsArchived, 0) = 0;";
 
             using SqlCommand cmd = new SqlCommand(query, conn, tx);
             cmd.Parameters.AddWithValue("@BookID", bookId);
-            cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
             cmd.ExecuteNonQuery();
         }
 
@@ -546,12 +658,10 @@ SET Status =
         ELSE 'In Stock'
     END,
     UpdatedAt = SYSUTCDATETIME()
-WHERE BookID = @BookID
-  AND ClientID = @ClientID;";
+WHERE BookID = @BookID;";
 
             using SqlCommand cmd = new SqlCommand(query, conn, tx);
             cmd.Parameters.AddWithValue("@BookID", bookId);
-            cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
             cmd.ExecuteNonQuery();
         }
 
@@ -563,9 +673,8 @@ BEGIN
     CREATE TABLE dbo.BorrowingRecords
     (
         BorrowID INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        ClientID INT NOT NULL,
+        ClientID INT NOT NULL DEFAULT 1,
         MemberID INT NOT NULL,
-        MemberName NVARCHAR(150) NULL,
         BookID NVARCHAR(20) NULL,
         BookTitle NVARCHAR(250) NOT NULL,
         IssueDate DATE NOT NULL,
@@ -576,38 +685,50 @@ BEGIN
     );
 END;
 
-IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
-    ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NULL;
-
-IF COL_LENGTH('dbo.BorrowingRecords', 'MemberID') IS NULL
-    ALTER TABLE dbo.BorrowingRecords ADD MemberID INT NULL;
-
-IF COL_LENGTH('dbo.BorrowingRecords', 'MemberName') IS NULL
-    ALTER TABLE dbo.BorrowingRecords ADD MemberName NVARCHAR(150) NULL;
-
 IF COL_LENGTH('dbo.BorrowingRecords', 'BookID') IS NULL
+BEGIN
     ALTER TABLE dbo.BorrowingRecords ADD BookID NVARCHAR(20) NULL;
+END;
 
 IF COL_LENGTH('dbo.BorrowingRecords', 'BookTitle') IS NULL
+BEGIN
     ALTER TABLE dbo.BorrowingRecords ADD BookTitle NVARCHAR(250) NULL;
+END;
+
+IF COL_LENGTH('dbo.BorrowingRecords', 'ClientID') IS NULL
+BEGIN
+    ALTER TABLE dbo.BorrowingRecords ADD ClientID INT NOT NULL DEFAULT 1;
+END;
+
+IF COL_LENGTH('dbo.BorrowingRecords', 'MemberName') IS NULL
+BEGIN
+    ALTER TABLE dbo.BorrowingRecords ADD MemberName NVARCHAR(150) NULL;
+END;
+
+IF COL_LENGTH('dbo.BorrowingRecords', 'BorrowBatchID') IS NULL
+BEGIN
+    ALTER TABLE dbo.BorrowingRecords ADD BorrowBatchID NVARCHAR(50) NULL;
+END;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'DefaultLoanDays') IS NULL
+BEGIN
+    ALTER TABLE dbo.ClientLibraries ADD DefaultLoanDays INT NOT NULL CONSTRAINT DF_ClientLibraries_DefaultLoanDays_Borrow DEFAULT 7;
+END;
+
+IF COL_LENGTH('dbo.ClientLibraries', 'MaxBooksPerUser') IS NULL
+BEGIN
+    ALTER TABLE dbo.ClientLibraries ADD MaxBooksPerUser INT NULL;
+END;
 
 IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
+BEGIN
     ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL DEFAULT 0;
+END;
 
 IF COL_LENGTH('dbo.BorrowingRecords', 'CreatedAt') IS NULL
+BEGIN
     ALTER TABLE dbo.BorrowingRecords ADD CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME();
-
-IF COL_LENGTH('dbo.Books', 'ClientID') IS NULL
-    ALTER TABLE dbo.Books ADD ClientID INT NULL;
-
-IF COL_LENGTH('dbo.Users', 'ClientID') IS NULL
-    ALTER TABLE dbo.Users ADD ClientID INT NULL;
-
-IF COL_LENGTH('dbo.Users', 'IsActive') IS NULL
-    ALTER TABLE dbo.Users ADD IsActive BIT NOT NULL DEFAULT 1;
-
-IF COL_LENGTH('dbo.Users', 'IsArchived') IS NULL
-    ALTER TABLE dbo.Users ADD IsArchived BIT NOT NULL DEFAULT 0;";
+END;";
 
             using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.ExecuteNonQuery();

@@ -314,7 +314,7 @@ namespace EducationSystem
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 EnableHeadersVisualStyles = false,
                 ColumnHeadersHeight = 64,
-                RowTemplate = { Height = 88 },
+                RowTemplate = { Height = 104 },
                 GridColor = LineSoft,
                 CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal,
                 ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None,
@@ -393,23 +393,50 @@ namespace EducationSystem
                 EnsureBorrowingClientSchema(conn);
 
                 string query = @"
-SELECT 
-    b.BorrowID,
-    b.MemberID,
-    COALESCE(NULLIF(b.MemberName, ''), u.FullName, 'Unknown Member') AS MemberName,
-    ISNULL(u.Role, 'Member') AS Role,
-    b.BookTitle,
-    b.IssueDate,
-    b.DueDate,
-    ISNULL(b.Status, 'ACTIVE') AS Status
-FROM dbo.BorrowingRecords b
-LEFT JOIN dbo.Users u
-    ON b.MemberID = u.UserID
-   AND u.ClientID = b.ClientID
-WHERE b.ClientID = @ClientID
-  AND ISNULL(b.IsArchived, 0) = 0
-  AND UPPER(ISNULL(b.Status, 'ACTIVE')) IN ('ACTIVE', 'BORROWED', 'IN PROGRESS')
-ORDER BY b.IssueDate DESC, b.BorrowID DESC;";
+;WITH active AS
+(
+    SELECT
+        b.BorrowID,
+        ISNULL(NULLIF(b.BorrowBatchID, ''), CAST(b.BorrowID AS NVARCHAR(50))) AS BatchId,
+        b.MemberID,
+        COALESCE(NULLIF(b.MemberName, ''), u.FullName, 'Unknown Member') AS MemberName,
+        ISNULL(u.Role, 'Member') AS Role,
+        b.BookTitle,
+        b.IssueDate,
+        b.DueDate,
+        ISNULL(b.Status, 'ACTIVE') AS Status,
+        b.ClientID
+    FROM dbo.BorrowingRecords b
+    LEFT JOIN dbo.Users u
+        ON b.MemberID = u.UserID
+       AND u.ClientID = b.ClientID
+    WHERE b.ClientID = @ClientID
+      AND ISNULL(b.IsArchived, 0) = 0
+      AND UPPER(ISNULL(b.Status, 'ACTIVE')) IN ('ACTIVE', 'BORROWED', 'IN PROGRESS')
+)
+SELECT
+    MIN(a.BorrowID) AS BorrowID,
+    a.BatchId,
+    MIN(a.MemberID) AS MemberID,
+    MAX(a.MemberName) AS MemberName,
+    MAX(a.Role) AS Role,
+    STUFF((
+        SELECT CHAR(13) + CHAR(10) + '• ' + x.BookTitle
+        FROM active x
+        WHERE x.BatchId = a.BatchId
+        ORDER BY x.BorrowID
+        FOR XML PATH(''), TYPE
+    ).value('.', 'NVARCHAR(MAX)'), 1, 2, '') AS BookTitle,
+    MIN(a.IssueDate) AS IssueDate,
+    MAX(a.DueDate) AS DueDate,
+    CASE
+        WHEN SUM(CASE WHEN a.DueDate < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) > 0 THEN 'OVERDUE'
+        ELSE MAX(a.Status)
+    END AS Status,
+    COUNT(*) AS BookCount
+FROM active a
+GROUP BY a.BatchId
+ORDER BY MAX(a.IssueDate) DESC, MIN(a.BorrowID) DESC;";
 
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@ClientID", GetCurrentClientId());
@@ -419,6 +446,7 @@ ORDER BY b.IssueDate DESC, b.BorrowID DESC;";
                 while (reader.Read())
                 {
                     int borrowId = Convert.ToInt32(reader["BorrowID"]);
+                    string batchId = Convert.ToString(reader["BatchId"]) ?? borrowId.ToString();
                     string memberName = reader["MemberName"]?.ToString() ?? "Unknown Member";
                     string role = reader["Role"]?.ToString() ?? "Member";
                     string bookTitle = reader["BookTitle"]?.ToString() ?? "";
@@ -444,6 +472,7 @@ ORDER BY b.IssueDate DESC, b.BorrowID DESC;";
                     allBorrowRows.Add(new BorrowRowItem
                     {
                         BorrowId = borrowId,
+                        BatchId = batchId,
                         MemberName = memberName,
                         Role = role,
                         BookTitle = bookTitle,
@@ -491,6 +520,9 @@ IF COL_LENGTH('dbo.BorrowingRecords', 'MemberID') IS NULL
 
 IF COL_LENGTH('dbo.BorrowingRecords', 'MemberName') IS NULL
     ALTER TABLE dbo.BorrowingRecords ADD MemberName NVARCHAR(150) NULL;
+
+IF COL_LENGTH('dbo.BorrowingRecords', 'BorrowBatchID') IS NULL
+    ALTER TABLE dbo.BorrowingRecords ADD BorrowBatchID NVARCHAR(50) NULL;
 
 IF COL_LENGTH('dbo.BorrowingRecords', 'IsArchived') IS NULL
     ALTER TABLE dbo.BorrowingRecords ADD IsArchived BIT NOT NULL CONSTRAINT DF_BorrowingRecords_IsArchived_Client DEFAULT 0;
@@ -615,8 +647,14 @@ IF COL_LENGTH('dbo.Users', 'IsActive') IS NULL
                 const string query = @"
 UPDATE dbo.BorrowingRecords
 SET IsArchived = 1
-WHERE BorrowID = @BorrowID
-  AND ClientID = @ClientID;";
+WHERE ClientID = @ClientID
+  AND ISNULL(NULLIF(BorrowBatchID, ''), CAST(BorrowID AS NVARCHAR(50))) =
+      (
+          SELECT ISNULL(NULLIF(BorrowBatchID, ''), CAST(BorrowID AS NVARCHAR(50)))
+          FROM dbo.BorrowingRecords
+          WHERE BorrowID = @BorrowID
+            AND ClientID = @ClientID
+      );";
 
                 using SqlCommand cmd = new SqlCommand(query, conn);
                 cmd.Parameters.AddWithValue("@BorrowID", borrowId);
@@ -1016,6 +1054,7 @@ WHERE BorrowID = @BorrowID
         private sealed class BorrowRowItem
         {
             public int BorrowId { get; set; }
+            public string BatchId { get; set; } = "";
             public string MemberName { get; set; } = "";
             public string Role { get; set; } = "";
             public string BookTitle { get; set; } = "";
